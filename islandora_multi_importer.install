@@ -1,0 +1,86 @@
+<?php
+
+/**
+ * @file
+ * Defines functions used for the installation of the islandora_multi_importer module.
+ * This works only for MYSQL!
+ */
+/**
+ * Implements hook_schema().
+ */
+ 
+function islandora_multi_importer_schema() {
+  $schema['islandora_multi_importer_twig_templates'] = array(
+    'description' => 'This table is used to store Twig templates used by the multi importer',
+    'fields' => array(
+      'id' => array(
+        'type' => 'serial',
+        'not null' => TRUE,
+      ),
+      'name' => array(
+        'description' => 'The name of the stored Template.',
+        'type' => 'varchar',
+        'length' => 128,
+        'not null' => TRUE,
+      ),
+      'twig' => array(
+        'description' => 'The stored template',
+        'type' => 'text',
+        'size' => 'big',
+        'not null' => TRUE,
+      ),
+      'updated' => array(
+        'description' => 'Timestamp this Template was updated',
+        'mysql_type' => 'timestamp',
+        'not null' => TRUE,
+      ),
+    ),
+    'unique keys' => array('name' => array('name')),
+    'primary key' => array('id'),
+  );
+  $schema['islandora_multi_importer_presets'] = array(
+    'description' => 'This table is used to whole islandora multi importer presets for an input/output mix',
+    'fields' => array(
+      'id' => array(
+        'type' => 'serial',
+        'not null' => TRUE,
+      ),
+      'name' => array(
+        'description' => 'The name of the stored Preset',
+        'type' => 'varchar',
+        'length' => 128,
+        'not null' => TRUE,
+      ),
+      'preset' => array(
+        'type' => 'blob',
+        'not null' => FALSE,
+        'size' => 'big',
+        'serialize' => TRUE,
+        'description' => 'A serialized array of the whole import form',
+      ),
+      'updated' => array(
+        'description' => 'Timestamp this Template was updated',
+        'mysql_type' => 'timestamp',
+        'not null' => TRUE,
+      ),
+    ),
+    'unique keys' => array('name' => array('name')),
+    'primary key' => array('id'),
+  );
+   return $schema;
+}
+
+function islandora_multi_importer_enable() {
+  db_query('
+    ALTER TABLE {islandora_multi_importer_twig_templates} 
+    MODIFY updated TIMESTAMP NOT NULL 
+    DEFAULT CURRENT_TIMESTAMP 
+    ON UPDATE CURRENT_TIMESTAMP'
+  );
+  db_query('
+    ALTER TABLE {islandora_multi_importer_presets} 
+    MODIFY updated TIMESTAMP NOT NULL 
+    DEFAULT CURRENT_TIMESTAMP 
+    ON UPDATE CURRENT_TIMESTAMP'
+  );
+}

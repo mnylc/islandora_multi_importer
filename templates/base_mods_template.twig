@@ -1,0 +1,224 @@
+<?xml version="1.0" encoding="UTF-8"?>
+{% block content %}
+{% autoescape false %}
+<mods xmlns="http://www.loc.gov/mods/v3" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:mods="http://www.loc.gov/mods/v3" xsi:schemaLocation="http://www.loc.gov/mods/v3 http://www.loc.gov/standards/mods/v3/mods-3-4.xsd"> 
+  
+<titleInfo>
+	<title>{{ data.title }}</title>
+</titleInfo>
+
+{% if  attribute(data, 'name_personal') %}
+{% for name in attribute(data, 'name_personal')|split (';') %}
+<name authority="naf" type="personal">
+	<namePart>{{ name|trim }}</namePart>
+	<role>
+		<roleTerm authority="marcrelator" type="text">{{ data.role }}</roleTerm>
+	</role>
+</name>
+{% endfor %}
+{% endif %}
+
+{% if  attribute(data, 'name_corporate') %}
+{% for name in attribute(data, 'name_corporate')|split (';') %}
+<name authority="naf" type="corporate">
+	<namePart>{{ name|trim }}</namePart>
+	<role>
+		<roleTerm authority="marcrelator" type="text">{{ data.role }}</roleTerm>
+	</role>
+</name>
+{% endfor %}
+{% endif %}
+
+{% if  attribute(data, 'creator_personal') %}
+{% for creator in attribute(data, 'creator_personal')|split (';') %}
+<name authority="naf" type="personal">
+	<namePart>{{ creator|trim }}</namePart>
+	<role>
+		<roleTerm authority="marcrelator" type="text">Creator</roleTerm>
+	</role>
+</name>
+{% endfor %}
+{% endif %}
+
+{% if  attribute(data, 'creator_corporate') %}
+{% for creator in attribute(data, 'creator_corporate')|split (';') %}
+<name authority="naf" type="corporate">
+	<namePart>{{ creator|trim }}</namePart>
+	<role>
+		<roleTerm authority="marcrelator" type="text">Creator</roleTerm>
+	</role>
+</name>
+{% endfor %}
+{% endif %}
+
+{% if  attribute(data, 'contributor_personal') %}
+{% for contributor in attribute(data, 'contributor_personal')|split (';') %}
+<name authority="naf" type="personal">
+	<namePart>{{ contributor|trim }}</namePart>
+	<role>
+		<roleTerm authority="marcrelator" type="text">Contributor</roleTerm>
+	</role>
+</name>
+{% endfor %}
+{% endif %}
+
+{% if  attribute(data, 'contributor_corporate') %}
+{% for contributor in attribute(data, 'contributor_corporate')|split (';') %}
+<name authority="naf" type="corporate">
+	<namePart>{{ contributor|trim }}</namePart>
+	<role>
+		<roleTerm authority="marcrelator" type="text">Contributor</roleTerm>
+	</role>
+</name>
+{% endfor %}
+{% endif %}
+
+{% if  attribute(data, 'subject_topic') %}
+{% for topic in attribute(data, 'subject_topic')|split (';') %}
+<subject authority="fast">
+	<topic>{{ topic|trim }}</topic>
+</subject>
+{% endfor %}
+{% endif %}
+
+{% if  attribute(data, 'subject_geographic') %}
+{% for geographic in attribute(data, 'subject_geographic')|split (';') %}
+<subject authority="fast">
+	<geographic>{{ geographic|trim }}</geographic>
+</subject>
+{% endfor %}
+{% endif %}
+
+{% if  attribute(data, 'subject_temporal') %}
+{% for temporal in attribute(data, 'subject_temporal')|split (';') %}
+<subject authority="fast">
+	<temporal>{{ temporal|trim }}</temporal>
+</subject>
+{% endfor %}
+{% endif %}
+
+{% if  attribute(data, 'subject_name') %}
+{% for subjectname in attribute(data, 'subject_name')|split (';') %}
+<subject authority="fast">
+	<name>
+		<namePart>{{ subjectname|trim }}</namePart>
+	</name>
+</subject>
+{% endfor %}
+{% endif %} 
+
+{% if  attribute(data, 'subject_name_personal') %}
+{% for subjectname in attribute(data, 'subject_name_personal')|split (';') %}
+<subject authority="fast">
+	<name type="personal">
+		<namePart>{{ subjectname|trim }}</namePart>
+	</name>
+</subject>
+{% endfor %}
+{% endif %} 
+
+{% if  attribute(data, 'subject_name_corporate') %}
+{% for subjectname in attribute(data, 'subject_name_corporate')|split (';') %}
+<subject authority="fast">
+	<name type="corporate">
+		<namePart>{{ subjectname|trim }}</namePart>
+	</name>
+</subject>
+{% endfor %}
+{% endif %} 
+
+{% if  attribute(data, 'coordinates') %}
+<subject>
+	<cartographics>
+		<coordinates>{{ data.coordinates }}</coordinates>
+	</cartographics>
+</subject> 
+{% endif %}  
+
+{% if attribute(data, 'date_created') or attribute(data, 'date_issued') or attribute(data, 'publisher') or attribute(data, 'place_of_publication') %}
+<originInfo>
+{% if attribute(data, 'date_created') %}
+	<dateCreated encoding="w3cdtf" keyDate="yes">{{ data.date_created }}</dateCreated>
+{% endif %}
+{% if attribute(data, 'date_issued') %} 
+	<dateIssued encoding="w3cdtf" keyDate="yes">{{ data.date_issued }}</dateIssued>
+{% endif %} 
+{% if attribute(data, 'publisher') %}
+	<publisher>{{ data.publisher }}</publisher>
+{% endif %} 
+{% if attribute(data, 'place_of_publication') %}
+    <place>
+      <placeTerm type="text">{{ data.place_of_publication }}</placeTerm>
+    </place>
+{% endif %} 
+</originInfo>
+{% endif %} 
+
+<abstract>{{ data.description }}</abstract>
+<note>{{ data.note }}</note>
+
+{% if  attribute(data, 'type_of_resource') %}
+{% for type in attribute(data, 'type_of_resource')|split (';') %}
+<typeOfResource>{{ data.type_of_resource }}</typeOfResource>
+{% endfor %}
+{% endif %} 
+  
+{% if  attribute(data, 'genre') %}
+{% for genre in attribute(data, 'genre')|split (';') %}
+<genre authority="aat">{{ genre|trim }}</genre>
+{% endfor %}
+{% endif %} 
+  
+{% if attribute(data, 'extent') or attribute(data, 'form') %}
+<physicalDescription>
+	{% if attribute(data, 'form') %}
+	<form>{{ data.form }}</form>
+	{% endif %} 
+	{% if attribute(data, 'extent') %}
+    <extent>{{ data.extent }}</extent>
+	{% endif %} 
+    <internetMediaType>{{ data.digital_format }}</internetMediaType>
+    <digitalOrigin>{{ data.digital_origin }}</digitalOrigin>
+</physicalDescription>
+{% endif %} 
+
+{% if  attribute(data, 'language') %}
+{% for language in attribute(data, 'language')|split (';') %}
+<language>
+	<languageTerm type="code" authority="iso639-2b">{{ language|trim }}</languageTerm>
+</language>
+{% endfor %}
+{% endif %} 
+
+{% if attribute(data, 'relation') %}
+<relatedItem>
+	<titleInfo>
+		<title>{{ data.relation }}</title>
+	</titleInfo>
+</relatedItem>
+{% endif %} 
+
+<relatedItem type="host" displayLabel="Collection">
+	<titleInfo>
+      <title>{{ data.collection_title }}</title>
+    </titleInfo>
+</relatedItem>
+
+{% if attribute(data, 'collection_description') %}  
+<relatedItem type="host" displayLabel="Collection">
+    <abstract>{{ data.collection_description }}</abstract>
+</relatedItem>
+{% endif %} 
+  
+<accessCondition>{{ data.rights }}</accessCondition>
+<note type="ownership">{{ data.owning_institution_held_by }}</note>
+<identifier type="local">{{ data.identifier }}</identifier>
+
+<recordInfo>
+	<languageOfCataloging>
+		<languageTerm authority="iso639-2b" type="code">eng</languageTerm>
+    </languageOfCataloging>
+</recordInfo>
+</mods>
+{% endautoescape %}
+{% endblock %}

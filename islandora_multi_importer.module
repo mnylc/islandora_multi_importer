@@ -1,0 +1,107 @@
+<?php
+
+/**
+ * @file
+ * Creates Islandora Objects from tabulated data.
+ */
+
+// Permissions.
+define('ISLANDORA_MULTI_IMPORTER_CREATE', 'Import Objects using Islandora Multi Importer');
+define('ISLANDORA_MULTI_IMPORTER_UPDATE', 'Update Objects using Islandora Multi Importer');
+
+
+/**
+ * Implements hook_init().
+ */
+function islandora_multi_importer_init() {
+    require_once(__DIR__ ."/vendor/autoload.php");
+}
+
+/**
+ * Implements hook_menu().
+ */
+function islandora_multi_importer_menu() {
+  return array(
+    'multi_importer' => array(
+      'title' => 'Multi Import Objects',
+      'type' => MENU_NORMAL_ITEM,
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('islandora_multi_importer_form'),
+      'file' => 'includes/import.form.inc',
+      'access arguments' => array(ISLANDORA_MULTI_IMPORTER_CREATE),
+    ),
+  /*  'multi_importer_test' => array(
+      'title' => 'Multi Import Objects Test',
+      'type' => MENU_NORMAL_ITEM,
+      'page callback' => 'islandora_multi_importer_test',
+      'access arguments' => array(ISLANDORA_MULTI_IMPORTER_CREATE),
+    ),*/
+    'multi_importer/colautocomplete' => array(
+      'page callback' => 'islandora_multi_importer_get_collection_autocomplete',
+      'access callback' => TRUE,
+      'file' => 'includes/callbacks.inc',
+      'type' => MENU_CALLBACK,
+    ),
+    'multi_importer/cmodelautocomplete' => array(
+      'page callback' => 'islandora_multi_importer_get_cmodel_autocomplete',
+      'access callback' => TRUE,
+      'file' => 'includes/callbacks.inc',
+      'type' => MENU_CALLBACK,
+    ),
+    'multi_importer/dsidautocomplete' => array(
+      'page callback' => 'islandora_multi_importer_get_dsid_autocomplete',
+      'access callback' => TRUE,
+      'file' => 'includes/callbacks.inc',
+      'type' => MENU_CALLBACK,
+    ),
+  );
+}
+
+/**
+ * Implements hook_permission().
+ */
+function islandora_multi_importer_permission() {
+  return array(
+    ISLANDORA_MULTI_IMPORTER_CREATE => array(
+      'title' => t('Import Islandora objects from user-supplied tabulated Data.'),
+      'description' => t('Import Islandora objects from user-supplied tabulated Data.'),
+    ),
+    ISLANDORA_MULTI_IMPORTER_UPDATE => array(
+      'title' => t('Update Islandora objects from user-supplied tabulated Data.'),
+      'description' => t('Update Islandora objects from user-supplied tabulated Data.'),
+    ),
+  );
+}
+/**
+ * Implements hook_theme().
+ */
+function islandora_multi_importer_theme() {
+  return array(
+    'islandora_multi_importer_form_table' => array(
+      'render element' => 'form',
+      'file' => 'theme/form.theme.inc',
+      'function' => 'theme_islandora_multi_importer_form_table',
+    ),
+  );
+}
+
+function islandora_multi_importer_test() {
+  $object = islandora_object_load('diego:17b07d97-d14a-4f6a-ac6e-bd36a69f3be3');
+  $dsid = 'TEST';
+  $ds = isset($object[$dsid]) ? $object[$dsid] : $object->constructDatastream('TEST', 'M');
+  $file2 = file_create_filename('temp5.txt', 'temporary://');
+  file_exists($file2);
+  file_put_contents($file2, 'a super long string');
+  error_log(stat($file2)['size']);
+  $ds->setContentFromFile($file2);
+  if (!isset($object[$dsid])) {
+    $object->ingestDatastream($ds);
+  }
+  usleep(1000);
+  file_put_contents($file2, 'shorter one bla bla and some extra also');
+  error_log(stat($file2)['size']);
+  $ds->setContentFromFile($file2);
+
+}
+
+

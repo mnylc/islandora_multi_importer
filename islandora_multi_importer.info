@@ -1,0 +1,7 @@
+name = Islandora Multi Importer
+description = Multiple use Islandora Objects Importer
+dependencies[] = islandora
+dependencies[] = islandora_batch
+package = Islandora
+core = 7.x
+files[] = includes/islandora_multi_batch.inc
