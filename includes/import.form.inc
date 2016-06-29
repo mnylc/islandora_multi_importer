@@ -99,6 +99,21 @@ function islandora_multi_importer_form(array $form, array &$form_state) {
               '#description' => t('This sends processing to multiple background workers'),
         );   
       break;
+      case 3:
+      $step_forms['last'] = islandora_multi_importer_zip_upload_form($form, $form_state);
+      $step_forms['ingest'] = array(
+            '#type' => 'submit',
+            '#value' => t('Ingest'),
+        ); 
+      
+      //We should only show this one when all required info for the ingest is set
+      $step_forms['ingest_option'] = array(
+              '#type' => 'checkbox',
+              '#value' => FALSE,
+              '#title' => t('Use zeroMQ processing'),
+              '#description' => t('This sends processing to multiple background workers'),
+        );  
+      break;
     }
     
     $form = $step_forms;
@@ -118,10 +133,30 @@ function islandora_multi_importer_upload_form($form, &$form_state) {
         '#title' => t('CSV or TSV file containing the rows to import'),
         '#size' => 48,
         '#description' => t('Select a file to upload.<br/>Files must be less than <strong>@size MB.</strong>', array('@size' => $upload_size)),
-        '#default_value' => isset($form_state['values']['files']) ? $form_state['values']['files'] : NULL,
+        '#default_value' => isset($form_state['values']['file']) ? $form_state['values']['file'] : NULL,
         '#upload_location' => file_default_scheme() . '://',
         '#upload_validators' => array(
           'file_validate_extensions' => array('txt csv tsv xls xlsx'),
+          'file_validate_size' => array($upload_size * 1024 * 1024),
+        ),
+      ),
+    );
+  return $form; 
+}
+
+function islandora_multi_importer_zip_upload_form($form, &$form_state) {
+  $upload_size = min((int) ini_get('post_max_size'), (int) ini_get('upload_max_filesize'));
+  $form = array(
+      'file2' => array(
+        '#type' => 'managed_file',
+        '#required' => TRUE,
+        '#title' => t('ZIP file containing the files referenced in the source data'),
+        '#size' => 48,
+        '#description' => t('Select a file to upload.<br/>Files must be less than <strong>@size MB.</strong>', array('@size' => $upload_size)),
+        '#default_value' => isset($form_state['values']['file2']) ? $form_state['values']['file2'] : NULL,
+        '#upload_location' => file_default_scheme() . '://',
+        '#upload_validators' => array(
+          'file_validate_extensions' => array('zip'),
           'file_validate_size' => array($upload_size * 1024 * 1024),
         ),
       ),
@@ -593,7 +628,6 @@ function islandora_multi_importer_cmodeldsmapping_form(&$form_state, $file_data)
       //Iterate over existing ones
       
       $defaults = array(); // Defaults 
-      dpm($dsids);
       foreach ($dsids as $dsid => $dsidinfo) {
         
         $options = array(); // Individual Options for each DSID
@@ -734,7 +768,7 @@ function islandora_multi_importer_objectmapping_form($form, &$form_state, $file_
           '#type' => 'select',
           '#attributes'=>'',
           '#description' => t('Select public accesible resource location'),
-          '#options'=> array('AWS S3/Dropbox via http(s)','local*','ZIP'),
+          '#options'=> array('REMOTE' => 'AWS S3/Dropbox via http(s)','LOCAL' => 'local*','ZIP'=>'ZIP'),
       ),
     ),
   );
@@ -760,6 +794,10 @@ function islandora_multi_importer_objectmapping_form($form, &$form_state, $file_
 
 
 function islandora_multi_importer_form_upload_callback($form, $form_state) {
+  return $form;
+}
+
+function islandora_multi_importer_form_upload_zip_callback($form, $form_state) {
   return $form;
 }
 function islandora_multi_importer_previs_ajax($form, &$form_state) {
@@ -799,7 +837,7 @@ function islandora_multi_importer_form_submit($form, &$form_state) {
    $step_name = 'step' . $form_state['storage']['step'];
     if (!empty($form_state['storage']['values'][$step_name])) {
       $form_state['values'][$step_name] = $form_state['storage']['values'][$step_name];
-  }
+    }
   if ($form_state['triggering_element']['#value'] == t('Save Template')) {
     $twig_template = trim($form_state['values']['step3']['group_tabs']['group_twig_tab']['twig']);
     $twig_template_name = trim($form_state['values']['step3']['group_tabs']['group_twig_tab']['savemenu']['save']['template_name']);
@@ -817,45 +855,49 @@ function islandora_multi_importer_form_submit($form, &$form_state) {
 
 
 
-
-  if ($form_state['triggering_element']['#value'] == t('Ingest')) {
-    // Build $info structure, containing all needed data
-    // to build our to be ingested Objects
- //   dpm($form_state);
-    //$file = file_load($form_state['storage']['values']['step1']['file']);
-    //$file_path = drupal_realpath($file->uri);
-    //$file_data_all = islandora_multi_importer_read_filedata($file_path, -1, 0);
-    // @TODO This all needs to be validated
-    $parameters = array(
-       'target' => 's3',
-       'source_data' =>  $form_state['storage']['values']['step1']['file'],
-       'cmodel_source_field_index' => $form_state['values']['cmodelmap']['basemapping']['rows']['cmodelmap_row']['cmodelmap'],
-       'cmodel_mapping' => $form_state['values']['cmodelmap']['cmodels'],
-       'object_maping' => $form_state['values']['objectmap']['objectmapping']['rows'],
-       'computed_cmodels' => $form_state['storage']['values']['general']['computed_cmodels'],
-    );
-    dpm($form_state);
-    dpm($parameters);
-    
-    
-    
-    
-    //$preprocessor = new IslandoraScanBatch($connection, $parameters);
+  // Handle the ingest buttom
+  if ($form_state['triggering_element']['#value'] == t('Ingest')){
+    // Check if a ZIP file needs to be uploaded
+    if ($form_state['storage']['step'] == 2) {
+      if ($form_state['values']['objectmap']['objectmapping']['rows']['dsmap_row']['dsremote'] == 'ZIP') {
+        $form_state['storage']['step'] = 3;
+        $form_state['storage']['values']['step3'] = array(
+          'type' => $form_state['values']['objectmap']['objectmapping']['rows']['dsmap_row']['dsremote'],
+          'source_data' => $form_state['storage']['values']['step1']['file'],
+          'cmodel_source_field_index' => $form_state['values']['cmodelmap']['basemapping']['rows']['cmodelmap_row']['cmodelmap'],
+          'cmodel_mapping' => $form_state['values']['cmodelmap']['cmodels'],
+          'object_maping' => $form_state['values']['objectmap']['objectmapping']['rows'],
+          'computed_cmodels' => $form_state['storage']['values']['general']['computed_cmodels'],
+        );
+       $form_state['rebuild'] = TRUE;
+       return $form;
+      }
+      else {
+      // @TODO This all needs to be validated
+        $parameters = array(
+          'type' => $form_state['values']['objectmap']['objectmapping']['rows']['dsmap_row']['dsremote'],
+          'source_data' => $form_state['storage']['values']['step1']['file'],
+          'cmodel_source_field_index' => $form_state['values']['cmodelmap']['basemapping']['rows']['cmodelmap_row']['cmodelmap'],
+          'cmodel_mapping' => $form_state['values']['cmodelmap']['cmodels'],
+          'object_maping' => $form_state['values']['objectmap']['objectmapping']['rows'],
+          'computed_cmodels' => $form_state['storage']['values']['general']['computed_cmodels'],
+        );
+      } 
+    }
+    else {
+      $parameters = $form_state['storage']['values']['step3'];
+      $parameters['source_binaries'] = $form_state['values']['last']['file2'];
+    }
+   
     $connection = islandora_get_tuque_connection();
     $preprocessor = new IslandoraMultiBatch($connection, $parameters);
-  
-    // Pass the preprocessor off to run.
+  // Pass the preprocessor off to run.
     $preprocessed = islandora_batch_handle_preprocessor($preprocessor);
-    
-    
-    
-    //islandora_multi_importer_startprocessing($parameters);
+//islandora_multi_importer_startprocessing($parameters);
     $form_state['rebuild'] = TRUE;
     return $form;
   }
 
-
-  
   // If not finished keep rebuilding
   $form_state['rebuild'] = TRUE;
   return $form;

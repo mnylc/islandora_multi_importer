@@ -176,7 +176,6 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
    */
   protected function scanZip($target) {
     $zip = new ZipArchive();
-
     $zip_file = drupal_realpath($target);
     if (($error = $zip->open($zip_file)) !== TRUE) {
       return FALSE;
@@ -297,6 +296,15 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
     $file_path = drupal_realpath($file->uri);
     $file_data_all = islandora_multi_importer_read_filedata($file_path, -1 , $offset = 0);
     $this->parameters['data']['headers'] =  $file_data_all['headers'];
+    
+    if ($this->parameters['type'] == 'ZIP') {
+      // We don't need to scan the whole zip file,
+      // We will try to just fetch the filename comming from the data
+      // during datastream creation
+      $zipfile = file_load($this->parameters['source_binaries']);
+      $this->parameters['zipfile'] = drupal_realpath($zipfile->uri);
+    }  
+    
     $namespace_hash = array();
     $parent_hash = array(); // Keeps track of all parents and child that don't have a PID assigned
     $namespace_count = array();
@@ -375,18 +383,18 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
     }
   // Ok, maybe this is expensive, so let's try it first so, if not 
   // @TODO optimize
-  dpm($parent_hash);
+ 
   foreach($info as $index => &$objectInfo) {
     
     $namespace = $objectInfo['namespace'];
-    dpm($namespace);
+    
     $objectInfo['pid'] = isset($objectInfo['pid']) ? isset($objectInfo['pid']) : $this->getInternalIdentifier($namespace, $namespace_count[$namespace]);
     // Is this object parent of someone?
     if (isset($parent_hash[$objectInfo['parent']])) {
          $objectInfo['parent'] =  $info[$objectInfo['parent']]['pid'];
     }
   }
-  dpm($info);
+  
   return $info;
   }
 
@@ -463,7 +471,8 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
             //Nothing to do really, derivative processing will do the job
             break;
             case ('xslt' && !$this->deriveDC) :
-            // Deal with xslt transforms, we will leave this to the end, since we need the source datastreams to transform
+            // Deal with xslt transforms, we will leave this to after processing, 
+            // since we need the source datastreams to transform
             break;
             case 'template':
             $twig_input = array();
@@ -473,9 +482,9 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
             $twig_input['data'] =  array('data' => array_combine($this->preprocessorParameters['data']['headers'], $this->objectInfo['data']));
             // @TODO should we validate the template again here?
             $output = islandora_multi_importer_twig_process($twig_input);
-  					$newfileName="$dsid_".$method[0].'_'.$this->objectInfo['pid'].time().'.xml';
+            $newfileName="$dsid_".$method[0].'_'.$this->objectInfo['pid'].time().'.xml';
             //$tmp_directory = islandora_multi_importer_temp_directory();
-  					$newfile = file_save_data($output,  "public://" . $newfileName);
+            $newfile = file_save_data($output,  "public://" . $newfileName);
             // We are assumming the twig template complies with mimetype. @TODO enforce this somehow
             $file[] = $newfile;
             $datastreams[$dsid] = array(
@@ -494,7 +503,27 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
             // if URL just fetch the damn thing
             if ($this->preprocessorParameters['type'] == 'ZIP') {
               // Fetch one file from provided ZIP file
-              // @TODO Preprocessor should replace the field value with a zip:// path, so just add it
+             
+              $path_info = pathinfo(trim($this->objectInfo['data'][$method[1]]));
+              $z = new ZipArchive();
+              error_log($this->preprocessorParameters['zipfile']);
+              if ($z->open($this->preprocessorParameters['zipfile'])) {
+                  $fp = $z->getStream($this->objectInfo['data'][$method[1]]);
+                  if(!$fp) {
+                    error_log($fp);
+                    // the file does not exist
+                    //@TODO add this to errors
+                    break;
+                  }
+                  $datastreams[$dsid] = array(
+                    'dsid' => $dsid,
+                    'label' => "$dsid datastream",
+                    'mimetype' => $this->getMimetype($path_info['basename']),
+                    'datastream_file' =>  "zip://".$this->preprocessorParameters['zipfile']."#".$this->objectInfo['data'][$method[1]],
+                    'filename' => $path_info['basename'],
+                    'control_group' => 'M',
+                  );
+              }
             } 
             else {
               // This will handle all cases, except ZIP

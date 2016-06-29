@@ -28,9 +28,9 @@ function islandora_multi_importer_read_filedata($file_path, $numrows = 20, $offs
   $tabdata = array('headers' => array(), 'data' => array(), 'totalrows' => 0);
   try {
     $inputFileType = PHPExcel_IOFactory::identify($file_path);
-    dpm($inputFileType);
+  
     $objReader = PHPExcel_IOFactory::createReader($inputFileType);
-    dpm($objReader);
+   
     $objReader->setReadDataOnly(true);
     $objPHPExcel = $objReader->load($file_path);
   } catch(Exception $e) {
