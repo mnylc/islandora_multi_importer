@@ -341,15 +341,17 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
         $notPID = TRUE;
         $parent = $objectInfo['parent'];
         $parent_hash[$parent][$index] = $index;
+        $parentchilds = array();
         if ((!isset($invalid[$index])) && (!isset($invalid[$parent]))) {
           // Only traverse if we don't have this index or the parent one in the invalid register
           $objectInfo['parent_cmodel'] = $file_data_all['data'][$parent][$this->parameters['cmodel_source_field_index']];
+          $parentchilds = array();
+          $i = 0;
           while($notPID) {
-            // Parent rows where shifted by removing the header row
-            $parentup = $file_data_all['data'][$parent][trim($row[$this->parameters['object_maping']['parentmap_row']['parentmap']])];
-            $parentchilds[$parentup ] = $parentup ;
+            $parentup = $file_data_all['data'][$parent][$this->parameters['object_maping']['parentmap_row']['parentmap']];
+            $parentchilds[$parentup] = $parentup;
             if (islandora_is_valid_pid(trim($parentup))) {
-              $namespace = isset($pid_hash[$parentup][$objectInfo['cmodel']])
+              $namespace = isset($namespace_hash[$parentup][$objectInfo['cmodel']])
                 ? $namespace_hash[$parentup][$objectInfo['cmodel']] 
                 : $namespace_hash[$parentup][$objectInfo['cmodel']] = $this->determineNamespacebyPID($parentup, $objectInfo['cmodel']
               ); 
@@ -359,11 +361,12 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
               $notPID = false;
             }
             else if(empty(trim($parent))) {
-              unset($objectInfo);
+            
               //We can't continue here
               // means there must be an error
               // This will fail for any child object that is child of any of these parents
               $invalid = $invalid + $parentchilds + array($objectInfo['parent'] => $objectInfo['parent']);
+              unset($objectInfo);
               $notPID = false;
             }
             else {
@@ -523,6 +526,7 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
                     'filename' => $path_info['basename'],
                     'control_group' => 'M',
                   );
+                  $z->close();
               }
             } 
             else {
