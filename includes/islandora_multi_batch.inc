@@ -397,7 +397,6 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
          $objectInfo['parent'] =  $info[$objectInfo['parent']]['pid'];
     }
   }
-  
   return $info;
   }
 
@@ -430,15 +429,17 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
    */
   public function batchProcess() {
     // Use object_info to create some datastreams.
-    $this->label = $this->getTitle();
+    $this->label = !empty($this->getTitle()) ? $this->getTitle() : "New Object";
     $errors = array();
     $files = array();
+    $datastreams = array();
     $datastreams = $this->getDatastreams($errors, $files);
     foreach ($files as $file) {
       $file->status &= ~FILE_STATUS_PERMANENT;
       file_save($file);
       file_usage_add($file, 'islandora_batch', 'islandora_batch_object', $this->getBatchId());
     }
+   
     foreach ($datastreams as $ds) {
       $ds_uri = isset($ds['file']) ?
         $ds['file']->uri :
@@ -447,6 +448,7 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
       $datastream = $this->constructDatastream($ds['dsid'], $ds['control_group']);
       $datastream->label = $ds['label'];
       $datastream->mimetype = $ds['mimetype'];
+      error_log($ds_uri);
       $datastream->setContentFromFile($ds_uri);
       $this->ingestDatastream($datastream);
     }
@@ -485,16 +487,16 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
             $twig_input['data'] =  array('data' => array_combine($this->preprocessorParameters['data']['headers'], $this->objectInfo['data']));
             // @TODO should we validate the template again here?
             $output = islandora_multi_importer_twig_process($twig_input);
-            $newfileName="$dsid_".$method[0].'_'.$this->objectInfo['pid'].time().'.xml';
+            $newfileName="$dsid_".$method[0].'_'.urlencode($this->objectInfo['pid']).'_'.time().'.xml';
             //$tmp_directory = islandora_multi_importer_temp_directory();
-            $newfile = file_save_data($output,  "public://" . $newfileName);
+            $newfile = file_save_data($output,  "public://" . $newfileName, FILE_EXISTS_RENAME);
             // We are assumming the twig template complies with mimetype. @TODO enforce this somehow
             $file[] = $newfile;
             $datastreams[$dsid] = array(
               'dsid' => $dsid,
               'label' => "$dsid datastream",
               'mimetype' => $this->preprocessorParameters['computed_cmodels'][$this->objectInfo['cmodel']][$dsid]['mime'][0],
-              'datastream_file' => file_create_url($newfile->uri),
+              'datastream_file' => drupal_realpath($newfile->uri),
               'filename' => $newfileName,
               'control_group' => 'M',
               //'file' => $file,
@@ -513,7 +515,7 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
               if ($z->open($this->preprocessorParameters['zipfile'])) {
                   $fp = $z->getStream($this->objectInfo['data'][$method[1]]);
                   if(!$fp) {
-                    error_log($fp);
+                    error_log('not found for '.$this->id);
                     // the file does not exist
                     //@TODO add this to errors
                     break;
@@ -526,7 +528,10 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
                     'filename' => $path_info['basename'],
                     'control_group' => 'M',
                   );
-                  $z->close();
+                  //$z->close();
+              }
+              else {
+                error_log('can not open '.$this->preprocessorParameters['zipfile']);
               }
             } 
             else {
