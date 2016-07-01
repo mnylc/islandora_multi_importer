@@ -136,6 +136,7 @@ function islandora_multi_importer_twig_process(array $twig_input = array()) {
   //We won't validate here. We are here because our form did that
   $output = $twig->render($twig_input['name'], $twig_input['data']);
   //@todo catch anyway any twig error to avoid the worker to fail bad.
+  
   return $output;
 }
 

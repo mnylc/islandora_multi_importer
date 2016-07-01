@@ -475,7 +475,7 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
             case 'derivative':
             //Nothing to do really, derivative processing will do the job
             break;
-            case ('xslt' && !$this->deriveDC) :
+            case 'xslt':
             // Deal with xslt transforms, we will leave this to after processing, 
             // since we need the source datastreams to transform
             break;
