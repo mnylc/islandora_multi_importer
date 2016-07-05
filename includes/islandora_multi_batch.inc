@@ -114,124 +114,7 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
     }
     return $current_cmodel;
   }
-  /**
-   * Get a listing of "file-object"-like entries.
-   *
-   * @return array
-   *   An associative array of stdClass objects representing files. Array keys
-   *   are URIs relative to the "target", and the objects properties include:
-   *   - uri: A string containing the complete URI of the resource.
-   *   - filename: The filename.
-   *   - name: The filename without its extension.
-   */
-  protected function scan() {
-    $method = "scan" . ucfirst($this->getTargetType());
-    return $this->$method($this->getTarget());
-  }
-
-  /**
-   * Get the target resource.
-   */
-  protected function getTarget() {
-    return $this->parameters['target'];
-  }
-
-  /**
-   * Get the type of the target resource.
-   *
-   * Prefixed with "scan_" to determine which method gets called to generate
-   * the list of resource.
-   */
-  protected function getTargetType() {
-    return $this->parameters['type'];
-  }
-
-  /**
-   * Allow the pattern to be set differently.
-   */
-  protected static function getPattern() {
-    return '/.*/';
-  }
-
-  /**
-   * Scan the directory with file_scan_directory().
-   */
-  protected function scanDirectory($target) {
-    $files = array();
-    $target_path = drupal_realpath($target);
-    $target_length = strlen($target_path) + 1;
-    $directory_contents = file_scan_directory(
-      $target_path,
-      $this->getPattern(),
-      array('recurse' => $this->recursiveScan)
-    );
-    foreach ($directory_contents as $uri => $value) {
-      $files[substr($uri, $target_length)] = $value;
-    }
-    return $files;
-  }
-
-  /**
-   * Generate output analogous to file_scan_directory().
-   */
-  protected function scanZip($target) {
-    $zip = new ZipArchive();
-    $zip_file = drupal_realpath($target);
-    if (($error = $zip->open($zip_file)) !== TRUE) {
-      return FALSE;
-    }
-
-    $count = $zip->numFiles;
-
-    $info = array();
-    for ($i = 0; $i < $count; $i++) {
-      $raw_name = $zip->getNameIndex($i, ZipArchive::FL_UNCHANGED);
-      if (isset($this->parameters['zip_encoding']) && trim($this->parameters['zip_encoding']) !== '') {
-        $name = drupal_convert_to_utf8($raw_name, $this->parameters['zip_encoding']);
-      }
-      else {
-        $name = $zip->getNameIndex($i);
-      }
-      $path_info = pathinfo($name);
-
-      // Avoid creating entries for directories and some weird Mac stuff...
-      // XXX: Should be made to take the pattern from
-      // $this::getPattern(), and to filter the results based on it.
-      if (isset($path_info['extension']) && strpos($path_info['dirname'], '__MACOSX') === FALSE && $path_info['extension'] != 'DS_Store') {
-        $file_entry = new stdClass();
-        $file_entry->uri = "zip://$zip_file#$raw_name";
-        $file_entry->filename = $path_info['basename'];
-        $file_entry->name = $path_info['filename'];
-        $info[$name] = $file_entry;
-      }
-    }
-
-    $zip->close();
-
-    return $info;
-  }
-
-  /**
-   * Group file entries logically, to pass off to the import object.
-   *
-   * Default implementation groups on files' basename.
-   *
-   * @param array $files
-   *   An array, as returned by file_scan_directory().
-   */
-  protected function groupFiles($files) {
-    $grouped = array();
-
-    // TODO: Group according to basename, to and hand-off each group to object
-    // wrappers.
-    foreach ($files as $uri => &$file_object) {
-      $file_object->ext = pathinfo($file_object->filename, PATHINFO_EXTENSION);
-      $grouped[$file_object->name][$file_object->ext] = $file_object;
-    }
-
-    return $grouped;
-  }
-
+  
   /**
    * Get the name of the class to instantiate for the batch operations.
    */
@@ -243,17 +126,6 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
    * Perform preprocessing of the scanned resources.
    */
   public function preprocess() {
-    //$files = $this->scan();
-
-    //if ($files === FALSE) {
-      // Failed to scan.
-      // TODO: Pop an error.
-   
-    //elseif (empty($files)) {
-      // No contents.
-      // TODO: Pop a warning.
-    
-
     $added = array();
     $object_class = static::getObjectClass();
     $info = $this->getIngestInfo();
@@ -273,23 +145,6 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
     return $added;
   }
 
-
-  /*$parameters = array(
-    'type' => drush_get_option('type'),
-    'target' => drush_get_option('target'),
-    'parent' => drush_get_option('parent', variable_get('islandora_repository_pid', 'islandora:root')),
-    'parent_relationship_uri' => drush_get_option('parent_relationship_uri', 'info:fedora/fedora-system:def/relations-external#'),
-    'parent_relationship_pred' => drush_get_option('parent_relationship_pred', 'isMemberOfCollection'),
-    'namespace' => drush_get_option('namespace'),
-    'zip_encoding' => drush_get_option('zip_encoding'),
-  );
-
-  if ($content_models = drush_get_option('content_models', FALSE)) {
-    $parameters['content_models'] = explode(',', $content_models);
-  }
-  else {
-    $parameters['content_models'] = array();
-  }*/
   protected function getIngestInfo() {
     error_log('running getIngestInfo');
     $file = file_load($this->parameters['source_data']);
@@ -595,8 +450,6 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
    * Gets the label not empty; otherwise, grabs a title from the MODS.
    */
   protected function getTitle() {
-   
-      
     return trim($this->objectInfo['data'][$this->preprocessorParameters['object_maping']['labelmap_row']['labelmap']]);
   }
 
@@ -631,110 +484,6 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
     return $processor->transformToXML($input);
   }
 
-  /**
-   * Function to get the mods.
-   */
-  protected function getMods() {
-    if (!isset($this['MODS'])) {
-      $dir = drupal_get_path('module', 'islandora_batch');
-      // TODO: Create the MODS datastream on this object.
-      $mods_datastream = $this->constructDatastream('MODS', 'M');
-      $mods_datastream->mimetype = 'application/xml';
-      $mods_datastream->label = 'MODS Record';
-
-      // If we have an XML stream which is:
-      if (isset($this->objectInfo['xml'])) {
-        $xml = file_get_contents($this->objectInfo['xml']->uri);
-
-        if ($xml) {
-          $s_xml = new SimpleXMLElement($xml);
-          // MODS, set.
-          if ($s_xml->getName() == 'mods') {
-            // XXX: Should probably create a resource entry.
-            $mods_datastream->setContentFromFile($this->objectInfo['xml']->uri, FALSE);
-          }
-          // MARCXML, transform to MODS and set.
-          elseif (in_array($s_xml->getName(), array('collection', 'record'))) {
-            $mods_datastream->content = static::runXslTransform(array(
-              'input' => $xml,
-              'xsl' => $dir . '/transforms/MARC21slim2MODS3-4.xsl',
-            ));
-          }
-          // DC, transform to MODS and set.
-          elseif ($s_xml->getName() == 'dc') {
-            $mods_datastream->content = static::runXslTransform(array(
-              'input' => $xml,
-              'xsl' => $dir . '/transforms/simpleDC2MODS.xsl',
-            ));
-          }
-          // Unrecognized format...
-          else {
-            // Do nothing?
-          }
-        }
-      }
-
-      // We use some Java code from LoC to transform binary MARC to MODS.
-      if (!isset($mods_datastream->content) && isset($this->objectInfo['mrc'])) {
-        // Generate some MODS from binary MARC.
-        // Get the java executable.
-        $java = variable_get('islandora_batch_java', 'java');
-        $temp_file_marc = tempnam('/tmp', 'binmrc');
-        $temp_file_mods = tempnam('/tmp', 'mods');
-
-        // Copy the file, so we're sure it's accessible on the filesystem.
-        copy($this->objectInfo['mrc']->uri, $temp_file_marc);
-        $absolute = realpath($dir);
-
-        // The command to run.
-        $command = "$java -cp $absolute/transforms/marcxml/marcxml.jar:$absolute/transforms/marcxml/marc4j.jar gov.loc.marcxml.MARC2MODS $temp_file_marc $temp_file_mods";
-
-        // Run the command.
-        $proc = popen($command, 'r');
-        pclose($proc);
-
-        // Load the output into a DOMDocument.
-        $doc = new DOMDocument();
-        $doc->load($temp_file_mods);
-
-        // Drop the temp.
-        unlink($temp_file_marc);
-        unlink($temp_file_mods);
-
-        $mods_docs = $doc->getElementsByTagName('mods');
-        if ($mods_docs->length > 0) {
-          // Grab the first.
-          $mods = new DOMDocument();
-          $mods_node = $mods_docs->item(0);
-          $mods_node = $mods->importNode($mods_node, TRUE);
-          $mods->appendChild($mods_node);
-
-          // TODO: Transform dates to Solr format...  Or should this be left to
-          // a core hook?
-          // And put the content into the datastream.
-          $mods_datastream->content = $mods->saveXML();
-        }
-      }
-
-      if (!isset($mods_datastream->content)) {
-        // If we do not yet have any XML, create a dumb MODS with just the
-        // title, and set it...
-        $title = $this->baseName;
-
-        $mods_datastream->content = <<<EOXML
-<mods xmlns:mods="http://www.loc.gov/mods/v3" xmlns="http://www.loc.gov/mods/v3">
-  <titleInfo>
-    <title>$title</title>
-  </titleInfo>
-</mods>
-EOXML;
-      }
-
-      $this->ingestDatastream($mods_datastream);
-    }
-
-    return $this['MODS']->content;
-  }
   /**
    * Function to get dc.
    */
