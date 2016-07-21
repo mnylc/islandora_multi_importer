@@ -584,7 +584,7 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
     $this->relationships->add(ISLANDORA_RELS_EXT_URI, 'isPageNumber', trim($this->objectInfo['data'][$this->preprocessorParameters['object_maping']['sequencemap_row']['sequencemap']]), RELS_TYPE_PLAIN_LITERAL);
     $this->relationships->add(ISLANDORA_RELS_EXT_URI, 'isSection', '1', RELS_TYPE_PLAIN_LITERAL);
     // @TODO fetch the language from somewhere?
-    $this->relationships->add(ISLANDORA_RELS_EXT_URI, 'hasLanguage', 'en', RELS_TYPE_PLAIN_LITERAL);
+    $this->relationships->add(ISLANDORA_RELS_EXT_URI, 'hasLanguage', 'eng', RELS_TYPE_PLAIN_LITERAL);
   }
 
   /**
