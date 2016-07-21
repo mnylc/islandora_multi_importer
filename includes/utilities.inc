@@ -8,8 +8,6 @@
  * @author Diego Pino Navarro
  */
 
-@include_once 'sites/all/libraries/phpexcel/PHPExcel.php';
-
 /**
  * Read Tabulated data into array.
  *
