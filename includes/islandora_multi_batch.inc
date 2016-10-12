@@ -342,10 +342,13 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
             $twig_input['data'] =  array('data' => array_combine($this->preprocessorParameters['data']['headers'], $this->objectInfo['data']));
             // @TODO should we validate the template again here?
             $output = islandora_multi_importer_twig_process($twig_input);
-            $newfileName="$dsid_".$method[0].'_'.urlencode($this->objectInfo['pid']).'_'.time().'.xml';
+            
+            // We need to make sure that $output is in fact an valid XML file
+            $newfileName="{$dsid}"."_".$method[0].'_'.urlencode($this->objectInfo['pid']).'_'.time().'.xml';
             //$tmp_directory = islandora_multi_importer_temp_directory();
             $newfile = file_save_data($output,  "public://" . $newfileName, FILE_EXISTS_RENAME);
             // We are assumming the twig template complies with mimetype. @TODO enforce this somehow
+            
             $file[] = $newfile;
             $datastreams[$dsid] = array(
               'dsid' => $dsid,
