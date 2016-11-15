@@ -1,6 +1,6 @@
 # islandora_multi_importer
 
-## DCMNY user documentation and additional resources
+### DCMNY admin documentation 
 
 [Multi-Importer Admin Instructions for DCMNY Administrators] (https://docs.google.com/document/d/18oB6sX-8s6sIScgUf7RbkFFlJ52Y9k_f9FcsaWvDJ7s/edit?usp=sharing)
 
