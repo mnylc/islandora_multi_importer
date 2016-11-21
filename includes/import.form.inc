@@ -169,7 +169,7 @@ function islandora_multi_importer_previs_form($form, &$form_state, &$file_data) 
 
   $per_page = 20;
   $previous_page = isset($form_state['storage']['values']['general']['previous_page']) ? $form_state['storage']['values']['general']['previous_page'] : 0;
-  $page = isset($form_state['values']['step2']['file_content']['page']) ? $form_state['values']['step2']['file_content']['page']: 0;
+  $page = isset($form_state['values']['step2']['file_content']['page']) ? $form_state['values']['step2']['file_content']['page'] : 0;
  
   //Only if data is empty or previous page different to current run this expensive code
   if (($page != $previous_page) || empty($file_data)) {
@@ -182,7 +182,7 @@ function islandora_multi_importer_previs_form($form, &$form_state, &$file_data) 
 
   //Multistep form gets broken by pager. Lets make a simple drop down
   $numpages = ceil($file_data['totalrows']/$per_page);
-  $pages = range(0,$numpages);
+  $pages = range(1, $numpages);
   
   $form['file_content'] = array(
     '#type' => 'fieldset',
