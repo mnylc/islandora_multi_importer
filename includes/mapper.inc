@@ -66,11 +66,12 @@ function islandora_multi_importer_mapper_get_derivatives($cmodel) {
       array($cmodel),
       array()
     );
-    foreach (islandora_build_hook_list(ISLANDORA_DERIVATIVE_CREATION_HOOK, array($cmodel)) as $hook) {
-      drupal_alter($hook, $derivatives);
-    }
-    uasort($derivatives, 'drupal_sort_weight');
-    return $derivatives;
+  $cmodel_object = islandora_object_load($cmodel);
+  foreach (islandora_build_hook_list(ISLANDORA_DERIVATIVE_CREATION_HOOK, array($cmodel)) as $hook) {
+    drupal_alter($hook, $derivatives, $cmodel_object);
+  }
+  uasort($derivatives, 'drupal_sort_weight');
+  return $derivatives;
 }
 
 
