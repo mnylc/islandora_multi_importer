@@ -110,6 +110,7 @@ class TwigTemplateDatabase {
       $object = new stdClass();
       $object->name = $twig_name;
       $object->twig = trim($twigTemplate);
+      $object->updated = time();
       return drupal_write_record(self::TABLE, $object) !== FALSE;
     }
     return FALSE;
@@ -151,7 +152,7 @@ class TwigTemplateDatabase {
     if (self::Exists($twig_name)) {
      
       $num = db_update(self::TABLE)
-        ->fields(array('twig' => $twigTemplate))
+        ->fields(array('twig' => $twigTemplate, 'updated' => time()))
         ->condition('name', $twig_name)
         ->execute();
       if ($num) {
