@@ -13,9 +13,6 @@
  */
 class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
 
-  // Change to FALSE if one wants to take control over hierarchical structures.
-  // @todo Make zip scan respect this.
-  public $recursiveScan = TRUE;
   protected $itemClass = "IslandoraMultiBatchObject";
   protected static $internal_pidcache = array();//We need PIDS generated on getingestinfo
   
