@@ -45,6 +45,7 @@ function islandora_multi_importer_mapper_check_cmodels($cmodels) {
  */
 function islandora_multi_importer_mapper_get_derivatives($cmodel) {
     module_load_include('inc', 'islandora', 'includes/utilities');
+    module_load_include('inc', 'islandora_multi_importer', 'includes/FakeObject');
    /* $options
     *   An array of parameters containing:
     *   - force: Bool denoting whether we are forcing the generation of
@@ -66,8 +67,15 @@ function islandora_multi_importer_mapper_get_derivatives($cmodel) {
       array($cmodel),
       array()
     );
+    $fakeabstractobject = new FakeObject();
     foreach (islandora_build_hook_list(ISLANDORA_DERIVATIVE_CREATION_HOOK, array($cmodel)) as $hook) {
-      drupal_alter($hook, $derivatives);
+      // This hooks have 3 parameters, which goes against the recomendations of
+      // https://api.drupal.org/api/drupal/includes%21module.inc/function/drupal_alter/7.x
+      // Also, second argument, the third if using drupal_alter, should be an 
+      // Islandora Object, but in all cases that should default to NULL
+      // on an API level and implementation one which we "fix"
+      // here by passing it as a fake abstract derived object.
+      drupal_alter($hook, $derivatives, $fakeabstractobject);
     }
     uasort($derivatives, 'drupal_sort_weight');
     return $derivatives;
