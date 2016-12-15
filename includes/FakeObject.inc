@@ -53,28 +53,26 @@ class FakeObject extends AbstractObject {
   */
   public function ingestDatastream(&$ds) { return FALSE;}
   
-  public function offsetExists($offset) 
-  { 
+  public function offsetExists($offset) { 
 
   } 
 
-  public function offsetSet($offset, $value) 
-  { 
+  public function offsetSet($offset, $value) { 
 
   } 
 
-  public function offsetGet($offset) 
-  { 
+  public function offsetGet($offset) { 
 
   } 
 
-  public function offsetUnset($offset) 
-  { 
+  public function offsetUnset($offset) { 
 
   } 
+  
   public function count() {
     return 0;
   }
+  
   public function getIterator() {
     
   }
