@@ -30,7 +30,7 @@ function islandora_multi_importer_form(array $form, array &$form_state) {
   $step = empty($form_state['storage']['step']) ? 1 : $form_state['storage']['step'];
  
   $form_state['storage']['step'] = $step;
-  //dpm($form_state);
+  //kpr($form_state);
   $step_forms = array();
   switch ($step) {
       case 1:
@@ -118,7 +118,7 @@ function islandora_multi_importer_form(array $form, array &$form_state) {
     
     $form = $step_forms;
     $form['#tree'] = TRUE;
-    //dpm($form);
+    //kpr($form);
     
     return $form;
 }
@@ -287,7 +287,7 @@ function islandora_multi_importer_twig_form($form, &$form_state, $file_data) {
     $twig->parse($twig->tokenize($twig_template));
   } 
   catch (Exception $e) {
-    dpm(get_class($e));
+    kpr(get_class($e));
   }
   catch (Twig_Error_Runtime $e) {
      $validated = false;
@@ -644,7 +644,10 @@ function islandora_multi_importer_cmodeldsmapping_form(&$form_state, $file_data)
         //Todo, add other mime types we can create with Twig (RDF, turtle, html, whatever is not binary)
        
          if (array_intersect($dsidinfo['mime'], array('text/xml','application/xml','rdf/xml','application/rdf+xml','text/plain'))) {
-          $options['Use Twig Template']= array_combine(array_map($prefix_options, $template_options, array_fill(0, count($template_options),"template|")), $template_options);
+           //in case no template is there yet (first install)?
+          if (!empty($template_options)) {
+            $options['Use Twig Template']= array_combine(array_map($prefix_options, $template_options, array_fill(0, count($template_options),"template|")), $template_options);
+          }
         }
         
         //Fetch Derivative options from computed ones (if any)
@@ -853,8 +856,6 @@ function islandora_multi_importer_form_submit($form, &$form_state) {
     }
   }
 
-
-
   // Handle the ingest buttom
   if ($form_state['triggering_element']['#value'] == t('Ingest')){
     // Check if a ZIP file needs to be uploaded
@@ -890,10 +891,11 @@ function islandora_multi_importer_form_submit($form, &$form_state) {
     }
    
     $connection = islandora_get_tuque_connection();
+    //kpr($parameters);
     $preprocessor = new IslandoraMultiBatch($connection, $parameters);
-  // Pass the preprocessor off to run.
+    // Pass the preprocessor off to run.
     $preprocessed = islandora_batch_handle_preprocessor($preprocessor);
-//islandora_multi_importer_startprocessing($parameters);
+    //islandora_multi_importer_startprocessing($parameters);
     $form_state['rebuild'] = TRUE;
     return $form;
   }
