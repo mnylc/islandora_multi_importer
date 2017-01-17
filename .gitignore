@@ -1,2 +1,12 @@
 
 vendor/*
+
+.idea/workspace.xml
+
+.idea/modules.xml
+
+.idea/vcs.xml
+
+.idea/islandora_multi_importer.iml
+
+.idea/copyright/profiles_settings.xml
