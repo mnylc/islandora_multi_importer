@@ -222,6 +222,22 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
           $i = 0;
           while ($notPID) {
             $parentup = $file_data_all['data'][$parent][$this->parameters['object_maping']['parentmap_row']['parentmap']];
+            
+            // Probably the simples approach for breaking a knott 
+            // a.k.a infinite loop, invalidating the whole parentship 
+            // chain for good.
+            $inaloop = array_key_exists($parentup, $parentchilds);
+            // if $inaloop === true means we already traversed this branch
+            // so we are in a loop and all our original child and it's 
+            // parent objects are invalid.
+            if ($inaloop) {
+              $invalid = $invalid + $parentchilds;
+              unset($objectInfo);
+              $notPID = FALSE;
+              break;
+            }
+            
+            
             $parentchilds[$parentup] = $parentup;
             if (islandora_is_valid_pid(trim($parentup))) {
               $namespace = isset($namespace_hash[$parentup][$objectInfo['cmodel']])
@@ -232,6 +248,7 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
               $namespace_count[$namespace] = isset($namespace_hash[$namespace]) ? $namespace_hash[$namespace]++ : 1;
               $objectInfo['namespace'] = $namespace;
               $notPID = FALSE;
+              break;
             }
             elseif (empty(trim($parent))) {
 
@@ -244,6 +261,7 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
               $notPID = FALSE;
             }
             else {
+              // This a simple accumulator, means all is well, parent is still an index
               $parent_hash[$parentup][$parent] = $parent;
             }
             $parent = $parentup;
