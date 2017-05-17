@@ -444,7 +444,21 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
                     error_log('not found for ' . $this->id);
                     // The file does not exist.
                     // @TODO add this to errors
+                    // try to get it now from remote
+                    error_log('will try to get '.$this->objectInfo['data'][$method[1]]. 'remotely');
+                    $fileurl = islandora_multi_importer_remote_file_get(trim($this->objectInfo['data'][$method[1]]));
+                    if ($fileurl) {
+                      $datastreams[$dsid] = array(
+                        'dsid' => $dsid,
+                        'label' => "$dsid datastream",
+                        'mimetype' => $this->getMimetype(drupal_basename($fileurl)),
+                        'datastream_file' => $fileurl,
+                        'filename' => drupal_basename($fileurl),
+                        'control_group' => 'M',
+                      // 'file' => $file,.
+                      );
                     break;
+                    }
                   }
                   $datastreams[$dsid] = array(
                     'dsid' => $dsid,
