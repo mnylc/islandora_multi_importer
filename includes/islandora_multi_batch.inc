@@ -34,7 +34,7 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
    * Accessor for the Proccessed Objects lists.
    */
   public function getProcessedObjectsInfo() {
-    return $this->$processedObjectsInfo;
+    return $this->processedObjectsInfo;
   }
 
   /**
@@ -302,7 +302,7 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
       }
     }
     // Keep track of what could be processed and which ones not.
-    $this->$processedObjectsInfo = array(
+    $this->processedObjectsInfo = array(
       'success' => array_keys($info),
       'error' => array_keys($invalid),
     );
