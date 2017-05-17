@@ -936,6 +936,15 @@ function islandora_multi_importer_form_submit($form, &$form_state) {
     $preprocessor = new IslandoraMultiBatch($connection, $parameters);
     // Pass the preprocessor off to run.
     $preprocessed = islandora_batch_handle_preprocessor($preprocessor);
+
+    drupal_set_message(t('You are all set(id = @set)!', array('@set' => $preprocessor->getSetId())), 'status');
+    $theProcessedInfo = $preprocessor->getProcessedObjectsInfo();
+    $good_objects = format_plural(count($theProcessedInfo['success']), '%num Objects added successfully to set', '%num Object added successfully to set', array('%num' => count($theProcessedInfo['success'])));
+    $bad_objects = format_plural(count($theProcessedInfo['error']), 'Row with issue(s) that could not be translated to Object: %errored', '%success Object added successfully to set', array('%errored' => implode(",", $theProcessedInfo['error'])));
+    if (count($theProcessedInfo['error']) > 0) {
+      drupal_set_message($bad_objects, 'error');
+    }
+    drupal_set_message($good_objects, 'status');
     // islandora_multi_importer_startprocessing($parameters);
     $form_state['rebuild'] = TRUE;
     return $form;

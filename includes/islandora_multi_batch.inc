@@ -16,6 +16,14 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
   protected $itemClass = "IslandoraMultiBatchObject";
 
   /**
+   * Keeps track of success and failed objects in set.
+   *
+   * @var processedObjects
+   *   An array of all processed Objects.
+   */
+  protected $processedObjectsInfo = array();
+
+  /**
    * We need PIDS generated on getingestinfo.
    *
    * @var internal_pidcache
@@ -23,12 +31,19 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
   protected static $internalPidcache = array();
 
   /**
+   * Accessor for the Proccessed Objects lists.
+   */
+  public function getProcessedObjectsInfo() {
+    return $this->$processedObjectsInfo;
+  }
+
+  /**
    * Static function to get PIDs.
    *
    * @param string $namespace
-   *    A valid fedora pid namespace.
+   *   A valid fedora pid namespace.
    * @param int $cachesize
-   *    Size of the temp cache for identifiers for this
+   *   Size of the temp cache for identifiers for this
    *    namespace.
    *
    * @return string
@@ -51,9 +66,9 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
    * Try to get the namespace from the collection policy.
    *
    * @param string $parent_pid
-   *    A PID.
+   *   A PID.
    * @param string $cmodel
-   *    A CMODEL.
+   *   A CMODEL.
    *
    * @return string|null
    *   The namespace with which the object should be ingested.
@@ -96,7 +111,7 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
    * Try to get the cmodels from the parent objet.
    *
    * @param string $parent_pid
-   *    A PID.
+   *   A PID.
    *
    * @return string|null
    *   The namespace with which the object should be ingested.
@@ -222,13 +237,13 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
           $i = 0;
           while ($notPID) {
             $parentup = $file_data_all['data'][$parent][$this->parameters['object_maping']['parentmap_row']['parentmap']];
-            
-            // Probably the simples approach for breaking a knott 
-            // a.k.a infinite loop, invalidating the whole parentship 
+
+            // Probably the simples approach for breaking a knott
+            // a.k.a infinite loop, invalidating the whole parentship
             // chain for good.
             $inaloop = array_key_exists($parentup, $parentchilds);
-            // if $inaloop === true means we already traversed this branch
-            // so we are in a loop and all our original child and it's 
+            // If $inaloop === true means we already traversed this branch
+            // so we are in a loop and all our original child and it's
             // parent objects are invalid.
             if ($inaloop) {
               $invalid = $invalid + $parentchilds;
@@ -236,8 +251,7 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
               $notPID = FALSE;
               break;
             }
-            
-            
+
             $parentchilds[$parentup] = $parentup;
             if (islandora_is_valid_pid(trim($parentup))) {
               $namespace = isset($namespace_hash[$parentup][$objectInfo['cmodel']])
@@ -261,7 +275,8 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
               $notPID = FALSE;
             }
             else {
-              // This a simple accumulator, means all is well, parent is still an index
+              // This a simple accumulator, means all is well,
+              // parent is still an index.
               $parent_hash[$parentup][$parent] = $parent;
             }
             $parent = $parentup;
@@ -286,6 +301,12 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
         $objectInfo['parent'] = $info[$objectInfo['parent']]['pid'];
       }
     }
+    // Keep track of what could be processed and which ones not.
+    $this->$processedObjectsInfo = array(
+      'success' => array_keys($info),
+      'error' => array_keys($invalid),
+    );
+
     return $info;
   }
 
@@ -315,7 +336,7 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
    */
   public function __construct(IslandoraTuque $connection, $base_name, $object_info, $preprocessor_parameters) {
     parent::__construct(NULL, $connection->repository);
-    // Checks if DC is set a a derivative, if so,
+    // Checks if DC is set as derivative, if so,
     // we can safely let the derivative process deal with this.
     $this->deriveDC = !variable_get('xml_form_builder_use_default_dc_xslts', FALSE);
     $this->modsToDcTransform = drupal_get_path('module', 'islandora_batch') . '/transforms/mods_to_dc.xsl';
