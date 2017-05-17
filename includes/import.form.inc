@@ -940,7 +940,7 @@ function islandora_multi_importer_form_submit($form, &$form_state) {
     drupal_set_message(t('You are all set(id = @set)!', array('@set' => $preprocessor->getSetId())), 'status');
     $theProcessedInfo = $preprocessor->getProcessedObjectsInfo();
     $good_objects = format_plural(count($theProcessedInfo['success']), '%num Objects added successfully to set', '%num Object added successfully to set', array('%num' => count($theProcessedInfo['success'])));
-    $bad_objects = format_plural(count($theProcessedInfo['error']), 'Row with issue(s) that could not be translated to Object: %errored', '%success Object added successfully to set', array('%errored' => implode(",", $theProcessedInfo['error'])));
+    $bad_objects = format_plural(count($theProcessedInfo['error']), 'Row with issue(s) that could not be translated to Object: %errored', 'Rows with issue(s) that could not be translated to Objects: %errored', array('%errored' => implode(",", $theProcessedInfo['error'])));
     if (count($theProcessedInfo['error']) > 0) {
       drupal_set_message($bad_objects, 'error');
     }
