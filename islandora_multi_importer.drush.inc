@@ -3,6 +3,7 @@
 /**
  * @file
  * Drush hooks.
+ * @author Diego Pino Navarro
  */
 
 /**
@@ -11,25 +12,23 @@
 function islandora_multi_importer_drush_command() {
   $items = array();
 
-  $items['islandora-multi-importer-zeroMQboot'] = array(
-    'aliases' => array('imboot'),
+  $items['islandora-multi-importer-zeromqboot'] = array(
+    'aliases' => array('imzmqboot'),
     'description' => 'Spawn an Islandora Multi Importer ZeroMQ server/workers ensamble',
     'drupal dependencies' => array('islandora_multi_importer'),
-    'callback' => 'drush_islandora_multi_importer_zeroMQboot',
+    'callback' => 'drush_islandora_multi_importer_zeromqboot',
     'examples' => array(
-      'drush -v --user=admin islandora_multi_importer_zeroMQboot',
+      'drush -v --user=admin islandora_multi_importer_zeromqboot',
     ),
     'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_LOGIN,
   );
   return $items;
 }
 
-
 /**
- *
  * Builds a preprocessor, and passes it off to a preprocessor handler.
  */
-function drush_islandora_multi_importer_zeroMQboot() {
+function drush_islandora_multi_importer_zeromqboot() {
   // XXX: Due to how Drush bootstrapping works, the connection may be created
   // without credentials (when your site's front page is
   // 'islandora/object/some:object', for example). Resetting to ensure a new
@@ -39,5 +38,4 @@ function drush_islandora_multi_importer_zeroMQboot() {
   drupal_static_reset('islandora_get_tuque_connection');
   $connection = islandora_get_tuque_connection();
   $boot = islandora_multi_importer_zeroMQ_boot($connection);
-  return;
 }

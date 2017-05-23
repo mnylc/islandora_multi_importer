@@ -3,18 +3,18 @@
 /**
  * @file
  * Creates Islandora Objects from tabulated data.
+ * @author Diego Pino Navarro
  */
 
 // Permissions.
 define('ISLANDORA_MULTI_IMPORTER_CREATE', 'Import Objects using Islandora Multi Importer');
 define('ISLANDORA_MULTI_IMPORTER_UPDATE', 'Update Objects using Islandora Multi Importer');
 
-
 /**
  * Implements hook_init().
  */
 function islandora_multi_importer_init() {
-    require_once(__DIR__ ."/vendor/autoload.php");
+  require_once __DIR__ . "/vendor/autoload.php";
 }
 
 /**
@@ -30,12 +30,6 @@ function islandora_multi_importer_menu() {
       'file' => 'includes/import.form.inc',
       'access arguments' => array(ISLANDORA_MULTI_IMPORTER_CREATE),
     ),
-  /*  'multi_importer_test' => array(
-      'title' => 'Multi Import Objects Test',
-      'type' => MENU_NORMAL_ITEM,
-      'page callback' => 'islandora_multi_importer_test',
-      'access arguments' => array(ISLANDORA_MULTI_IMPORTER_CREATE),
-    ),*/
     'multi_importer/colautocomplete' => array(
       'page callback' => 'islandora_multi_importer_get_collection_autocomplete',
       'access callback' => TRUE,
@@ -72,6 +66,7 @@ function islandora_multi_importer_permission() {
     ),
   );
 }
+
 /**
  * Implements hook_theme().
  */
@@ -85,6 +80,9 @@ function islandora_multi_importer_theme() {
   );
 }
 
+/**
+ * Legacy test function, keep around until stable release.
+ */
 function islandora_multi_importer_test() {
   $object = islandora_object_load('diego:17b07d97-d14a-4f6a-ac6e-bd36a69f3be3');
   $dsid = 'TEST';
@@ -103,5 +101,3 @@ function islandora_multi_importer_test() {
   $ds->setContentFromFile($file2);
 
 }
-
-

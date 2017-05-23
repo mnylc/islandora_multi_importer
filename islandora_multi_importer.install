@@ -31,7 +31,7 @@ function islandora_multi_importer_schema() {
       ),
       'updated' => array(
         'description' => 'Timestamp this Template was updated',
-        'mysql_type' => 'timestamp',
+        'type' => 'int',
         'not null' => TRUE,
       ),
     ),
@@ -60,7 +60,7 @@ function islandora_multi_importer_schema() {
       ),
       'updated' => array(
         'description' => 'Timestamp this Template was updated',
-        'mysql_type' => 'timestamp',
+        'type' => 'int',
         'not null' => TRUE,
       ),
     ),
@@ -71,16 +71,4 @@ function islandora_multi_importer_schema() {
 }
 
 function islandora_multi_importer_enable() {
-  db_query('
-    ALTER TABLE {islandora_multi_importer_twig_templates} 
-    MODIFY updated TIMESTAMP NOT NULL 
-    DEFAULT CURRENT_TIMESTAMP 
-    ON UPDATE CURRENT_TIMESTAMP'
-  );
-  db_query('
-    ALTER TABLE {islandora_multi_importer_presets} 
-    MODIFY updated TIMESTAMP NOT NULL 
-    DEFAULT CURRENT_TIMESTAMP 
-    ON UPDATE CURRENT_TIMESTAMP'
-  );
 }

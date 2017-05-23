@@ -2,59 +2,79 @@
 
 /**
  * @file
- * A batch ingest implement, (preprocessor and object) for twig template based Multi importer.
+ * A batch ingest implement, (preprocessor and object) for Multi importer.
  *
  * Works similar to other importers derived from islandora_importer module.
+ * @author Diego Pino Navarro
  */
 
 /**
- * A class which is capable of using Twig templates and tabulated row data to build an object.
- *
+ * A class that uses Twig templates and tabulated data to build objects.
  */
 class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
 
-  // Change to FALSE if one wants to take control over hierarchical structures.
-  // @todo Make zip scan respect this.
-  public $recursiveScan = TRUE;
   protected $itemClass = "IslandoraMultiBatchObject";
-  protected static $internal_pidcache = array();//We need PIDS generated on getingestinfo
-  
+
   /**
-   *  Static function to get PIDs. 
+   * Keeps track of success and failed objects in set.
+   *
+   * @var processedObjects
+   *   An array of all processed Objects.
+   */
+  protected $processedObjectsInfo = array();
+
+  /**
+   * We need PIDS generated on getingestinfo.
+   *
+   * @var internal_pidcache
+   */
+  protected static $internalPidcache = array();
+
+  /**
+   * Accessor for the Proccessed Objects lists.
+   */
+  public function getProcessedObjectsInfo() {
+    return $this->processedObjectsInfo;
+  }
+
+  /**
+   * Static function to get PIDs.
    *
    * @param string $namespace
-   *    A valid fedora pid namespace
-   *
+   *   A valid fedora pid namespace.
    * @param int $cachesize
-   *    Size of the temp cache for identifiers for this
-   *    namespace.  
+   *   Size of the temp cache for identifiers for this
+   *    namespace.
    *
-   * @return string 
+   * @return string
    *   a PID for this namespace.
    */
   protected function getInternalIdentifier($namespace, $cachesize) {
     module_load_include('inc', 'islandora', 'includes/utilities');
-    if (empty(self::$internal_pidcache[$namespace])) {
+    if (empty(self::$internalPidcache[$namespace])) {
       // Get enough PIDs given an initial $cachesize
       // (plus one, so we'll always get at least one).
-      //Instead of using the build in parent function use the Islandora API to get the identifier using de uuid variable
-      self::$internal_pidcache[$namespace] = (array) $this->connection->repository->getNextIdentifier($namespace, variable_get('islandora_basic_collection_generate_uuid', FALSE), $cachesize + 1);
+      // Instead of using the build in parent function
+      // use the Islandora API to get the identifier using de uuid variable.
+      self::$internalPidcache[$namespace] = (array) $this->connection->repository->getNextIdentifier($namespace, variable_get('islandora_basic_collection_generate_uuid', FALSE), $cachesize + 1);
     }
 
-    return array_shift(self::$internal_pidcache[$namespace]);
+    return array_shift(self::$internalPidcache[$namespace]);
   }
 
   /**
    * Try to get the namespace from the collection policy.
    *
-   * @param string
-   *    A PID
+   * @param string $parent_pid
+   *   A PID.
+   * @param string $cmodel
+   *   A CMODEL.
    *
-   * @return string|NULL
+   * @return string|null
    *   The namespace with which the object should be ingested.
    *   NULL if we use the Fedora configured default.
    */
-  protected function determineNamespacebyPID($parent_pid, $cmodel) {
+  protected function determineNamespacebyPid($parent_pid, $cmodel) {
     // Get namespace based on collection.
     $collection_policies =& drupal_static(__METHOD__, array());
     // Parameter not set.
@@ -66,10 +86,10 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
         $collection_policies[$parent_pid] = new CollectionPolicy($policy_stream->content);
       }
       else {
-        // If not collection, just return the namespace of the 
+        // If not collection, just return the namespace of the
         // Parent PID, assuming they will inherit, like pages, etc?
         // @TODO maybe we need a recursive namespace thing until we hit a collection?
-        $namespace_tmp =  explode(':', $parent_pid);
+        $namespace_tmp = explode(':', $parent_pid);
         $namespace = trim($namespace_tmp[0]);
       }
     }
@@ -86,13 +106,14 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
     }
     return $namespace;
   }
+
   /**
    * Try to get the cmodels from the parent objet.
    *
-   * @param string
-   *    A PID
+   * @param string $parent_pid
+   *   A PID.
    *
-   * @return string|NULL
+   * @return string|null
    *   The namespace with which the object should be ingested.
    *   NULL if we use the Fedora configured default.
    */
@@ -106,15 +127,16 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
       $cmodels[$parent_pid] = $parent->models;
     }
     else {
-      $cmodels[$parent_pid] = FALSE; // Means the object does not exist. So error
+      // Means the object does not exist. So error.
+      $cmodels[$parent_pid] = FALSE;
     }
-    
+
     if (isset($cmodels[$parent_pid])) {
       $current_cmodel = $cmodels[$parent_pid];
     }
     return $current_cmodel;
   }
-  
+
   /**
    * Get the name of the class to instantiate for the batch operations.
    */
@@ -134,7 +156,7 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
       $ingest_object->id = $object_info['pid'];
       try {
         $ingest_object->addRelationships();
-        $this->addToDatabase($ingest_object, $ingest_object->getResources(),$object_info['parent']);
+        $this->addToDatabase($ingest_object, $ingest_object->getResources(), $object_info['parent']);
         $added[] = $ingest_object;
       }
       catch (Exception $e) {
@@ -145,132 +167,177 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
     return $added;
   }
 
+  /**
+   * {@inheritdoc}
+   */
   protected function getIngestInfo() {
     error_log('running getIngestInfo');
     $file = file_load($this->parameters['source_data']);
     $file_path = drupal_realpath($file->uri);
-    $file_data_all = islandora_multi_importer_read_filedata($file_path, -1 , $offset = 0);
-    $this->parameters['data']['headers'] =  $file_data_all['headers'];
-    
+    $file_data_all = islandora_multi_importer_read_filedata($file_path, -1, $offset = 0);
+    $this->parameters['data']['headers'] = $file_data_all['headers'];
+
     if ($this->parameters['type'] == 'ZIP') {
       // We don't need to scan the whole zip file,
       // We will try to just fetch the filename comming from the data
-      // during datastream creation
+      // during datastream creation.
       $zipfile = file_load($this->parameters['source_binaries']);
       $this->parameters['zipfile'] = drupal_realpath($zipfile->uri);
-    }  
-    
+    }
+
     $namespace_hash = array();
-    $parent_hash = array(); // Keeps track of all parents and child that don't have a PID assigned
+    // Keeps track of all parents and child that don't have a PID assigned.
+    $parent_hash = array();
     $namespace_count = array();
     $info = array();
-    $invalid = array(); // Keeps track of invalid rows
-    foreach($file_data_all['data'] as $index => $row) {
-      //Each row will be an object
-     $objectInfo = array();
-     $objectInfo['cmodel'] = trim($row[$this->parameters['cmodel_source_field_index']]);
+    // Keeps track of invalid rows.
+    $invalid = array();
+    foreach ($file_data_all['data'] as $index => $row) {
+      // Each row will be an object.
+      $objectInfo = array();
+      $objectInfo['cmodel'] = trim($row[$this->parameters['cmodel_source_field_index']]);
       // Lets start by grouping by parents, namespaces and generate pids
-      // namespaces are inherited, so we just need to find collection objects in parent pid column
+      // namespaces are inherited, so we just need to find collection
+      // objects in parent pid column.
       $objectInfo['parent'] = trim($row[$this->parameters['object_maping']['parentmap_row']['parentmap']]);
       $objectInfo['data'] = $row;
       if (islandora_is_valid_pid($objectInfo['parent'])) {
         // If valid PID, let's try to fetch a valid namespace for current cmodel
-        // we will store all this stuff in a temp hash to avoid hitting this again and again
+        // we will store all this stuff in a temp hash to avoid hitting
+        // this again and again.
         $objectInfo['parent_cmodel'] = $this->getParentCmodel($objectInfo['parent']);
         if ($objectInfo['parent_cmodel']) {
           $namespace = isset($namespace_hash[$objectInfo['parent']][$objectInfo['cmodel']])
-            ? $namespace_hash[$objectInfo['parent']][$objectInfo['cmodel']] 
-            : $namespace_hash[$objectInfo['parent']][$objectInfo['cmodel']] = $this->determineNamespacebyPID($objectInfo['parent'], $objectInfo['cmodel']); 
-          //This keeps the count so our pidcache is exact. Nice
-          $namespace_count[$namespace]= isset($namespace_hash[$namespace]) ? $namespace_hash[$namespace]++ : 1;
+            ? $namespace_hash[$objectInfo['parent']][$objectInfo['cmodel']]
+            : $namespace_hash[$objectInfo['parent']][$objectInfo['cmodel']] = $this->determineNamespacebyPid($objectInfo['parent'], $objectInfo['cmodel']);
+          // This keeps the count so our pidcache is exact. Nice.
+          $namespace_count[$namespace] = isset($namespace_hash[$namespace]) ? $namespace_hash[$namespace]++ : 1;
           $objectInfo['namespace'] = $namespace;
         }
         else {
-          unset($objectInfo); // No parent cmodel, no object, can't create
+          // No parent cmodel, no object, can't create.
+          unset($objectInfo);
           $invalid = $invalid + array($index => $index);
         }
       }
       else {
-        // Means our parent object is a ROW index (referencing another row in the spreadsheet)
-        // So a different strategy is needed. We will need recurse until we find a non numeric parent.
+        // Means our parent object is a ROW index
+        // (referencing another row in the spreadsheet)
+        // So a different strategy is needed. We will need recurse
+        // until we find a non numeric parent.
         $notPID = TRUE;
         $parent = $objectInfo['parent'];
         $parent_hash[$parent][$index] = $index;
         $parentchilds = array();
         if ((!isset($invalid[$index])) && (!isset($invalid[$parent]))) {
-          // Only traverse if we don't have this index or the parent one in the invalid register
+          // Only traverse if we don't have this index or the parent one
+          // in the invalid register.
           $objectInfo['parent_cmodel'] = $file_data_all['data'][$parent][$this->parameters['cmodel_source_field_index']];
           $parentchilds = array();
           $i = 0;
-          while($notPID) {
+          while ($notPID) {
             $parentup = $file_data_all['data'][$parent][$this->parameters['object_maping']['parentmap_row']['parentmap']];
+
+            // Probably the simples approach for breaking a knott
+            // a.k.a infinite loop, invalidating the whole parentship
+            // chain for good.
+            $inaloop = array_key_exists($parentup, $parentchilds);
+            // If $inaloop === true means we already traversed this branch
+            // so we are in a loop and all our original child and it's
+            // parent objects are invalid.
+            if ($inaloop) {
+              $invalid = $invalid + $parentchilds;
+              unset($objectInfo);
+              $notPID = FALSE;
+              break;
+            }
+
             $parentchilds[$parentup] = $parentup;
             if (islandora_is_valid_pid(trim($parentup))) {
               $namespace = isset($namespace_hash[$parentup][$objectInfo['cmodel']])
-                ? $namespace_hash[$parentup][$objectInfo['cmodel']] 
-                : $namespace_hash[$parentup][$objectInfo['cmodel']] = $this->determineNamespacebyPID($parentup, $objectInfo['cmodel']
-              ); 
-              //This keeps the count so our pidcache is exact. Nice
-              $namespace_count[$namespace]= isset($namespace_hash[$namespace]) ? $namespace_hash[$namespace]++ : 1;
-              $objectInfo['namespace'] = $namespace; 
-              $notPID = false;
+                ? $namespace_hash[$parentup][$objectInfo['cmodel']]
+                : $namespace_hash[$parentup][$objectInfo['cmodel']] = $this->determineNamespacebyPid($parentup, $objectInfo['cmodel']
+              );
+              // This keeps the count so our pidcache is exact. Nice.
+              $namespace_count[$namespace] = isset($namespace_hash[$namespace]) ? $namespace_hash[$namespace]++ : 1;
+              $objectInfo['namespace'] = $namespace;
+              $notPID = FALSE;
+              break;
             }
-            else if(empty(trim($parent))) {
-            
-              //We can't continue here
+            elseif (empty(trim($parent))) {
+
+              // We can't continue here
               // means there must be an error
-              // This will fail for any child object that is child of any of these parents
+              // This will fail for any child object that is
+              // child of any of these parents.
               $invalid = $invalid + $parentchilds + array($objectInfo['parent'] => $objectInfo['parent']);
               unset($objectInfo);
-              $notPID = false;
+              $notPID = FALSE;
             }
             else {
+              // This a simple accumulator, means all is well,
+              // parent is still an index.
               $parent_hash[$parentup][$parent] = $parent;
             }
             $parent = $parentup;
           }
-        } 
+        }
         else {
           unset($objectInfo);
         }
       }
-      
+
       if (isset($objectInfo) and !empty($objectInfo)) {
         $info[$index] = $objectInfo;
       }
     }
-  // Ok, maybe this is expensive, so let's try it first so, if not 
-  // @TODO optimize
- 
-  foreach($info as $index => &$objectInfo) {
-    
-    $namespace = $objectInfo['namespace'];
-    
-    $objectInfo['pid'] = isset($objectInfo['pid']) ? isset($objectInfo['pid']) : $this->getInternalIdentifier($namespace, $namespace_count[$namespace]);
-    // Is this object parent of someone?
-    if (isset($parent_hash[$objectInfo['parent']])) {
-         $objectInfo['parent'] =  $info[$objectInfo['parent']]['pid'];
+    // Ok, maybe this is expensive, so let's try it first so.
+    // TODO: optimize maybe?
+    foreach ($info as $index => &$objectInfo) {
+      $namespace = $objectInfo['namespace'];
+      $objectInfo['pid'] = isset($objectInfo['pid']) ? isset($objectInfo['pid']) : $this->getInternalIdentifier($namespace, $namespace_count[$namespace]);
+      // Is this object parent of someone?
+      if (isset($parent_hash[$objectInfo['parent']])) {
+        $objectInfo['parent'] = $info[$objectInfo['parent']]['pid'];
+      }
     }
-  }
-  return $info;
+    // Keep track of what could be processed and which ones not.
+    $this->processedObjectsInfo = array(
+      'success' => array_keys($info),
+      'error' => array_keys($invalid),
+    );
+
+    return $info;
   }
 
 }
-
+/**
+ * The Batch Object class.
+ */
 class IslandoraMultiBatchObject extends IslandoraBatchObject {
   protected $baseName;
   protected $objectInfo;
-  // Keys in objectInfo that are not to be datastreams.
+  /**
+   * Keys in objectInfo that are not to be datastreams.
+   *
+   * @var preprocessorParameters
+   */
   protected $preprocessorParameters;
-  // Path to MODS->DC XSLT.
+  /**
+   * Path to MODS->DC XSLT.
+   *
+   * @var modsToDcTransform
+   */
   public $modsToDcTransform;
   public $deriveDC;
+
   /**
    * Constructor for the IslandoraScanBatchObject.
    */
   public function __construct(IslandoraTuque $connection, $base_name, $object_info, $preprocessor_parameters) {
     parent::__construct(NULL, $connection->repository);
-    //Checks if DC is set a a derivative, if so, we can safely let the derivative process deal with this
+    // Checks if DC is set as derivative, if so,
+    // we can safely let the derivative process deal with this.
     $this->deriveDC = !variable_get('xml_form_builder_use_default_dc_xslts', FALSE);
     $this->modsToDcTransform = drupal_get_path('module', 'islandora_batch') . '/transforms/mods_to_dc.xsl';
     $this->baseName = $base_name;
@@ -294,7 +361,7 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
       file_save($file);
       file_usage_add($file, 'islandora_batch', 'islandora_batch_object', $this->getBatchId());
     }
-   
+
     foreach ($datastreams as $ds) {
       $ds_uri = isset($ds['file']) ?
         $ds['file']->uri :
@@ -319,113 +386,129 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
   protected function getDatastreams(&$errors = NULL, &$files = NULL) {
     module_load_include('inc', 'islandora', 'includes/utilities');
     module_load_include('inc', 'islandora_multi_importer', 'includes/utilities');
-    
+
     $datastreams = array();
-    
-    if (isset($this->preprocessorParameters['cmodel_mapping'][$this->objectInfo['cmodel']])) { 
-      foreach($this->preprocessorParameters['cmodel_mapping'][$this->objectInfo['cmodel']]['dsid']['rows'] as $dsid => $howtogenerate) {
+
+    if (isset($this->preprocessorParameters['cmodel_mapping'][$this->objectInfo['cmodel']])) {
+      foreach ($this->preprocessorParameters['cmodel_mapping'][$this->objectInfo['cmodel']]['dsid']['rows'] as $dsid => $howtogenerate) {
         if (!empty($howtogenerate['method']['data'])) {
           $method = explode("|", $howtogenerate['method']['data']);
-          switch($method[0]) {
+          switch ($method[0]) {
             case 'derivative':
-            //Nothing to do really, derivative processing will do the job
-            break;
+              // Nothing to do really, derivative processing will do the job.
+              break;
+
             case 'xslt':
-            // Deal with xslt transforms, we will leave this to after processing, 
-            // since we need the source datastreams to transform
-            break;
+              // Deal with xslt transforms, we will leave this to after
+              // processing, since we need the source datastreams to transform.
+              break;
+
             case 'template':
-            $twig_input = array();
-            $template = islandora_multi_importer_twig_fetch($method[1]); 
-            $twig_input['name'] = $method[1];
-            $twig_input['template'] = $template;
-            $twig_input['data'] =  array('data' => array_combine($this->preprocessorParameters['data']['headers'], $this->objectInfo['data']));
-            // @TODO should we validate the template again here?
-            $output = islandora_multi_importer_twig_process($twig_input);
-            
-            // We need to make sure that $output is in fact an valid XML file
-            $newfileName="{$dsid}"."_".$method[0].'_'.urlencode($this->objectInfo['pid']).'_'.time().'.xml';
-            //$tmp_directory = islandora_multi_importer_temp_directory();
-            $newfile = file_save_data($output,  "public://" . $newfileName, FILE_EXISTS_RENAME);
-            // We are assumming the twig template complies with mimetype. @TODO enforce this somehow
-            
-            $file[] = $newfile;
-            $datastreams[$dsid] = array(
-              'dsid' => $dsid,
-              'label' => "$dsid datastream",
-              'mimetype' => $this->preprocessorParameters['computed_cmodels'][$this->objectInfo['cmodel']][$dsid]['mime'][0],
-              'datastream_file' => drupal_realpath($newfile->uri),
-              'filename' => $newfileName,
-              'control_group' => 'M',
-              //'file' => $file,
-            );
-            break;
+              $twig_input = array();
+              $template = islandora_multi_importer_twig_fetch($method[1]);
+              $twig_input['name'] = $method[1];
+              $twig_input['template'] = $template;
+              $twig_input['data'] = array('data' => array_combine($this->preprocessorParameters['data']['headers'], $this->objectInfo['data']));
+              // @TODO should we validate the template again here?
+              $output = islandora_multi_importer_twig_process($twig_input);
+              // We need to make sure that $output is in fact an valid XML file.
+              $newfileName = "{$dsid}" . "_" . $method[0] . '_' . urlencode($this->objectInfo['pid']) . '_' . time() . '.xml';
+              // $tmp_directory = islandora_multi_importer_temp_directory();
+              $newfile = file_save_data($output, "public://" . $newfileName, FILE_EXISTS_RENAME);
+              // We are assumming the twig template complies with
+              // mimetype. TODO enforce this somehow.
+              $file[] = $newfile;
+              $datastreams[$dsid] = array(
+                'dsid' => $dsid,
+                'label' => "$dsid datastream",
+                'mimetype' => $this->preprocessorParameters['computed_cmodels'][$this->objectInfo['cmodel']][$dsid]['mime'][0],
+                'datastream_file' => drupal_realpath($newfile->uri),
+                'filename' => $newfileName,
+                'control_group' => 'M',
+              // 'file' => $file,.
+              );
+              break;
+
             case 'column':
-            // this means our source field contains a file path or and url
-            // if file path, we need to know if local of ZIP
-            // if URL just fetch the damn thing
-            if ($this->preprocessorParameters['type'] == 'ZIP') {
-              // Fetch one file from provided ZIP file
-             
-              $path_info = pathinfo(trim($this->objectInfo['data'][$method[1]]));
-              $z = new ZipArchive();
-              error_log($this->preprocessorParameters['zipfile']);
-              if ($z->open($this->preprocessorParameters['zipfile'])) {
+              // This means our source field contains a file path or and url
+              // if file path, we need to know if local of ZIP
+              // if URL just fetch the damn thing.
+              if ($this->preprocessorParameters['type'] == 'ZIP') {
+                // Fetch one file from provided ZIP file.
+                $path_info = pathinfo(trim($this->objectInfo['data'][$method[1]]));
+                $z = new ZipArchive();
+                error_log($this->preprocessorParameters['zipfile']);
+                if ($z->open($this->preprocessorParameters['zipfile'])) {
                   $fp = $z->getStream($this->objectInfo['data'][$method[1]]);
-                  if(!$fp) {
-                    error_log('not found for '.$this->id);
-                    // the file does not exist
-                    //@TODO add this to errors
+                  if (!$fp) {
+                    error_log('not found for ' . $this->id);
+                    // The file does not exist.
+                    // @TODO add this to errors
+                    // try to get it now from remote
+                    error_log('will try to get '.$this->objectInfo['data'][$method[1]]. 'remotely');
+                    $fileurl = islandora_multi_importer_remote_file_get(trim($this->objectInfo['data'][$method[1]]));
+                    if ($fileurl) {
+                      $datastreams[$dsid] = array(
+                        'dsid' => $dsid,
+                        'label' => "$dsid datastream",
+                        'mimetype' => $this->getMimetype(drupal_basename($fileurl)),
+                        'datastream_file' => $fileurl,
+                        'filename' => drupal_basename($fileurl),
+                        'control_group' => 'M',
+                      // 'file' => $file,.
+                      );
                     break;
+                    }
                   }
                   $datastreams[$dsid] = array(
                     'dsid' => $dsid,
                     'label' => "$dsid datastream",
                     'mimetype' => $this->getMimetype($path_info['basename']),
-                    'datastream_file' =>  "zip://".$this->preprocessorParameters['zipfile']."#".$this->objectInfo['data'][$method[1]],
+                    'datastream_file' => "zip://" . $this->preprocessorParameters['zipfile'] . "#" . $this->objectInfo['data'][$method[1]],
                     'filename' => $path_info['basename'],
                     'control_group' => 'M',
                   );
-                  //$z->close();
+                  // $z->close();
+                }
+                else {
+                  error_log('can not open ' . $this->preprocessorParameters['zipfile']);
+                }
               }
               else {
-                error_log('can not open '.$this->preprocessorParameters['zipfile']);
+                // This will handle all cases, except ZIP.
+                $fileurl = islandora_multi_importer_remote_file_get(trim($this->objectInfo['data'][$method[1]]));
+                if ($fileurl) {
+                  $datastreams[$dsid] = array(
+                    'dsid' => $dsid,
+                    'label' => "$dsid datastream",
+                    'mimetype' => $this->getMimetype(drupal_basename($fileurl)),
+                    'datastream_file' => $fileurl,
+                    'filename' => drupal_basename($fileurl),
+                    'control_group' => 'M',
+                  // 'file' => $file,.
+                  );
+                }
               }
-            } 
-            else {
-              // This will handle all cases, except ZIP
-              $fileurl = islandora_multi_importer_remote_file_get(trim($this->objectInfo['data'][$method[1]]));
-              if ($fileurl) {
-                $datastreams[$dsid] = array(
-                  'dsid' => $dsid,
-                  'label' => "$dsid datastream",
-                  'mimetype' => $this->getMimetype(drupal_basename($fileurl)),
-                  'datastream_file' => $fileurl,
-                  'filename' => drupal_basename($fileurl),
-                  'control_group' => 'M',
-                  //'file' => $file,
-                );
-              }
-            }
-            break;
+              break;
+
             default:
-            break;
-            
+              break;
+
           }; // End Switch
         }
       }
     }
-  return $datastreams;
-  }  
-    
+    return $datastreams;
+  }
+
   /**
    * Determine the Mimetype for the given file name.
    *
    * @param string $name
    *   A filename for which to determine a mimetype.
    *
-   * @return string 
-   * - A string containing the detected mimetype of the file.
+   * @return string
+   *   - A string containing the detected mimetype of the file.
    */
   protected function getMimetype($name) {
 
@@ -469,7 +552,7 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
    * @return string
    *   The transformed XML, as a string.
    */
-  protected static function runXslTransform($info) {
+  protected static function runXslTransform(array $info) {
     $xsl = new DOMDocument();
     $xsl->load($info['xsl']);
 
@@ -541,47 +624,54 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
    * Fetch a valid parent RELS-EXT relationship for cmodel pair.
    */
   protected function setValidRelationships() {
-    // @TODO this should make use of Ontology Solution Pack instead of hardcoding this mess
+    // TODO this should make use of Ontology Solution Pack instead
+    // of hardcoding this mess.
     $parent_pid = $this->objectInfo['parent'];
     if (islandora_is_valid_pid($parent_pid)) {
-      // I need to know what CMODEL the parent has. This is pre-calculated by the preprocessor
+      // I need to know what CMODEL the parent has.
+      // This is pre-calculated by the preprocessor.
       $parent_cmodel = (array) $this->objectInfo['parent_cmodel'];
-      //We can only get one for now
-      switch(reset($parent_cmodel)) {
+      // We can only get one for now.
+      switch (reset($parent_cmodel)) {
         case 'islandora:bookCModel':
         case 'islandora:newspaperIssueCModel':
           $this->setValidPagedRelationships($parent_pid);
-        break;
+          break;
+
         case 'islandora:newspaperCModel':
-        $this->relationships->add(FEDORA_RELS_EXT_URI, 'isMemberOf', $parent_pid);
-        $this->relationships->add(
+          $this->relationships->add(FEDORA_RELS_EXT_URI, 'isMemberOf', $parent_pid);
+          $this->relationships->add(
           ISLANDORA_RELS_EXT_URI,
           'isSequenceNumber',
           trim($this->objectInfo['data'][$this->preprocessorParameters['object_maping']['sequencemap_row']['sequencemap']]),
           RELS_TYPE_PLAIN_LITERAL
-        );
+          );
         case 'islandora:collectionCModel':
-        $this->relationships->add(FEDORA_RELS_EXT_URI, 'isMemberOfCollection',$parent_pid);
-        break;
+          $this->relationships->add(FEDORA_RELS_EXT_URI, 'isMemberOfCollection', $parent_pid);
+          break;
+
         case 'islandora:compoundCModel':
-         //Compund or any other sine compound allows also free linking
+          // Compund or any other sine compound allows also free linking.
         default:
-        $escaped_pid = str_replace(':', '_', $parent_pid);
-        $rels_predicate = variable_get('islandora_compound_object_relationship', 'isConstituentOf');
-        $this->relationships->add(FEDORA_RELS_EXT_URI, $rels_predicate, $parent_pid);
-        $this->relationships->add(
-          ISLANDORA_RELS_EXT_URI, 
+          $escaped_pid = str_replace(':', '_', $parent_pid);
+          $rels_predicate = variable_get('islandora_compound_object_relationship', 'isConstituentOf');
+          $this->relationships->add(FEDORA_RELS_EXT_URI, $rels_predicate, $parent_pid);
+          $this->relationships->add(
+          ISLANDORA_RELS_EXT_URI,
           "isSequenceNumberOf$escaped_pid",
           trim($this->objectInfo['data'][$this->preprocessorParameters['object_maping']['sequencemap_row']['sequencemap']]),
           RELS_TYPE_PLAIN_LITERAL
-        );
-        break;
+          );
+          break;
       }
     }
   }
 
-   protected function setValidPagedRelationships($parent_pid) {
-    $this->relationships->add(ISLANDORA_RELS_EXT_URI, 'isPageOf',$parent_pid);
+  /**
+   * Sets valid paged solutionpack predicates into RELS-EXT.
+   */
+  protected function setValidPagedRelationships($parent_pid) {
+    $this->relationships->add(ISLANDORA_RELS_EXT_URI, 'isPageOf', $parent_pid);
     $this->relationships->add(FEDORA_RELS_EXT_URI, 'isMemberOf', $parent_pid);
     $this->relationships->add(ISLANDORA_RELS_EXT_URI, 'isSequenceNumber', trim($this->objectInfo['data'][$this->preprocessorParameters['object_maping']['sequencemap_row']['sequencemap']]), RELS_TYPE_PLAIN_LITERAL);
     $this->relationships->add(ISLANDORA_RELS_EXT_URI, 'isPageNumber', trim($this->objectInfo['data'][$this->preprocessorParameters['object_maping']['sequencemap_row']['sequencemap']]), RELS_TYPE_PLAIN_LITERAL);
