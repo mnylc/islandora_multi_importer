@@ -22,25 +22,59 @@ function islandora_multi_importer_form(array $form, array &$form_state) {
   module_load_include('inc', 'islandora', 'includes/utilities');
   module_load_include('inc', 'islandora_multi_importer', 'includes/mapper');
   module_load_include('inc', 'islandora_multi_importer', 'includes/utilities');
+  module_load_include('inc', 'islandora_multi_importer', 'includes/googleapi.inc');
   form_load_include($form_state, 'inc', 'islandora_multi_importer', 'includes/import.form');
   form_load_include($form_state, 'inc', 'islandora_multi_importer', 'includes/utilities');
+  form_load_include($form_state, 'inc', 'islandora_multi_importer', 'includes/googleapi');
   form_load_include($form_state, 'inc', 'islandora_multi_importer', 'includes/callbacks');
 
   $step = empty($form_state['storage']['step']) ? 1 : $form_state['storage']['step'];
-
+  drupal_set_title("Islandora Multi importer - Step {$step}");
   $form_state['storage']['step'] = $step;
   $step_forms = array();
   switch ($step) {
     case 1:
+      
       $step_forms['step1'] = islandora_multi_importer_upload_form($form, $form_state);
+      $step_forms['#validate'] = array('islandora_multi_importer_form_check_fileisuploaded');
       $step_forms['submit'] = array(
         '#type' => 'submit',
+        '#name' => 'preprocess',
         '#value' => t('Preprocess'),
         '#weight' => 100,
       );
+      
+      $step_forms['skip'] = array(
+        '#type' => 'submit',
+        '#name' => 'skip',
+        '#value' => t('use Google Spreadsheet instead'),
+        '#weight' => 101,
+      );
+      
+      break;
+    
+    case 2:
+      $step_forms['#tree'] = TRUE;
+        //$step_forms['#validate'] = array('islandora_multi_importer_form_check_fileisuploaded');
+      $step_forms['step2'] = islandora_multi_importer_google_form($form, $form_state);
+      $step_forms['#validate'] = array();
+      $step_forms['submit'] = array(
+          '#type' => 'submit',
+          '#name' => 'preprocess',
+          '#value' => t('Preprocess'),
+          '#weight' => 101,
+        );
+      
+      $step_forms['back'] = array(
+        '#type' => 'submit',
+        '#name' => 'back',
+        '#value' => t('Back to use a spreadsheet file instead'),
+        '#weight' => 100,
+        '#limit_validation_errors' => array(),
+        );
       break;
 
-    case 2:
+      case 3:
 
       // This keeps our file data around between rebuilds.
       $file_data = isset($form_state['storage']['values']['general']['file_data']) ? $form_state['storage']['values']['general']['file_data'] : array();
@@ -48,24 +82,24 @@ function islandora_multi_importer_form(array $form, array &$form_state) {
 
       $step_forms['#tree'] = TRUE;
 
-      $step_forms['step2'] = islandora_multi_importer_previs_form($form, $form_state, $file_data);
+      $step_forms['step3'] = islandora_multi_importer_previs_form($form, $form_state, $file_data);
 
-      $step_forms['step3'] = islandora_multi_importer_twig_form($form, $form_state, $file_data);
+      $step_forms['step4'] = islandora_multi_importer_twig_form($form, $form_state, $file_data);
       $step_forms['cmodelmap'] = islandora_multi_importer_cmodelmapping_form($form, $form_state, $file_data);
       $step_forms['objectmap'] = islandora_multi_importer_objectmapping_form($form, $form_state, $file_data);
-      $step_forms['step2']['#id'] = drupal_html_id('main-data2');
-      $step_forms['step2']['#group'] = 'maintab';
-      $step_forms['step2']['#collapsible'] = FALSE;
-      $step_forms['step2']['#access'] = TRUE;
-      $step_forms['step2']['#type'] = 'fieldset';
-      $step_forms['step2']['#title'] = t('Your data');
-
-      $step_forms['step3']['#id'] = drupal_html_id('main-data3');
+      $step_forms['step3']['#id'] = drupal_html_id('main-data2');
       $step_forms['step3']['#group'] = 'maintab';
       $step_forms['step3']['#collapsible'] = FALSE;
       $step_forms['step3']['#access'] = TRUE;
       $step_forms['step3']['#type'] = 'fieldset';
-      $step_forms['step3']['#title'] = t('Templating');
+      $step_forms['step3']['#title'] = t('Your data');
+
+      $step_forms['step4']['#id'] = drupal_html_id('main-data3');
+      $step_forms['step4']['#group'] = 'maintab';
+      $step_forms['step4']['#collapsible'] = FALSE;
+      $step_forms['step4']['#access'] = TRUE;
+      $step_forms['step4']['#type'] = 'fieldset';
+      $step_forms['step4']['#title'] = t('Templating');
 
       $step_forms['cmodelmap']['#id'] = drupal_html_id('main-data4');
       $step_forms['cmodelmap']['#group'] = 'maintab';
@@ -80,7 +114,11 @@ function islandora_multi_importer_form(array $form, array &$form_state) {
       $step_forms['objectmap']['#access'] = TRUE;
       $step_forms['objectmap']['#type'] = 'fieldset';
       $step_forms['objectmap']['#title'] = t('Object Properties Mapping');
-
+      $step_forms['back'] = array(
+        '#name' => 'ini',
+        '#type' => 'submit',
+        '#value' => t('Back to data source selection'),
+      );
       $step_forms['ingest'] = array(
         '#type' => 'submit',
         '#value' => t('Ingest'),
@@ -118,8 +156,39 @@ function islandora_multi_importer_form(array $form, array &$form_state) {
 
   $form = $step_forms;
   $form['#tree'] = TRUE;
-  // kpr($form);
   return $form;
+}
+
+function islandora_multi_importer_form_check_fileisuploaded($form, &$form_state) {
+
+  // If the file passed validation:
+  // Weird but once people push the upload button file_save_upload 
+  // had run already on a different level. So need to skip if that
+  // is the case.
+
+  if ($form_state['clicked_button']['#name'] == 'skip' || $form_state['clicked_button']['#name'] == 'back') {
+    return;
+  }
+
+  if (!$form_state['values']['step1']['file']) {
+  $file = file_save_upload('step1_file', array(
+    'file_validate_extensions' => array('txt csv tsv xls xlsx')),
+    FILE_EXISTS_REPLACE);
+
+   if ($file) {
+     // Move the file into the Drupal file system.
+     if ($file = file_move($file, 'public://')) {
+       // Save the file for use in the submit handler.
+       $form_state['storage']['file'] = $file;
+     }
+     else {
+       form_set_error('file', t("Failed to write the uploaded file to the site's file folder."));
+     }
+   }
+   else {
+     form_set_error('file', t('No file was uploaded.'));
+   }
+ }
 }
 
 /**
@@ -130,8 +199,8 @@ function islandora_multi_importer_upload_form($form, &$form_state) {
   $form = array(
     'file' => array(
       '#type' => 'managed_file',
-      '#required' => TRUE,
-      '#title' => t('CSV or TSV file containing the rows to import'),
+      '#required' => false,
+      '#title' => t('CSV,TSV,XLS or XLSX file containing the row(s) to import'),
       '#size' => 48,
       '#description' => t('Select a file to upload.<br/>Files must be less than <strong>@size MB.</strong>', array('@size' => $upload_size)),
       '#default_value' => isset($form_state['values']['file']) ? $form_state['values']['file'] : NULL,
@@ -142,6 +211,32 @@ function islandora_multi_importer_upload_form($form, &$form_state) {
       ),
     ),
   );
+  return $form;
+}
+
+
+
+/**
+ * Google Spreadsheet ID
+ */
+function islandora_multi_importer_google_form($form, &$form_state) {
+  $form['google_api']= array(
+    '#prefix' => '<div id="islandora-multi-googleapi">',
+    '#suffix' => '</div>',
+    '#tree' => TRUE,
+    'spreadsheet_id' => array(
+      '#type' => 'textfield',
+      '#title' => t('ID of your Google Spreadsheet'),
+      '#description' => ' If shared at https://docs.google.com/spreadsheets/d/aaBAccEEFfC_aBC-aBc0d1EF/edit, use aaBAccEEFfC_aBC-aBc0d1EF as ID.',
+      '#default_value' => '',
+    ),
+    'spreadsheet_range' => array(
+      '#type' => 'textfield',
+      '#title' =>  t('Cell Range'),
+      '#description' => t('Cell Range for your Google Spreadsheet, in the form of SheetName!A1:B10'),
+      '#default_value' => 'Sheet1!A1:B10',
+    ),
+   ); 
   return $form;
 }
 
@@ -157,7 +252,7 @@ function islandora_multi_importer_zip_upload_form($form, &$form_state) {
       '#title' => t('ZIP file containing the files referenced in the source data'),
       '#size' => 48,
       '#description' => t('Select a file to upload.<br/>Files must be less than <strong>@size MB.</strong>', array('@size' => $upload_size)),
-      '#default_value' => isset($form_state['values']['file2']) ? $form_state['values']['file2'] : NULL,
+      '#default_value' => isset($form_state['values']['file3']) ? $form_state['values']['file3'] : NULL,
       '#upload_location' => file_default_scheme() . '://',
       '#upload_validators' => array(
         'file_validate_extensions' => array('zip'),
@@ -175,14 +270,17 @@ function islandora_multi_importer_previs_form($form, &$form_state, &$file_data) 
 
   $per_page = 20;
   $previous_page = isset($form_state['storage']['values']['general']['previous_page']) ? $form_state['storage']['values']['general']['previous_page'] : 0;
-  $page = isset($form_state['values']['step2']['file_content']['page']) ? $form_state['values']['step2']['file_content']['page'] : 0;
-
+  $page = isset($form_state['values']['step3']['file_content']['page']) ? $form_state['values']['step3']['file_content']['page'] : 0;
+  
   // Only if data is empty or previous page different to current
   // run this expensive code.
-  if (($page != $previous_page) || empty($file_data)) {
-    $file = file_load($form_state['storage']['values']['step1']['file']);
-    $file_path = drupal_realpath($file->uri);
-    $file_data = islandora_multi_importer_read_filedata($file_path, $per_page, $page * $per_page);
+  if (($page != $previous_page) || empty($file_data)) {  
+    //Two options here really.
+    // A) if google sheet id is set and range is set, try there first,
+    // B) if not go for the file
+    
+    $file_data = islandora_multi_importer_datasource_loader($form_state, $page, $per_page);
+    
     $form_state['storage']['values']['general']['previous_page'] = $page;
     $form_state['storage']['values']['general']['file_data'] = $file_data;
   }
@@ -190,6 +288,8 @@ function islandora_multi_importer_previs_form($form, &$form_state, &$file_data) 
   // Multistep form gets broken by pager. Lets make a simple drop down.
   $numpages = ceil($file_data['totalrows'] / $per_page);
   $pages = range(1, $numpages);
+  $offset_notice = $page * $per_page + $per_page;
+  $showingof = $offset_notice < $offset_notice ? $file_data['totalrows'] : $offset_notice;
 
   $form['file_content'] = array(
     '#type' => 'fieldset',
@@ -203,7 +303,7 @@ function islandora_multi_importer_previs_form($form, &$form_state, &$file_data) 
       '#prefix' => '<div class="help" style="overflow:scroll" id="islandora-multi-preview">',
       '#suffix' => t('Showing records from @num to @offset of @totalrows', array(
         '@num' => $page * $per_page,
-        '@offset' => $page * $per_page + $per_page,
+        '@offset' => $showingof ,
         '@totalrows' => $file_data['totalrows'],
       )) . '</div>',
       '#type' => 'tableselect',
@@ -216,6 +316,7 @@ function islandora_multi_importer_previs_form($form, &$form_state, &$file_data) 
           'tableheader-processed',
         ),
       ),
+      
     ),
     'page' => array(
       '#type' => 'select',
@@ -258,8 +359,8 @@ function islandora_multi_importer_twig_form($form, &$form_state, $file_data) {
     '#title' => t('Selected Data Row for template testing'),
   );
 
-  if (isset($form_state['values']['step2']['file_content'])) {
-    $current_row = isset($form_state['values']['step2']['file_content']['rows']) && !empty($form_state['values']['step2']['file_content']['rows']) ? $form_state['values']['step2']['file_content']['rows'] : key($file_data['data']);
+  if (isset($form_state['values']['step3']['file_content'])) {
+    $current_row = isset($form_state['values']['step3']['file_content']['rows']) && !empty($form_state['values']['step3']['file_content']['rows']) ? $form_state['values']['step3']['file_content']['rows'] : key($file_data['data']);
     $current_record_record_data = array('data' => array_combine($file_data['headers'], $file_data['data'][$current_row]));
     // Create a small sub table so Template developer
     // can see the data used to test template.
@@ -277,14 +378,14 @@ function islandora_multi_importer_twig_form($form, &$form_state, $file_data) {
     }
   }
 
-  $twig_name = isset($form_state['values']['step3']['group_tabs']['group_twig_tab']['savemenu']['template_chooser']['template_list']) ? $form_state['values']['step3']['group_tabs']['group_twig_tab']['savemenu']['template_chooser']['template_list'] : FALSE;
+  $twig_name = isset($form_state['values']['step4']['group_tabs']['group_twig_tab']['savemenu']['template_chooser']['template_list']) ? $form_state['values']['step4']['group_tabs']['group_twig_tab']['savemenu']['template_chooser']['template_list'] : FALSE;
   if ($twig_name) {
-    unset($form_state['input']['step3']['group_tabs']['group_twig_tab']['twig']);
+    unset($form_state['input']['step4']['group_tabs']['group_twig_tab']['twig']);
     $twig_template_toload = islandora_multi_importer_twig_fetch($twig_name);
   }
   $twig_template_default = isset($twig_template_toload) ? $twig_template_toload : '{% block content %} Hello {{ name }}{% endblock %}';
   $twig_name_default = isset($twig_name) ? $twig_name : t('New Twig template');
-  $twig_template = isset($form_state['values']['step3']['group_tabs']['group_twig_tab']['twig']) ? $form_state['values']['step3']['group_tabs']['group_twig_tab']['twig'] : $twig_template_default;
+  $twig_template = isset($form_state['values']['step4']['group_tabs']['group_twig_tab']['twig']) ? $form_state['values']['step4']['group_tabs']['group_twig_tab']['twig'] : $twig_template_default;
   $loaderFile = new Twig_Loader_Filesystem(__DIR__ . '/../templates');
   $loaderArray = new Twig_Loader_Array(array(
     'forminput.xml' => $twig_template,
@@ -331,6 +432,9 @@ function islandora_multi_importer_twig_form($form, &$form_state, $file_data) {
       // The $template syntax is valid, but still can throw run time errors.
       $template = $twig->createTemplate($twig_template);
       $output = $template->render($current_record_record_data);
+      //Remove those nasty emtpy lines...
+      // @TODO add a toogle for this?
+      $output = preg_replace("/(^[\r\n]*|[\r\n]+)[\s\t]*[\r\n]+/", "\n", $output);
     }
     catch (Twig_Error_Runtime $e) {
       $validated = FALSE;
@@ -488,6 +592,10 @@ function islandora_multi_importer_twig_form($form, &$form_state, $file_data) {
       '#group' => 'group_twig_input',
       '#markup' => filter_xss($output),
     ),
+    'parsed_and_enriched' => array(
+      '#group' => 'group_twig_input',
+      '#markup' => islandora_multi_importer_xml_highlight($output),
+    ),
   );
   return $form;
 }
@@ -514,9 +622,10 @@ function islandora_multi_importer_cmodelmapping_form(array $form, array &$form_s
   if (isset($form_state['clicked_button']) && ($form_state['clicked_button']['#value'] == 'Check CMODELS')) {
     $colum_index = $form_state['values']['cmodelmap']['basemapping']['rows']['cmodelmap_row']['cmodelmap'];
     // Sadly we have to fetch all data here.
-    $file = file_load($form_state['storage']['values']['step1']['file']);
-    $file_path = drupal_realpath($file->uri);
-    $file_data_all = islandora_multi_importer_read_filedata($file_path, -1, 0);
+
+   
+    $file_data_all = islandora_multi_importer_datasource_loader($form_state, 0, -1);
+
     $cmodel_colum = array_map(function ($element) use ($colum_index) {
       return $element[$colum_index];
     }, $file_data_all['data']);
@@ -823,35 +932,35 @@ function islandora_multi_importer_form_upload_zip_callback($form, $form_state) {
  * Previsualization callback for ajax driven form.
  */
 function islandora_multi_importer_previs_ajax($form, &$form_state) {
-  return $form['step2']['file_content']['rows'];
+  return $form['step3']['file_content']['rows'];
 }
 
 /**
  * Twig Previsualization callback for ajax driven form.
  */
 function islandora_multi_importer_previstwig_ajax($form, &$form_state) {
-  return $form['step3']['group_tabs']['group_twigoutput_tab']['twig'];
+  return $form['step4']['group_tabs']['group_twigoutput_tab']['twig'];
 }
 
 /**
  * Save template  allback for ajax driven form.
  */
 function islandora_multi_importer_savetwig_ajax($form, &$form_state) {
-  return $form['step3']['group_tabs']['group_twig_tab']['savemenu'];
+  return $form['step4']['group_tabs']['group_twig_tab']['savemenu'];
 }
 
 /**
  * Final, real save template callback for ajax driven form.
  */
 function islandora_multi_importer_savefinaltwig_ajax($form, &$form_state) {
-  return $form['step3']['group_tabs']['group_twig_tab']['savemenu'];
+  return $form['step4']['group_tabs']['group_twig_tab']['savemenu'];
 }
 
 /**
  * Load saved template callback for ajax driven form.
  */
 function islandora_multi_importer_loadtwig_ajax($form, &$form_state) {
-  return $form['step3']['group_tabs']['group_twig_tab']['twig'];
+  return $form['step4']['group_tabs']['group_twig_tab']['twig'];
 }
 
 /**
@@ -869,22 +978,39 @@ function islandora_multi_importer_form_submit($form, &$form_state) {
   module_load_include('inc', 'islandora', 'includes/utilities');
   // Store step data.
   $current_step = 'step' . $form_state['storage']['step'];
+  dpm($form_state['values']);
   if (!empty($form_state['values'][$current_step])) {
     $form_state['storage']['values'][$current_step] = $form_state['values'][$current_step];
   }
 
   // Increment or decrement the step as needed. Recover values if they exist.
-  if ($form_state['triggering_element']['#value'] == t('Preprocess')) {
+  if ($form_state['triggering_element']['#name'] == 'skip') {
     $form_state['storage']['step'] = 2;
   }
+  if ($form_state['triggering_element']['#name'] == 'ini') {
+      $form_state['storage']['step'] = 1;
+  }
+  if ($form_state['triggering_element']['#name'] == 'back') {
+    $form_state['storage']['step'] = isset($form_state['storage']['step'])  
+      ? $form_state['storage']['step']-- : 1 ;
+    $form_state['rebuild'] = TRUE;
+   
+    
+  }
+  if ($form_state['triggering_element']['#name'] == 'preprocess') {
+    $form_state['storage']['step'] = 3;
+    $form_state['rebuild'] = TRUE;
+   
+  }
+
 
   $step_name = 'step' . $form_state['storage']['step'];
   if (!empty($form_state['storage']['values'][$step_name])) {
     $form_state['values'][$step_name] = $form_state['storage']['values'][$step_name];
   }
   if ($form_state['triggering_element']['#value'] == t('Save Template')) {
-    $twig_template = trim($form_state['values']['step3']['group_tabs']['group_twig_tab']['twig']);
-    $twig_template_name = trim($form_state['values']['step3']['group_tabs']['group_twig_tab']['savemenu']['save']['template_name']);
+    $twig_template = trim($form_state['values']['step4']['group_tabs']['group_twig_tab']['twig']);
+    $twig_template_name = trim($form_state['values']['step4']['group_tabs']['group_twig_tab']['savemenu']['save']['template_name']);
     if (!empty($twig_template) && !empty($twig_template_name)) {
       // Save the template to db.
       if (islandora_multi_importer_twig_save($twig_template_name, $twig_template)) {
@@ -900,10 +1026,10 @@ function islandora_multi_importer_form_submit($form, &$form_state) {
   // Handle the ingest buttom.
   if ($form_state['triggering_element']['#value'] == t('Ingest')) {
     // Check if a ZIP file needs to be uploaded.
-    if ($form_state['storage']['step'] == 2) {
+    if ($form_state['storage']['step'] == 3) {
       if ($form_state['values']['objectmap']['objectmapping']['rows']['dsmap_row']['dsremote'] == 'ZIP') {
-        $form_state['storage']['step'] = 3;
-        $form_state['storage']['values']['step3'] = array(
+        $form_state['storage']['step'] = 4;
+        $form_state['storage']['values']['step4'] = array(
           'type' => $form_state['values']['objectmap']['objectmapping']['rows']['dsmap_row']['dsremote'],
           'source_data' => $form_state['storage']['values']['step1']['file'],
           'cmodel_source_field_index' => $form_state['values']['cmodelmap']['basemapping']['rows']['cmodelmap_row']['cmodelmap'],
@@ -916,6 +1042,19 @@ function islandora_multi_importer_form_submit($form, &$form_state) {
       }
       else {
         // @TODO This all needs to be validated
+        
+        // Lets check if Google was used as source. I should
+        // Create a flag better to make sure i´m coming here with this checked out
+        // and not only rely on having the form_state values.
+          if (isset($form_state['storage']['values']['step2']) && !empty($form_state['storage']['values']['step2']['google_api']['spreadsheet_id'])) {
+            $spreadsheetId = trim($form_state['storage']['values']['step2']['google_api']['spreadsheet_id']);
+            $range = trim($form_state['storage']['values']['step2']['google_api']['spreadsheet_range']);
+            $newfile_fid= islandora_multi_importer_read_googledata($spreadsheetId, $range, -1, 0);
+            $form_state['storage']['values']['step1']['file'] = islandora_multi_importer_csv_save($newfile_fid);
+          }
+        
+        
+        
         $parameters = array(
           'type' => $form_state['values']['objectmap']['objectmapping']['rows']['dsmap_row']['dsremote'],
           'source_data' => $form_state['storage']['values']['step1']['file'],
@@ -927,7 +1066,7 @@ function islandora_multi_importer_form_submit($form, &$form_state) {
       }
     }
     else {
-      $parameters = $form_state['storage']['values']['step3'];
+      $parameters = $form_state['storage']['values']['step4'];
       $parameters['source_binaries'] = $form_state['values']['last']['file2'];
     }
 

@@ -48,6 +48,15 @@ function islandora_multi_importer_menu() {
       'file' => 'includes/callbacks.inc',
       'type' => MENU_CALLBACK,
     ),
+    'admin/islandora/tools/multi_importer' => array(
+        'title' => 'Multi Importer settings',
+        'description' => 'Configure the infamous Multi Importer Module.',
+        'type' => MENU_NORMAL_ITEM,
+        'page callback' => 'drupal_get_form',
+        'page arguments' => array('islandora_multi_importer_admin_form'),
+        'file' => 'includes/admin.form.inc',
+        'access arguments' => array('administer site configuration'),
+      ),
   );
 }
 
