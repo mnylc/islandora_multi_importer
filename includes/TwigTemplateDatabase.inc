@@ -71,6 +71,24 @@ class TwigTemplateDatabase {
     }
     return FALSE;
   }
+  
+  /**
+   * Gets the Twig Template identified by id.
+   *
+   * @param int $id
+   *   The name of the Twig Template.
+   *
+   * @return DOMDocument
+   *   The Twig Template if found, FALSE otherwise.
+   */
+  public static function GetbyId($id) {
+      $query = db_query('SELECT twig FROM {islandora_multi_importer_twig_templates} WHERE id = :id', array(':id' => $id));
+      $twig = $query->fetchField();
+      if (trim($twig) !== '' || $twig!== FALSE) {
+        return  $twig;
+      }
+    return FALSE;
+  }
 
 
 
@@ -89,7 +107,24 @@ class TwigTemplateDatabase {
     }
     return $names;
   }
-
+  
+  /**
+   * Gets a list of all defined Twig Template names.
+   *
+   * @return array
+   *   An array of defined Twig Template names, where both the key and the value are the
+   *   Twig Template's name; e.g. array('name' => 'name').
+   */
+  public static function GetIdsAndNames() {
+    $names = array();
+    $result = db_query('SELECT id, name FROM {islandora_multi_importer_twig_templates}');
+  
+    while ($data = $result->fetchAssoc('id')) {
+      dpm($data);
+      $names[$data['id']] = $data['name'];
+    }
+    return $names;
+  }
 
 
   /**

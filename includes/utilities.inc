@@ -22,11 +22,11 @@
  *   array of associative arrays containing header and data as header => value pairs
  */
 function islandora_multi_importer_datasource_loader(array $form_state, $page = 0, $per_page = 20) {
-  dpm($form_state);
+  //dpm($form_state);
   if (isset($form_state['storage']['values']['step2']) && !empty($form_state['storage']['values']['step2']['google_api']['spreadsheet_id'])) {
     $spreadsheetId = trim($form_state['storage']['values']['step2']['google_api']['spreadsheet_id']);
     $range = trim($form_state['storage']['values']['step2']['google_api']['spreadsheet_range']);
-    dpm($range);
+    //dpm($range);
     $file_data = islandora_multi_importer_read_googledata($spreadsheetId, $range, $per_page, $page * $per_page);
    
   } 
@@ -128,15 +128,12 @@ function islandora_multi_importer_read_filedata($file_path, $numrows = 20, $offs
          $response = $service->spreadsheets_values->get($spreadsheetId, $range);
          $sp_data = $response->getValues();
     } catch( Google_Service_Exception $e )  {
-        drupal_set_message(t('Google API Error: @e',array('@e' => $e->getMessage()), 'error'));
+        drupal_set_message(t('Google API Error: @e',array('@e' => $e->getMessage())), 'error');
         return $tabdata;
     }
     $table = array();
     $headers = array();
     $maxRow = 0;
-    dpm($numrows);
-
-    
     $highestRow =  count($sp_data);
     if (($highestRow)>1) {
       // Returns Row Headers.
@@ -164,10 +161,10 @@ function islandora_multi_importer_read_filedata($file_path, $numrows = 20, $offs
         $maxRow = $rowindex;
         }
     }
-    $tabdata = array('headers' => $sp_data[0], 'data' => $table, 'totalrows'=> $maxRow);
+  $tabdata = array('headers' => $sp_data[0], 'data' => $table, 'totalrows'=> $maxRow);
   
-    return $tabdata;
-    }
+  return $tabdata;
+}
 
 function islandora_multi_importer_xml_highlight($s){
       $s = htmlspecialchars($s);
@@ -272,7 +269,6 @@ function islandora_multi_importer_twig_save($twig_name, $twigTemplate) {
  */
 function islandora_multi_importer_csv_save(array $data) {
     global $user;
-    dpm($data);
     $path = 'public:///islandora-multi-importer/csv/';
     $filename = $user->uid . '-' . uniqid() . '.csv';
     // Ensure the directory
@@ -300,11 +296,15 @@ function islandora_multi_importer_csv_save(array $data) {
     fclose($fh);
     // Notify the filesystem of the size change
     $file->filesize = filesize($file->uri);
+    $file->status = FILE_STATUS_PERMANENT;
     file_save($file);
+      
     // Tell the user where we stuck it
+   
     drupal_set_message( t('CSV file saved and available at. <a href="!url">!filename</a>.', array(
       '!url' => file_create_url($file->uri),
       '!filename' => $filename,
     )));
+    
     return $file->fid;
 }
