@@ -242,7 +242,7 @@ function islandora_multi_importer_twigcreateinternals_form($form, &$form_state, 
     '#group' => 'group_tabs',
     'template_name' => array(
       '#type' => 'textfield',
-      '#description' => 'Name for your new template',
+      '#description' => 'Name for your template',
       '#default_value' =>  $twig_name_default,
     ),
     'realsave' => array(
@@ -296,8 +296,14 @@ function islandora_multi_importer_twigedit_form($form, &$form_state, $id) {
   module_load_include('inc', 'islandora_multi_importer', 'includes/import.form');
   module_load_include('inc', 'islandora_multi_importer', 'includes/utilities');
   $file_data = isset($form_state['storage']['values']['general']['file_data']) ? $form_state['storage']['values']['general']['file_data'] : array();
+  // @TODO. and if the %id does not exists? 404? or notice.. not sure
   $thetemplateinfo = islandora_multi_importer_twig_fetchbyid($id);
-  dpm($thetemplateinfo);
+  if (empty($thetemplateinfo)) {
+    drupal_set_message(t('The requested Twig template does not exist'),'warning');
+    drupal_not_found();
+    drupal_exit();
+     
+  }
   $form_twigcreate['#tree'] = true;
   $form_twigcreate['#type'] = 'horizontal_tabs';
   $form_twigcreate['twig'] = array();
