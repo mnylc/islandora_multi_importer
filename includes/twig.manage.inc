@@ -39,7 +39,7 @@ function islandora_multi_importer_twiglistpage_callback() {
 
   foreach ($twig_templates_from_db as $key => $form_name) {
     $name = $form_name;
-    $edit = l(t('Edit'), "admin/islandora/twigtemplates/{$key}/duplicate");
+    $edit = l(t('Edit'), "admin/islandora/twigtemplates/{$key}/edit");
     $delete = l(t('Delete'), "admin/islandora/twigtemplates/{$key}/delete");
   
     $copy = l(t('Duplicate'), "admin/islandora/twigtemplates/{$key}/duplicate");
@@ -74,9 +74,8 @@ function islandora_multi_importer_twigcreate_form($form, &$form_state) {
   
   $form_twigcreate['#tree'] = true;
   $form_twigcreate['#type'] = 'horizontal_tabs';
-  $form_twigcreate['source_selector'] = 
- // $form_twigcreate['upload'] = islandora_multi_importer_upload_form(array(), $form_state);
-  $form_twigcreate['twig'] = islandora_multi_importer_twig_form(array(), $form_state, $file_data);
+  $form_twigcreate['twig'] = array();
+  $form_twigcreate['twig'] = islandora_multi_importer_twigcreateinternals_form(array(), $form_state, $file_data);
   $form_twigcreate['twig']['#id'] = drupal_html_id('main-data3');
   $form_twigcreate['twig']['#group'] = 'maintab';
   $form_twigcreate['twig']['#collapsible'] = FALSE;
@@ -84,11 +83,13 @@ function islandora_multi_importer_twigcreate_form($form, &$form_state) {
   $form_twigcreate['twig']['#type'] = 'fieldset';
   $form_twigcreate['twig']['#title'] = t('Templating');
  
-  return $form + $form_twigcreate;
+  return $form_twigcreate;
 }
-/*
-function islandora_multi_importer_twig_form($form, &$form_state, $file_data) {
-form_load_include
+
+function islandora_multi_importer_twigcreateinternals_form($form, &$form_state, $file_data) {
+  module_load_include('inc', 'islandora_multi_importer', 'includes/utilities');
+  global $user;
+ 
   $form['preview_data'] = array(
     '#type' => 'fieldset',
     '#name' => 'islandora-multi-rows-preview',
@@ -120,13 +121,9 @@ form_load_include
     }
   }
 
-  $twig_name = isset($form_state['values']['step4']['group_tabs']['group_twig_tab']['savemenu']['template_chooser']['template_list']) ? $form_state['values']['step4']['group_tabs']['group_twig_tab']['savemenu']['template_chooser']['template_list'] : FALSE;
-  if ($twig_name) {
-    unset($form_state['input']['step4']['group_tabs']['group_twig_tab']['twig']);
-    $twig_template_toload = islandora_multi_importer_twig_fetch($twig_name);
-  }
-  $twig_template_default = isset($twig_template_toload) ? $twig_template_toload : '{% block content %} Hello {{ name }}{% endblock %}';
-  $twig_name_default = isset($twig_name) ? $twig_name : t('New Twig template');
+
+  $twig_template_default = '{% block content %} Hello {{ name }}{% endblock %}';
+  $twig_name_default = isset($twig_name) ? $twig_name : t("New Twig template by @username", array("@username" => $user->name));
   $twig_template = isset($form_state['values']['step4']['group_tabs']['group_twig_tab']['twig']) ? $form_state['values']['step4']['group_tabs']['group_twig_tab']['twig'] : $twig_template_default;
   $loaderFile = new Twig_Loader_Filesystem(__DIR__ . '/../templates');
   $loaderArray = new Twig_Loader_Array(array(
@@ -236,76 +233,26 @@ form_load_include
       'wrapper' => 'islandora-multi-twigoutput',
     ),
   );
-  $form['group_tabs']['group_twig_tab']['savemenu'] = array(
-    '#prefix' => '<div class="form-group" id="islandora-multi-twigsave">',
-    '#suffix' => '</div>',
-    '#title' => t('Manage your templates'),
-    '#tree' => TRUE,
-    '#type' => 'fieldset',
-  );
-
-  $form['group_tabs']['group_twig_tab']['savemenu']['presave'] = array(
-    '#prefix' => '<div style="height:50px;">',
-    '#suffix' => '</div>',
-    '#tree' => TRUE,
-    '#type' => 'button',
-    '#value' => t('Save Template As'),
-    '#group' => 'group_tabs',
-    '#access' => ($form_state['triggering_element']['#value'] != t('Save Template As')),
-    '#ajax' => array(
-      'callback' => 'islandora_multi_importer_savetwig_ajax',
-      'wrapper' => 'islandora-multi-twigsave',
-    ),
-  );
 
   // This one is only displayed if the save button was pressed.
-  $form['group_tabs']['group_twig_tab']['savemenu']['save'] = array(
+  $form['group_tabs']['group_twig_tab']['save'] = array(
     '#prefix' => '<div class="form-group" id="islandora-multi-twigsave">',
     '#suffix' => '</div>',
-    '#access' => ($form_state['triggering_element']['#value'] == t('Save Template As')),
     '#tree' => TRUE,
     '#group' => 'group_tabs',
     'template_name' => array(
       '#type' => 'textfield',
       '#description' => 'Name for your new template',
-      '#default_value' => 'My New Template',
+      '#default_value' =>  $twig_name_default,
     ),
     'realsave' => array(
       '#tree' => TRUE,
       '#type' => 'submit',
       '#value' => t('Save Template'),
-      '#ajax' => array(
-        'callback' => 'islandora_multi_importer_savefinaltwig_ajax',
-        'wrapper' => 'islandora-multi-twigsave',
-      ),
-    ),
-    'cancel' => array(
-      '#tree' => TRUE,
-      '#type' => 'button',
-      '#value' => t('Cancel'),
-      '#ajax' => array(
-        'callback' => 'islandora_multi_importer_savefinaltwig_ajax',
-        'wrapper' => 'islandora-multi-twigsave',
-      ),
     ),
   );
 
-  $form['group_tabs']['group_twig_tab']['savemenu']['template_chooser'] = array(
-    '#prefix' => '<div class="help" id="islandora-multi-twigchooser"></div>',
-    '#type' => 'fieldset',
-    '#title' => 'Load existing template',
-    'template_list' => array(
-      '#type' => 'select',
-      '#multiple' => FALSE,
-      '#description' => t('Stored templates'),
-      '#empty_option' => t('- Select -'),
-      '#options' => islandora_multi_importer_twig_list(),
-      '#ajax' => array(
-        'callback' => 'islandora_multi_importer_loadtwig_ajax',
-        'wrapper' => 'islandora-multi-twigfull',
-      ),
-    ),
-  );
+ 
 
   // My Parsed Output tab.
   $form['group_tabs']['group_twigoutput_tab'] = array(
@@ -337,5 +284,3 @@ form_load_include
   );
   return $form;
 }
-
-*/
