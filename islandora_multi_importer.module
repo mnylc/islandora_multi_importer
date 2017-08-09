@@ -61,7 +61,8 @@ function islandora_multi_importer_menu() {
     'admin/islandora/twigtemplates/%/edit' => array(
       'title' => 'Multi Importer Twig templates',
       'description' => 'Manage stored Twig templates for use inside Multi Importer',
-      'page callback' => 'islandora_multi_importer_twiglistpage_callback',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('islandora_multi_importer_twigedit_form', 3),
       'access arguments' => array(ISLANDORA_MULTI_IMPORTER_TWIGMANAGE),
       'file' => 'includes/twig.manage.inc',
       'type' => MENU_NORMAL_ITEM,

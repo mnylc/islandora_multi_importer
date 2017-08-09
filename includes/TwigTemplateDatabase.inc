@@ -78,16 +78,13 @@ class TwigTemplateDatabase {
    * @param int $id
    *   The name of the Twig Template.
    *
-   * @return DOMDocument
-   *   The Twig Template if found, FALSE otherwise.
+   * @return Array
+   *   A full record with all the info
    */
   public static function GetbyId($id) {
-      $query = db_query('SELECT twig FROM {islandora_multi_importer_twig_templates} WHERE id = :id', array(':id' => $id));
-      $twig = $query->fetchField();
-      if (trim($twig) !== '' || $twig!== FALSE) {
-        return  $twig;
-      }
-    return FALSE;
+      $query = db_query('SELECT twig, name, updated FROM {islandora_multi_importer_twig_templates} WHERE id = :id', array(':id' => $id));
+      $twiginfo = $query->fetchAssoc('id');
+      return $twiginfo;
   }
 
 
@@ -120,7 +117,6 @@ class TwigTemplateDatabase {
     $result = db_query('SELECT id, name FROM {islandora_multi_importer_twig_templates}');
   
     while ($data = $result->fetchAssoc('id')) {
-      dpm($data);
       $names[$data['id']] = $data['name'];
     }
     return $names;

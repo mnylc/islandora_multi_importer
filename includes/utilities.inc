@@ -252,6 +252,16 @@ function islandora_multi_importer_twig_fetch($twig_name) {
 return $twig_template_from_db;
 }
 
+function islandora_multi_importer_twig_fetchbyid($twig_id) {
+  $twig_template_info_from_db = &drupal_static(__FUNCTION__);
+  if (!isset($twig_template_from_db)) {
+    module_load_include('inc', 'islandora_multi_importer', 'includes/TwigTemplateDatabase');
+    $twig_template_info_from_db = TwigTemplateDatabase::GetbyId($twig_id);
+  }
+  
+return $twig_template_info_from_db;
+}
+
 function islandora_multi_importer_twig_save($twig_name, $twigTemplate) {
    module_load_include('inc', 'islandora_multi_importer', 'includes/TwigTemplateDatabase');
    $twig_template_create_db = TwigTemplateDatabase::Create($twig_name, $twigTemplate);

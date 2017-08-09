@@ -86,7 +86,7 @@ function islandora_multi_importer_twigcreate_form($form, &$form_state) {
   return $form_twigcreate;
 }
 
-function islandora_multi_importer_twigcreateinternals_form($form, &$form_state, $file_data) {
+function islandora_multi_importer_twigcreateinternals_form($form, &$form_state, $file_data, $existingtwig = array()) {
   module_load_include('inc', 'islandora_multi_importer', 'includes/utilities');
   global $user;
  
@@ -123,8 +123,8 @@ function islandora_multi_importer_twigcreateinternals_form($form, &$form_state, 
 
 
   $twig_template_default = '{% block content %} Hello {{ name }}{% endblock %}';
-  $twig_name_default = isset($twig_name) ? $twig_name : t("New Twig template by @username", array("@username" => $user->name));
-  $twig_template = isset($form_state['values']['step4']['group_tabs']['group_twig_tab']['twig']) ? $form_state['values']['step4']['group_tabs']['group_twig_tab']['twig'] : $twig_template_default;
+  $twig_name_default = !empty($existingtwig) ? $existingtwig['name'] : t("New Twig template by @username", array("@username" => $user->name));
+  $twig_template = !empty($existingtwig) ? $existingtwig['twig'] : $existingtwig['twig'];
   $loaderFile = new Twig_Loader_Filesystem(__DIR__ . '/../templates');
   $loaderArray = new Twig_Loader_Array(array(
     'forminput.xml' => $twig_template,
@@ -217,7 +217,7 @@ function islandora_multi_importer_twigcreateinternals_form($form, &$form_state, 
     '#description' => t("All information is stored in the 'data' object. Example: to reference a column named identifier use <em>data.identifier</em>, if the column has special characters that can not be parsed as a PHP variable use this notation: <em>attribute(data, 'identifier-with-dash') </em>. More info at !url", array('!url' => l(t('twig.sensiolabs.org'), "http://twig.sensiolabs.org/doc/templates.html#variables"))),
     '#group' => 'group_twig_input',
     '#rows' => 20,
-    '#default_value' => $twig_template_default,
+    '#default_value' => $twig_template,
   );
 
   // Field - submit button.
@@ -283,4 +283,31 @@ function islandora_multi_importer_twigcreateinternals_form($form, &$form_state, 
     ),
   );
   return $form;
+}
+
+/**
+ * Creates new Twig template
+ *
+ * @return $form
+ *   the form to deal with CRUDing Twig templaes
+ */
+function islandora_multi_importer_twigedit_form($form, &$form_state, $id) {
+  form_load_include($form_state, 'inc', 'islandora_multi_importer', 'includes/import.form');
+  module_load_include('inc', 'islandora_multi_importer', 'includes/import.form');
+  module_load_include('inc', 'islandora_multi_importer', 'includes/utilities');
+  $file_data = isset($form_state['storage']['values']['general']['file_data']) ? $form_state['storage']['values']['general']['file_data'] : array();
+  $thetemplateinfo = islandora_multi_importer_twig_fetchbyid($id);
+  dpm($thetemplateinfo);
+  $form_twigcreate['#tree'] = true;
+  $form_twigcreate['#type'] = 'horizontal_tabs';
+  $form_twigcreate['twig'] = array();
+  $form_twigcreate['twig'] = islandora_multi_importer_twigcreateinternals_form(array(), $form_state, $file_data, $thetemplateinfo);
+  $form_twigcreate['twig']['#id'] = drupal_html_id('main-data3');
+  $form_twigcreate['twig']['#group'] = 'maintab';
+  $form_twigcreate['twig']['#collapsible'] = FALSE;
+  $form_twigcreate['twig']['#access'] = TRUE;
+  $form_twigcreate['twig']['#type'] = 'fieldset';
+  $form_twigcreate['twig']['#title'] = t('Templating');
+ 
+  return $form_twigcreate;
 }
