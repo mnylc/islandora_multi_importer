@@ -77,6 +77,7 @@ function islandora_multi_importer_read_filedata($file_path, $numrows = 20, $offs
     $rowHeaders_utf8=array_map('stripslashes',$rowHeaders[0]);
     $rowHeaders_utf8=array_map('utf8_encode',$rowHeaders_utf8);
     $rowHeaders_utf8=array_map('strtolower',$rowHeaders_utf8);
+    $rowHeaders_utf8=array_map('trim',$rowHeaders_utf8);
     foreach ($worksheet->getRowIterator() as $row) {
         $rowindex = $row->getRowIndex(); 
         if (($rowindex > 1) && ($rowindex > ($offset)) && (($rowindex <=($offset + $numrows +1)) || $numrows == -1 )) {
@@ -141,6 +142,7 @@ function islandora_multi_importer_read_filedata($file_path, $numrows = 20, $offs
       $rowHeaders_utf8=array_map('stripslashes',$rowHeaders);
       $rowHeaders_utf8=array_map('utf8_encode',$rowHeaders_utf8);
       $rowHeaders_utf8=array_map('strtolower',$rowHeaders_utf8);
+      $rowHeaders_utf8=array_map('trim',$rowHeaders_utf8);
       foreach ($sp_data as $rowindex => $row) {
         // Google Spreadsheets start with Index 0. But PHPEXCEL, parent`s
         // function does with 1.
