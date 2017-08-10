@@ -23,7 +23,7 @@
  */
 function islandora_multi_importer_datasource_loader(array $form_state, $page = 0, $per_page = 20) {
   //dpm($form_state);
-  if (isset($form_state['storage']['values']['step2']) && !empty($form_state['storage']['values']['step2']['google_api']['spreadsheet_id'])) {
+  if ($form_state['storage']['values']['step0']['data_source'] == 'google' && !empty($form_state['storage']['values']['step2']['google_api']['spreadsheet_id'])) {
     $spreadsheetId = trim($form_state['storage']['values']['step2']['google_api']['spreadsheet_id']);
     $range = trim($form_state['storage']['values']['step2']['google_api']['spreadsheet_range']);
     //dpm($range);
