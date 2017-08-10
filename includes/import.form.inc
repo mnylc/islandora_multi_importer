@@ -30,11 +30,11 @@ function islandora_multi_importer_form(array $form, array &$form_state) {
 
   $step = empty($form_state['storage']['step']) ? 0 : $form_state['storage']['step'];
   
-  drupal_set_title("Islandora Multi importer - Step {$step}");
   $form_state['storage']['step'] = $step;
   $step_forms = array();
   switch ($step) {
     case 0:
+      drupal_set_title(t("Islandora Multi importer - Data Source Selection Step"));
       $step_forms['step0'] = islandora_multi_importer_choosesource_form($form, $form_state);
       $step_forms['submit'] = array(
         '#type' => 'submit',
@@ -44,7 +44,7 @@ function islandora_multi_importer_form(array $form, array &$form_state) {
       );
       break;
     case 1:
-      
+      drupal_set_title(t("Islandora Multi importer - Data Source: Upload File Step"));
       $step_forms['step1'] = islandora_multi_importer_upload_form($form, $form_state);
       $step_forms['#validate'] = array('islandora_multi_importer_form_check_fileisuploaded');
       $step_forms['submit'] = array(
@@ -65,6 +65,7 @@ function islandora_multi_importer_form(array $form, array &$form_state) {
       break;
     
     case 2:
+      drupal_set_title(t("Islandora Multi importer - Data Source: Google SpreadSheet info"));
       $step_forms['#tree'] = TRUE;
         //$step_forms['#validate'] = array('islandora_multi_importer_form_check_fileisuploaded');
       $step_forms['step2'] = islandora_multi_importer_google_form($form, $form_state);
@@ -88,7 +89,7 @@ function islandora_multi_importer_form(array $form, array &$form_state) {
       break;
 
       case 3:
-
+      drupal_set_title(t("Islandora Multi importer - Import settings step"));
       // This keeps our file data around between rebuilds.
       $file_data = isset($form_state['storage']['values']['general']['file_data']) ? $form_state['storage']['values']['general']['file_data'] : array();
       $step_forms['maintab']['#type'] = 'horizontal_tabs';
@@ -149,6 +150,7 @@ function islandora_multi_importer_form(array $form, array &$form_state) {
       break;
 
     case 4:
+      drupal_set_title(t("Islandora Multi importer - Binary Source ZIP upload step"));
       $step_forms['last'] = islandora_multi_importer_zip_upload_form($form, $form_state);
       $step_forms['ingest'] = array(
         '#type' => 'submit',
