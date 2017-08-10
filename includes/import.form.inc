@@ -1134,6 +1134,7 @@ function islandora_multi_importer_form_submit($form, &$form_state) {
     $setID = $preprocessor->getSetId();
     //@TODO: switch needed here in case we are dealing with FULL CRUD and not only new objects
     // Since those will basically run differently.
+    $file = file_load($form_state['storage']['values']['step1']['file']);
     file_usage_add($file, 'islandora_batch', 'islandora_batch_set', $setID);
     
     drupal_set_message(t('You are all set(id = @set)!', array('@set' => $preprocessor->getSetId())), 'status');
