@@ -55,7 +55,9 @@ function islandora_multi_importer_mapper_get_derivatives($cmodel) {
    *   - destination_dsid: (Optional) String of the datastream id that is being
    *     created. To be used in the UI.
   );*/
-
+  $fakeabstractobject = new FakeObject();
+  // Ugly workaround for people that forget about function signatures.
+  
   $options = array(
     'force' => FALSE,
     'source_dsid' => NULL,
@@ -64,9 +66,9 @@ function islandora_multi_importer_mapper_get_derivatives($cmodel) {
   $derivatives = islandora_invoke_hook_list(
       ISLANDORA_DERIVATIVE_CREATION_HOOK,
       array($cmodel),
-      array()
+      array($fakeabstractobject)
     );
-  $fakeabstractobject = new FakeObject();
+  
   foreach (islandora_build_hook_list(ISLANDORA_DERIVATIVE_CREATION_HOOK, array($cmodel)) as $hook) {
     // This hooks have 3 parameters, which goes against the recomendations of
     // https://api.drupal.org/api/drupal/includes%21module.inc/function/drupal_alter/7.x
