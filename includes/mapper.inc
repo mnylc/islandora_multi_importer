@@ -57,7 +57,7 @@ function islandora_multi_importer_mapper_get_derivatives($cmodel) {
   );*/
   $fakeabstractobject = new FakeObject();
   // Ugly workaround for people that forget about function signatures.
-  
+  $fakeabstractobject->models = array($cmodel);
   $options = array(
     'force' => FALSE,
     'source_dsid' => NULL,
