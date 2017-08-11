@@ -74,7 +74,7 @@ function islandora_multi_importer_google_default_password($form, &$form_state) {
   if ($form_state['values']['islandora_multi_importer_googleClientSecret'] == '') {
       $form_state['values']['islandora_multi_importer_googleClientSecret'] = variable_get('islandora_multi_importer_googleClientSecret','');
   }
-  if ($form_state['values']['islandora_multi_importer_googleClientToken'] == '') {
+  if (isset($form_state['values']['islandora_multi_importer_googleClientToken']) && $form_state['values']['islandora_multi_importer_googleClientToken'] == '') {
       $form_state['values']['islandora_multi_importer_googleClientToken'] = variable_get('islandora_multi_importer_googleClientToken','');
   }
   $form['buttons']['submit'] = array('#type' => 'submit', '#value' => t('Save Configuration'));
