@@ -22,7 +22,7 @@ Islandora Multi Importer allows the csv data to be read directly from Google Spr
 
 * Enter the `client id` in `Google API App ID` and `client secret` in `Google API App Secret Key` and save the form.  Note that when you save, the secret key field will blanked.
 
-* You should see a third form element called `Google API Auth Code` and a link ("Enter from this URL"), click the link. It will ask to Choose a Google account and login.  When loged in, it will request permission to "View your Google Spreadsheets".  Click `Allow`.
+* You should see a third form element called `Google API Auth Code` and a link ("Enter from this URL").  Click the link. It will ask to Choose a Google account and login.  When loged in, it will request permission to "View your Google Spreadsheets".  Click `Allow`.
 
 ![Provide Permission](/docs/images/Provide_Permission.png)
 
