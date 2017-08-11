@@ -23,3 +23,13 @@
 [Twig Documentation] (http://twig.sensiolabs.org/documentation)
 
 
+## Why Use Multi-importer
+* UI driven integrated workflow for ingest and update
+* Metadata Cleanup: Export your MODS metadata as CSV via solr, clean up, then update the MODS datastream of the objects by recreating the MODS datastream using Twing
+* To ingest different content types at the same time
+* To avoid having to follow strict naming conventions and folder structure dictated by many Islandora batch ingest processes
+* Selectively choose which derivatives you want to create and upload
+* To avoid the OpenRefine/XSLT approach to creating MODS from CSVs
+* To take advantage of the Twig Templating system for creating MODS from CSVs
+* To preview the MODS output easily
+* Supports integration with Google Spreadsheets, Zip/Local/Amazon storage
