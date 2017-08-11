@@ -23,7 +23,7 @@
 [Twig Documentation] (http://twig.sensiolabs.org/documentation)
 
 
-## Why Use Multi-importer
+### Why Use Multi-importer
 * UI driven integrated workflow for ingest and update
 * Metadata Cleanup: Export your MODS metadata as CSV via solr, clean up, then update the MODS datastream of the objects by recreating the MODS datastream using Twing
 * To ingest different content types at the same time
