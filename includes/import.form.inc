@@ -414,8 +414,18 @@ function islandora_multi_importer_twig_form($form, &$form_state, $file_data) {
     else {
       // We should be never get here. If we are here our file has not data? WE need to push the user back to another step
       $current_record_record_data = array('name' => 'metro.org');
+      
+      if ($form_state['storage']['values']['step0']['data_source'] == 'google') {
+        drupal_set_message(t('Seems like your Google Spreadsheet has no data, no headers or we are having trouble fetching it. Try selecting another one or a different Range.'),'warning');
+      }
+      else {
+        drupal_set_message(t('Seems like your File has no data, no headers or we are having trouble fetching it. Try selecting another file.'),'warning');
+      }
+
     }
   }
+  
+  
   // Create a small sub table so Template developer
   // can see the data used to test template.
   $form['preview_data']['table']['#markup'] = theme('table', array('header' => $file_data['headers'], 'rows' => array($file_data['data'][$current_row])));
