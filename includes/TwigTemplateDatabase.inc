@@ -186,6 +186,7 @@ class TwigTemplateDatabase {
     return FALSE;
   }
 
+  
   /**
    * Updates the Twig Template with the given Twig Template name; the previous definition is lost.
    *
@@ -199,7 +200,7 @@ class TwigTemplateDatabase {
    * @returns bool
    *   TRUE if successful; FALSE otherwise.
    */
-  public static function Update($twig_id, $twig_name, $twigTemplate) {
+  public static function UpdatebyId($twig_id, $twig_name, $twigTemplate) {
     if (self::ExistsById($twig_id)) {
      
       $num = db_update(self::TABLE)

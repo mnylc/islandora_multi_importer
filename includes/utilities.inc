@@ -290,6 +290,22 @@ function islandora_multi_importer_twig_save($twig_name, $twigTemplate) {
    $twig_template_create_db = TwigTemplateDatabase::Create($twig_name, $twigTemplate);
    return $twig_template_create_db;
 }
+
+/**
+ * Updates an existing twig template by ID.
+ *
+ * @param string $twig_name
+ *   The future name of the twig template in DB.
+ * @param string $twigTemplate
+ *   Surprinsingly the Template itself.
+ *
+ * @return bool
+ */
+function islandora_multi_importer_twig_update($twig_id, $twig_name, $twigTemplate) {
+   module_load_include('inc', 'islandora_multi_importer', 'includes/TwigTemplateDatabase');
+   $twig_template_create_db = TwigTemplateDatabase::UpdateById($twig_id, $twig_name, $twigTemplate);
+   return $twig_template_create_db;
+}
 /**
  * Deletes a twig template by it's id.
  *

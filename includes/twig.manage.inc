@@ -317,14 +317,14 @@ function islandora_multi_importer_twigcreate_form_submit($form, &$form_state) {
    }
  }
  else {
-   drupal_set_message(t('Make sure your template and templante name are not empty.'), 'error');
+   drupal_set_message(t('Make sure your template and template name are not empty.'), 'error');
  } 
 }
 
 
 
 /**
- * Creates new Twig template
+ * Edits an existing Twig template
  *
  * @param array $form
  *   An array representing a Drupal form.
@@ -341,6 +341,8 @@ function islandora_multi_importer_twigedit_form($form, &$form_state, $id) {
   module_load_include('inc', 'islandora_multi_importer', 'includes/import.form');
   module_load_include('inc', 'islandora_multi_importer', 'includes/utilities');
   $file_data = isset($form_state['storage']['values']['general']['file_data']) ? $form_state['storage']['values']['general']['file_data'] : array();
+  $form_state['twig_id'] = $id;
+  
   // @TODO. and if the %id does not exists? 404? or notice.. not sure
   $thetemplateinfo = islandora_multi_importer_twig_fetchbyid($id);
   if (empty($thetemplateinfo)) {
@@ -361,6 +363,28 @@ function islandora_multi_importer_twigedit_form($form, &$form_state, $id) {
   $form_twigcreate['twig']['#title'] = t('Templating');
  
   return $form_twigcreate;
+}
+
+function islandora_multi_importer_twigedit_form_submit($form, &$form_state) {
+ module_load_include('inc', 'islandora_multi_importer', 'includes/utilities');
+ $twig_template = trim($form_state['values']['twig']['group_tabs']['group_twig_tab']['twig']);
+ $twig_template_name = trim($form_state['values']['twig']['group_tabs']['group_twig_tab']['save']['template_name']);
+ $twig_id =  $form_state['twig_id'];
+ if (!empty($twig_template) && !empty($twig_template_name) && !empty($twig_id)) {
+   // Save the template to db.
+   if (islandora_multi_importer_twig_update($twig_id, $twig_template_name, $twig_template)) {
+      drupal_static_reset('islandora_multi_importer_twig_list');
+      drupal_set_message(t('Your Twig template has been updated.'));
+      $form_state['redirect'] = 'admin/islandora/twigtemplates';
+    
+   }
+   else {
+     drupal_set_message(t('Template Failed to Save. Please check your fields'), 'error');
+   }
+ }
+ else {
+   drupal_set_message(t('Make sure your template and template name are not empty.'), 'error');
+ } 
 }
 
 /**
