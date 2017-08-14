@@ -114,7 +114,7 @@ function islandora_multi_importer_form(array $form, array &$form_state) {
       $step_forms['step4']['#access'] = TRUE;
       $step_forms['step4']['#type'] = 'fieldset';
       $step_forms['step4']['#title'] = t('Templating');
-
+      
       $step_forms['cmodelmap']['#id'] = drupal_html_id('main-data4');
       $step_forms['cmodelmap']['#group'] = 'maintab';
       $step_forms['cmodelmap']['#collapsible'] = FALSE;
@@ -378,7 +378,8 @@ function islandora_multi_importer_previs_form($form, &$form_state, &$file_data) 
       ),
     ),
   );
-
+  // Note: islandora_multi_importer_ajax_updaterecordpreview is in callbacks.inc file.
+  // not here, don´t search for it!
   return $form;
 }
 
@@ -1017,6 +1018,7 @@ function islandora_multi_importer_loadtwig_ajax($form, &$form_state) {
 function islandora_multi_importer_mapper_ajax($form, &$form_state) {
   return $form['cmodelmap']['cmodels'];
 }
+
 
 /**
  * Main submit handler for Multi Importer form.
