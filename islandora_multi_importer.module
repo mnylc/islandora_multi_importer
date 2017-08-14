@@ -67,6 +67,15 @@ function islandora_multi_importer_menu() {
       'file' => 'includes/twig.manage.inc',
       'type' => MENU_NORMAL_ITEM,
     ),
+    'admin/islandora/twigtemplates/%/delete' => array(
+      'title' => 'Multi Importer Twig templates',
+      'description' => 'Delete stored Twig templates used by Multi Importer',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('islandora_multi_importer_twigdelete_form', 3),
+      'access arguments' => array(ISLANDORA_MULTI_IMPORTER_TWIGMANAGE),
+      'file' => 'includes/twig.manage.inc',
+      'type' => MENU_NORMAL_ITEM,
+    ),
     'admin/islandora/twigtemplates/%/duplicate' => array(
       'title' => 'Multi Importer Twig templates',
       'description' => 'Manage stored Twig templates for use inside Multi Importer',

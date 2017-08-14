@@ -253,7 +253,19 @@ function islandora_multi_importer_twig_fetch($twig_name) {
   }
 return $twig_template_from_db;
 }
-
+/**
+ * Fetches a twig template by it's id.
+ *
+ * @param int $twig id
+ *   Surprinsingly the ID of the twig template in DB.
+ *
+ * @return array
+ * associative array with following structure 
+ * 'name' => the name of the template
+ * 'id' => the unique integer id
+ * 'twig' => the template itself
+ * 'updated' => when this one was updated
+ */
 function islandora_multi_importer_twig_fetchbyid($twig_id) {
   $twig_template_info_from_db = &drupal_static(__FUNCTION__);
   if (!isset($twig_template_from_db)) {
@@ -263,13 +275,34 @@ function islandora_multi_importer_twig_fetchbyid($twig_id) {
   
 return $twig_template_info_from_db;
 }
-
+/**
+ * Saves a twig template by it's name.
+ *
+ * @param string $twig_name
+ *   The future name of the twig template in DB.
+ * @param string $twigTemplate
+ *   Surprinsingly the Template itself.
+ *
+ * @return bool
+ */
 function islandora_multi_importer_twig_save($twig_name, $twigTemplate) {
    module_load_include('inc', 'islandora_multi_importer', 'includes/TwigTemplateDatabase');
    $twig_template_create_db = TwigTemplateDatabase::Create($twig_name, $twigTemplate);
    return $twig_template_create_db;
 }
-
+/**
+ * Deletes a twig template by it's id.
+ *
+ * @param int $twig id
+ *   Surprinsingly the ID of the twig template in DB.
+ *
+ * @return bool
+ */
+function islandora_multi_importer_twig_deletebyid($twig_id) {
+  module_load_include('inc', 'islandora_multi_importer', 'includes/TwigTemplateDatabase');
+  $twig_template = TwigTemplateDatabase::DeletebyId($twig_id);
+  return $twig_template;
+}
 
 /**
  * Creates an CSV from array and returns file.

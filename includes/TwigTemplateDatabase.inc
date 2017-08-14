@@ -36,6 +36,26 @@ class TwigTemplateDatabase {
     return $count == 1;
   }
 
+
+  /**
+   * Checks to see if the given Twig Template exists in the database.
+   *
+   * @param int $twig_id
+   *   The unique id of the Twig Template.
+   *
+   * @return bool
+   *   TRUE if the given Twig Template exists, FALSE otherwise.
+   */
+  public static function ExistsbyId($twig_id) {
+    $count = db_select('islandora_multi_importer_twig_templates', 'tw')
+      ->condition('tw.id', $twig_id)
+      ->fields('tw', array('name'))
+      ->execute()
+      ->rowCount();
+
+    return $count == 1;
+  }
+
   /**
    * Checks to see if the given Twig Template exists in the database and is valid.
    *
@@ -179,12 +199,12 @@ class TwigTemplateDatabase {
    * @returns bool
    *   TRUE if successful; FALSE otherwise.
    */
-  public static function Update($twig_name, $twigTemplate) {
-    if (self::Exists($twig_name)) {
+  public static function Update($twig_id, $twig_name, $twigTemplate) {
+    if (self::ExistsById($twig_id)) {
      
       $num = db_update(self::TABLE)
-        ->fields(array('twig' => $twigTemplate, 'updated' => time()))
-        ->condition('name', $twig_name)
+        ->fields(array('twig' => $twigTemplate, 'updated' => time(),'name' => trim($twig_name)))
+        ->condition('id', $twig_id)
         ->execute();
       if ($num) {
         return TRUE;
@@ -205,10 +225,10 @@ class TwigTemplateDatabase {
    * @return bool
    *   TRUE if successful; FALSE otherwise.
    */
-  public static function Delete($twig_name) {
-    if (self::Exists($twig_name)) {
+  public static function DeleteById($twig_id) {
+    if (self::ExistsById($twig_id)) {
       $num = db_delete(self::TABLE)
-        ->condition('name', $twig_name)
+        ->condition('id', $twig_id)
         ->execute();
       if ($num) {
         return TRUE;

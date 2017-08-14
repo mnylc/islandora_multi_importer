@@ -86,6 +86,21 @@ function islandora_multi_importer_twigcreate_form($form, &$form_state) {
   return $form_twigcreate;
 }
 
+/**
+ * Dual purpouse Form, for new and existing Twig Templates.
+ *
+ * @param array $form
+ *   An array representing a Drupal form.
+ * @param array $form_state
+ *   An array containing the Drupal form state.
+ * @param array $file_data
+ *   An array containing some data for doing previews.
+ * @param array $existingtwig
+ *   An array with Twig template info, id, content and date. The full package. 
+ *
+ * @return array
+ *   the form to deal with CRUDing Twig templaes
+ */
 function islandora_multi_importer_twigcreateinternals_form($form, &$form_state, $file_data, $existingtwig = array()) {
   module_load_include('inc', 'islandora_multi_importer', 'includes/utilities');
   global $user;
@@ -124,7 +139,7 @@ function islandora_multi_importer_twigcreateinternals_form($form, &$form_state, 
 
   $twig_template_default = '{% block content %} Hello {{ name }}{% endblock %}';
   $twig_name_default = !empty($existingtwig) ? $existingtwig['name'] : t("New Twig template by @username", array("@username" => $user->name));
-  $twig_template = !empty($existingtwig) ? $existingtwig['twig'] : $existingtwig['twig'];
+  $twig_template = !empty($existingtwig) ? $existingtwig['twig'] : "";
   $loaderFile = new Twig_Loader_Filesystem(__DIR__ . '/../templates');
   $loaderArray = new Twig_Loader_Array(array(
     'forminput.xml' => $twig_template,
@@ -285,10 +300,40 @@ function islandora_multi_importer_twigcreateinternals_form($form, &$form_state, 
   return $form;
 }
 
+function islandora_multi_importer_twigcreate_form_submit($form, &$form_state) {
+ module_load_include('inc', 'islandora_multi_importer', 'includes/utilities');
+ $twig_template = trim($form_state['values']['twig']['group_tabs']['group_twig_tab']['twig']);
+ $twig_template_name = trim($form_state['values']['twig']['group_tabs']['group_twig_tab']['save']['template_name']);
+ if (!empty($twig_template) && !empty($twig_template_name)) {
+   // Save the template to db.
+   if (islandora_multi_importer_twig_save($twig_template_name, $twig_template)) {
+      drupal_static_reset('islandora_multi_importer_twig_list');
+      drupal_set_message(t('A new Twig template named @twig_name has been saved.', array('@twig_name' => $twig_template_name)));
+      $form_state['redirect'] = 'admin/islandora/twigtemplates';
+    
+   }
+   else {
+     drupal_set_message(t('Template Failed to Save. Please check your fields'), 'error');
+   }
+ }
+ else {
+   drupal_set_message(t('Make sure your template and templante name are not empty.'), 'error');
+ } 
+}
+
+
+
 /**
  * Creates new Twig template
  *
- * @return $form
+ * @param array $form
+ *   An array representing a Drupal form.
+ * @param array $form_state
+ *   An array containing the Drupal form state.
+ * @param int $id
+ *   The ID of a Twig template
+ *
+ * @return array
  *   the form to deal with CRUDing Twig templaes
  */
 function islandora_multi_importer_twigedit_form($form, &$form_state, $id) {
@@ -316,4 +361,56 @@ function islandora_multi_importer_twigedit_form($form, &$form_state, $id) {
   $form_twigcreate['twig']['#title'] = t('Templating');
  
   return $form_twigcreate;
+}
+
+/**
+ * Deletes a Twig template
+ *
+ * @param array $form
+ *   An array representing a Drupal form.
+ * @param array $form_state
+ *   An array containing the Drupal form state.
+ * @param int $id
+ *   The ID of a Twig template
+ *
+ * @return array
+ *   An array representing the confirmation form.
+ */
+function islandora_multi_importer_twigdelete_form($form, &$form_state, $id) {
+  module_load_include('inc', 'islandora_multi_importer', 'includes/utilities');
+  module_load_include('inc', 'islandora_multi_importer', 'includes/TwigTemplateDatabase');
+  $form_state['twig_id'] = $id;
+  $thetemplateinfo = islandora_multi_importer_twig_fetchbyid($id);
+  if (empty($thetemplateinfo)) {
+    drupal_set_message(t('The requested Twig template does not exist'),'warning');
+    drupal_not_found();
+    drupal_exit();
+     
+  }
+  $form_state['twig_name'] = $thetemplateinfo['name'];
+  return confirm_form($form,
+    t('Are you sure you want to delete a twig template named @twig_name?', array('@twig_name' => $form_state['twig_name'])),
+    "admin/islandora/twigtemplates",
+    t('This action cannot be undone.'),
+    t('Delete'),
+    t('Cancel')
+  );
+}
+
+/**
+ * Submit handler for the islandora_solr_metadata delete confirm_form.
+ *
+ * @param array $form
+ *   An array representing a Drupal form.
+ * @param array $form_state
+ *   An array containing the Drupal form state.
+ */
+function islandora_multi_importer_twigdelete_form_submit($form, &$form_state) {
+  module_load_include('inc', 'islandora_multi_importer', 'includes/utilities');
+  module_load_include('inc', 'islandora_multi_importer', 'includes/TwigTemplateDatabase');
+  if (isset($form_state['twig_id'])) {
+    islandora_multi_importer_twig_deletebyid($form_state['twig_id']);
+    $form_state['redirect'] = 'admin/islandora/twigtemplates';
+    drupal_set_message(t('The Twig template formerly known as @twig_name has been deleted!', array('@twig_name' => $form_state['twig_name'])));
+  }
 }
