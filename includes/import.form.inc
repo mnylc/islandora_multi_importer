@@ -868,7 +868,7 @@ function islandora_multi_importer_objectmapping_form($form, &$form_state, $file_
       ),
       'pidtype' => array(
         '#type' => 'checkbox',
-        '#description' => t('Check to let Islandora build PID for you'),
+        '#description' => t('Check to let Islandora build PID for you and ignore the Object PID source fields'),
       ),
       'stub' => array(
         '#markup' => '&nbsp;',
@@ -1094,7 +1094,17 @@ function islandora_multi_importer_form_submit($form, &$form_state) {
   if ($form_state['triggering_element']['#value'] == t('Ingest')) {
     // Check if a ZIP file needs to be uploaded.
     if ($form_state['storage']['step'] == 3) {
+      // Lets check if Google was used as source. I should
+     
+      if ($form_state['storage']['values']['step0']['data_source'] == 'google' && !empty($form_state['storage']['values']['step2']['google_api']['spreadsheet_id'])) {
+        $spreadsheetId = trim($form_state['storage']['values']['step2']['google_api']['spreadsheet_id']);
+        $range = trim($form_state['storage']['values']['step2']['google_api']['spreadsheet_range']);
+        $newfile_fid= islandora_multi_importer_read_googledata($spreadsheetId, $range, -1, 0);
+        $form_state['storage']['values']['step1']['file'] = islandora_multi_importer_csv_save($newfile_fid);
+      }
+
       if ($form_state['values']['objectmap']['objectmapping']['rows']['dsmap_row']['dsremote'] == 'ZIP') {
+        
         $form_state['storage']['step'] = 4;
         $form_state['storage']['values']['step4'] = array(
           'type' => $form_state['values']['objectmap']['objectmapping']['rows']['dsmap_row']['dsremote'],
@@ -1109,18 +1119,6 @@ function islandora_multi_importer_form_submit($form, &$form_state) {
       }
       else {
         // @TODO This all needs to be validated
-        
-        // Lets check if Google was used as source. I should
-        // Create a flag better to make sure i´m coming here with this checked out
-        // and not only rely on having the form_state values.
-          if ($form_state['storage']['values']['step0']['data_source'] == 'google' && !empty($form_state['storage']['values']['step2']['google_api']['spreadsheet_id'])) {
-            $spreadsheetId = trim($form_state['storage']['values']['step2']['google_api']['spreadsheet_id']);
-            $range = trim($form_state['storage']['values']['step2']['google_api']['spreadsheet_range']);
-            $newfile_fid= islandora_multi_importer_read_googledata($spreadsheetId, $range, -1, 0);
-            $form_state['storage']['values']['step1']['file'] = islandora_multi_importer_csv_save($newfile_fid);
-          }
-        
-        
         
         $parameters = array(
           'type' => $form_state['values']['objectmap']['objectmapping']['rows']['dsmap_row']['dsremote'],

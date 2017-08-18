@@ -200,19 +200,50 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
       // namespaces are inherited, so we just need to find collection
       // objects in parent pid column.
       $objectInfo['parent'] = trim($row[$this->parameters['object_maping']['parentmap_row']['parentmap']]);
-      $objectInfo['data'] = $row;
+      $possiblePID = "";
+      
+       $objectInfo['data'] = $row;
+       
+      // Autogeneration of PID is enabled and a PID column is provided
+      // both modes complement/limit each other
+      if (($this->parameters['object_maping']['pidmap_row']['pidtype']) != 1) {
+        // User provided PIDs are not required to respect collection policies, namespace, etc.
+        $possiblePID = trim($row[$this->parameters['object_maping']['pidmap_row']['pidmap']]);
+        if (!empty($possiblePID)) {
+          if (islandora_is_valid_pid($possiblePID)) {
+            $objectInfo['pid'] = $possiblePID;
+          }
+        }
+        if (!isset($objectInfo['pid'])) {
+          unset($objectInfo);
+          $invalid = $invalid + array($index => $index);
+        }
+      }  
+      // NO else statement because autogeneration is in fact the standard
+      // QUESTION IS: NO AUTOGENERATION MODE, COLUMN IS SET, PID IS EMPTY
+      // SHOULD WE TRY TO GENERATE IT AUTOMATICALLY ANYWAY?
+     
       if (islandora_is_valid_pid($objectInfo['parent'])) {
         // If valid PID, let's try to fetch a valid namespace for current cmodel
         // we will store all this stuff in a temp hash to avoid hitting
         // this again and again.
         $objectInfo['parent_cmodel'] = $this->getParentCmodel($objectInfo['parent']);
         if ($objectInfo['parent_cmodel']) {
-          $namespace = isset($namespace_hash[$objectInfo['parent']][$objectInfo['cmodel']])
-            ? $namespace_hash[$objectInfo['parent']][$objectInfo['cmodel']]
-            : $namespace_hash[$objectInfo['parent']][$objectInfo['cmodel']] = $this->determineNamespacebyPid($objectInfo['parent'], $objectInfo['cmodel']);
-          // This keeps the count so our pidcache is exact. Nice.
-          $namespace_count[$namespace] = isset($namespace_hash[$namespace]) ? $namespace_hash[$namespace]++ : 1;
-          $objectInfo['namespace'] = $namespace;
+          if (!isset($objectInfo['pid'])) { //Only do this if no PID assigned yet
+            $namespace = isset($namespace_hash[$objectInfo['parent']][$objectInfo['cmodel']])
+              ? $namespace_hash[$objectInfo['parent']][$objectInfo['cmodel']]
+                : $namespace_hash[$objectInfo['parent']][$objectInfo['cmodel']] = $this->determineNamespacebyPid($objectInfo['parent'], $objectInfo['cmodel']);
+            // This keeps the count so our pidcache is exact. Nice.
+            $namespace_count[$namespace] = isset($namespace_hash[$namespace]) ? $namespace_hash[$namespace]++ : 1;
+            $objectInfo['namespace'] = $namespace;
+          }
+          else {
+            // we have a PID but i still want my objectInfo['namespace']
+            // NO worries about checking if pidparts is in fact lenght of 2
+            // PID was checked for sanity a little bit earlier
+            $pidparts = explode(":", $objectInfo['pid']);
+            $objectInfo['namespace'] = $pidparts[0];
+          }
         }
         else {
           // No parent cmodel, no object, can't create.
@@ -236,12 +267,14 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
           $parentchilds = array();
           $i = 0;
           while ($notPID) {
+          
             $parentup = $file_data_all['data'][$parent][$this->parameters['object_maping']['parentmap_row']['parentmap']];
-
+           
+            var_dump($parentup);
             // Probably the simples approach for breaking a knott
             // a.k.a infinite loop, invalidating the whole parentship
             // chain for good.
-            $inaloop = array_key_exists($parentup, $parentchilds);
+            $inaloop = isset($parentchilds[$parentup]);
             // If $inaloop === true means we already traversed this branch
             // so we are in a loop and all our original child and it's
             // parent objects are invalid.
@@ -254,13 +287,23 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
 
             $parentchilds[$parentup] = $parentup;
             if (islandora_is_valid_pid(trim($parentup))) {
-              $namespace = isset($namespace_hash[$parentup][$objectInfo['cmodel']])
-                ? $namespace_hash[$parentup][$objectInfo['cmodel']]
-                : $namespace_hash[$parentup][$objectInfo['cmodel']] = $this->determineNamespacebyPid($parentup, $objectInfo['cmodel']
-              );
-              // This keeps the count so our pidcache is exact. Nice.
-              $namespace_count[$namespace] = isset($namespace_hash[$namespace]) ? $namespace_hash[$namespace]++ : 1;
-              $objectInfo['namespace'] = $namespace;
+              if (!isset($objectInfo['pid'])) { //Only do this if no PID assigned yet
+                $namespace = isset($namespace_hash[$parentup][$objectInfo['cmodel']])
+                  ? $namespace_hash[$parentup][$objectInfo['cmodel']]
+                  : $namespace_hash[$parentup][$objectInfo['cmodel']] = $this->determineNamespacebyPid($parentup, $objectInfo['cmodel']
+                );
+                // This keeps the count so our pidcache is exact. Nice.
+                $namespace_count[$namespace] = isset($namespace_hash[$namespace]) ? $namespace_hash[$namespace]++ : 1;
+                $objectInfo['namespace'] = $namespace;
+              } 
+              else {
+                // we have a PID but i still want my objectInfo['namespace']
+                // NO worries about checking if pidparts is in fact lenght of 2
+                // PID was checked for sanity a little bit earlier
+                $pidparts = explode(":", $objectInfo['pid']);
+                $objectInfo['namespace'] = $pidparts[0];
+              }
+              
               $notPID = FALSE;
               break;
             }
