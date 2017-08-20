@@ -338,7 +338,7 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
     // TODO: optimize maybe?
     foreach ($info as $index => &$objectInfo) {
       $namespace = $objectInfo['namespace'];
-      $objectInfo['pid'] = isset($objectInfo['pid']) ? isset($objectInfo['pid']) : $this->getInternalIdentifier($namespace, $namespace_count[$namespace]);
+      $objectInfo['pid'] = isset($objectInfo['pid']) ? $objectInfo['pid'] : $this->getInternalIdentifier($namespace, $namespace_count[$namespace]);
       // Is this object parent of someone?
       if (isset($parent_hash[$objectInfo['parent']])) {
         $objectInfo['parent'] = $info[$objectInfo['parent']]['pid'];
