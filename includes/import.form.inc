@@ -90,7 +90,7 @@ function islandora_multi_importer_form(array $form, array &$form_state) {
 
       case 3:
       drupal_set_title(t("Islandora Multi importer - Import settings step"));
-      // This keeps our file data around between rebuilds.
+      // This keeps our file data around between rebuilds
       $file_data = isset($form_state['storage']['values']['general']['file_data']) ? $form_state['storage']['values']['general']['file_data'] : array();
       $step_forms['maintab']['#type'] = 'horizontal_tabs';
 
@@ -131,11 +131,23 @@ function islandora_multi_importer_form(array $form, array &$form_state) {
       $step_forms['back'] = array(
         '#name' => 'ini',
         '#type' => 'submit',
+        '#weight' => 100,
         '#value' => t('Back to data source selection'),
       );
+      if ($form_state['storage']['values']['step0']['data_source'] == 'google' && !empty($form_state['storage']['values']['step2']['google_api']['spreadsheet_id'])) {
+      $step_forms['reread'] = array(
+          '#type' => 'submit',
+          '#name' => 'reread',
+          '#value' => t('Re-read data from google'),
+          '#weight' => 101,
+          '#submit' => array('islandora_multi_importer_form_submit'),
+        );
+      }
       $step_forms['ingest'] = array(
         '#type' => 'submit',
+        '#weight' => 102,
         '#value' => t('Ingest'),
+        
       );
 
       // We should only show this one if required ingest info is set.
@@ -1065,6 +1077,13 @@ function islandora_multi_importer_form_submit($form, &$form_state) {
   }
   if ($form_state['triggering_element']['#name'] == 'preprocess') {
     $form_state['storage']['step'] = 3;
+    $form_state['rebuild'] = TRUE;
+   
+  }
+  if ($form_state['triggering_element']['#name'] == 'reread') {
+    $form_state['storage']['step'] = 3;
+    //clears google data and forces a remote re-read
+    unset($form_state['storage']['values']['general']['file_data']);
     $form_state['rebuild'] = TRUE;
    
   }
