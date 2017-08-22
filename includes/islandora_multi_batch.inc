@@ -202,7 +202,7 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
       $objectInfo['parent'] = trim($row[$this->parameters['object_maping']['parentmap_row']['parentmap']]);
       $possiblePID = "";
       
-       $objectInfo['data'] = $row;
+      $objectInfo['data'] = $row;
        
       // Autogeneration of PID is enabled and a PID column is provided
       // both modes complement/limit each other
@@ -222,114 +222,116 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
       // NO else statement because autogeneration is in fact the standard
       // QUESTION IS: NO AUTOGENERATION MODE, COLUMN IS SET, PID IS EMPTY
       // SHOULD WE TRY TO GENERATE IT AUTOMATICALLY ANYWAY?
-     
-      if (islandora_is_valid_pid($objectInfo['parent'])) {
+      
+      // Could happen that we already invalidated this row, so check if $objectInfo is
+      // is still around. New since allowing user provided PID.
+      if (isset($objectInfo)) {
+        if (islandora_is_valid_pid($objectInfo['parent'])) {
         // If valid PID, let's try to fetch a valid namespace for current cmodel
         // we will store all this stuff in a temp hash to avoid hitting
         // this again and again.
-        $objectInfo['parent_cmodel'] = $this->getParentCmodel($objectInfo['parent']);
-        if ($objectInfo['parent_cmodel']) {
-          if (!isset($objectInfo['pid'])) { //Only do this if no PID assigned yet
-            $namespace = isset($namespace_hash[$objectInfo['parent']][$objectInfo['cmodel']])
-              ? $namespace_hash[$objectInfo['parent']][$objectInfo['cmodel']]
-                : $namespace_hash[$objectInfo['parent']][$objectInfo['cmodel']] = $this->determineNamespacebyPid($objectInfo['parent'], $objectInfo['cmodel']);
-            // This keeps the count so our pidcache is exact. Nice.
-            $namespace_count[$namespace] = isset($namespace_hash[$namespace]) ? $namespace_hash[$namespace]++ : 1;
-            $objectInfo['namespace'] = $namespace;
-          }
-          else {
-            // we have a PID but i still want my objectInfo['namespace']
-            // NO worries about checking if pidparts is in fact lenght of 2
-            // PID was checked for sanity a little bit earlier
-            $pidparts = explode(":", $objectInfo['pid']);
-            $objectInfo['namespace'] = $pidparts[0];
-          }
-        }
-        else {
-          // No parent cmodel, no object, can't create.
-          unset($objectInfo);
-          $invalid = $invalid + array($index => $index);
-        }
-      }
-      else {
-        // Means our parent object is a ROW index
-        // (referencing another row in the spreadsheet)
-        // So a different strategy is needed. We will need recurse
-        // until we find a non numeric parent.
-        $notPID = TRUE;
-        $parent = $objectInfo['parent'];
-        $parent_hash[$parent][$index] = $index;
-        $parentchilds = array();
-        if ((!isset($invalid[$index])) && (!isset($invalid[$parent]))) {
-          // Only traverse if we don't have this index or the parent one
-          // in the invalid register.
-          $objectInfo['parent_cmodel'] = $file_data_all['data'][$parent][$this->parameters['cmodel_source_field_index']];
-          $parentchilds = array();
-          $i = 0;
-          while ($notPID) {
-          
-            $parentup = $file_data_all['data'][$parent][$this->parameters['object_maping']['parentmap_row']['parentmap']];
-           
-            var_dump($parentup);
-            // Probably the simples approach for breaking a knott
-            // a.k.a infinite loop, invalidating the whole parentship
-            // chain for good.
-            $inaloop = isset($parentchilds[$parentup]);
-            // If $inaloop === true means we already traversed this branch
-            // so we are in a loop and all our original child and it's
-            // parent objects are invalid.
-            if ($inaloop) {
-              $invalid = $invalid + $parentchilds;
-              unset($objectInfo);
-              $notPID = FALSE;
-              break;
-            }
-
-            $parentchilds[$parentup] = $parentup;
-            if (islandora_is_valid_pid(trim($parentup))) {
-              if (!isset($objectInfo['pid'])) { //Only do this if no PID assigned yet
-                $namespace = isset($namespace_hash[$parentup][$objectInfo['cmodel']])
-                  ? $namespace_hash[$parentup][$objectInfo['cmodel']]
-                  : $namespace_hash[$parentup][$objectInfo['cmodel']] = $this->determineNamespacebyPid($parentup, $objectInfo['cmodel']
-                );
-                // This keeps the count so our pidcache is exact. Nice.
-                $namespace_count[$namespace] = isset($namespace_hash[$namespace]) ? $namespace_hash[$namespace]++ : 1;
-                $objectInfo['namespace'] = $namespace;
-              } 
-              else {
-                // we have a PID but i still want my objectInfo['namespace']
-                // NO worries about checking if pidparts is in fact lenght of 2
-                // PID was checked for sanity a little bit earlier
-                $pidparts = explode(":", $objectInfo['pid']);
-                $objectInfo['namespace'] = $pidparts[0];
-              }
-              
-              $notPID = FALSE;
-              break;
-            }
-            elseif (empty(trim($parent))) {
-
-              // We can't continue here
-              // means there must be an error
-              // This will fail for any child object that is
-              // child of any of these parents.
-              $invalid = $invalid + $parentchilds + array($objectInfo['parent'] => $objectInfo['parent']);
-              unset($objectInfo);
-              $notPID = FALSE;
+          $objectInfo['parent_cmodel'] = $this->getParentCmodel($objectInfo['parent']);
+          if ($objectInfo['parent_cmodel']) {
+            if (!isset($objectInfo['pid'])) { //Only do this if no PID assigned yet
+              $namespace = isset($namespace_hash[$objectInfo['parent']][$objectInfo['cmodel']])
+                ? $namespace_hash[$objectInfo['parent']][$objectInfo['cmodel']]
+                  : $namespace_hash[$objectInfo['parent']][$objectInfo['cmodel']] = $this->determineNamespacebyPid($objectInfo['parent'], $objectInfo['cmodel']);
+              // This keeps the count so our pidcache is exact. Nice.
+              $namespace_count[$namespace] = isset($namespace_hash[$namespace]) ? $namespace_hash[$namespace]++ : 1;
+              $objectInfo['namespace'] = $namespace;
             }
             else {
-              // This a simple accumulator, means all is well,
-              // parent is still an index.
-              $parent_hash[$parentup][$parent] = $parent;
+              // we have a PID but i still want my objectInfo['namespace']
+              // NO worries about checking if pidparts is in fact lenght of 2
+              // PID was checked for sanity a little bit earlier
+              $pidparts = explode(":", $objectInfo['pid']);
+              $objectInfo['namespace'] = $pidparts[0];
             }
-            $parent = $parentup;
+          }
+          else {
+            // No parent cmodel, no object, can't create.
+            unset($objectInfo);
+            $invalid = $invalid + array($index => $index);
           }
         }
         else {
-          unset($objectInfo);
+          // Means our parent object is a ROW index
+          // (referencing another row in the spreadsheet)
+          // So a different strategy is needed. We will need recurse
+          // until we find a non numeric parent.
+          $notPID = TRUE;
+          $parent = $objectInfo['parent'];
+          $parent_hash[$parent][$index] = $index;
+          $parentchilds = array();
+          if ((!isset($invalid[$index])) && (!isset($invalid[$parent]))) {
+            // Only traverse if we don't have this index or the parent one
+            // in the invalid register.
+            $objectInfo['parent_cmodel'] = $file_data_all['data'][$parent][$this->parameters['cmodel_source_field_index']];
+            $parentchilds = array();
+            $i = 0;
+            while ($notPID) {
+          
+              $parentup = $file_data_all['data'][$parent][$this->parameters['object_maping']['parentmap_row']['parentmap']];
+           
+              // Probably the simples approach for breaking a knott
+              // a.k.a infinite loop, invalidating the whole parentship
+              // chain for good.
+              $inaloop = isset($parentchilds[$parentup]);
+              // If $inaloop === true means we already traversed this branch
+              // so we are in a loop and all our original child and it's
+              // parent objects are invalid.
+              if ($inaloop) {
+                $invalid = $invalid + $parentchilds;
+                unset($objectInfo);
+                $notPID = FALSE;
+                break;
+              }
+
+              $parentchilds[$parentup] = $parentup;
+              if (islandora_is_valid_pid(trim($parentup))) {
+                if (!isset($objectInfo['pid'])) { //Only do this if no PID assigned yet
+                  $namespace = isset($namespace_hash[$parentup][$objectInfo['cmodel']])
+                    ? $namespace_hash[$parentup][$objectInfo['cmodel']]
+                    : $namespace_hash[$parentup][$objectInfo['cmodel']] = $this->determineNamespacebyPid($parentup, $objectInfo['cmodel']
+                  );
+                  // This keeps the count so our pidcache is exact. Nice.
+                  $namespace_count[$namespace] = isset($namespace_hash[$namespace]) ? $namespace_hash[$namespace]++ : 1;
+                  $objectInfo['namespace'] = $namespace;
+                } 
+                else {
+                  // we have a PID but i still want my objectInfo['namespace']
+                  // NO worries about checking if pidparts is in fact lenght of 2
+                  // PID was checked for sanity a little bit earlier
+                  $pidparts = explode(":", $objectInfo['pid']);
+                  $objectInfo['namespace'] = $pidparts[0];
+                }
+              
+                $notPID = FALSE;
+                break;
+              }
+              elseif (empty(trim($parent))) {
+
+                // We can't continue here
+                // means there must be an error
+                // This will fail for any child object that is
+                // child of any of these parents.
+                $invalid = $invalid + $parentchilds + array($objectInfo['parent'] => $objectInfo['parent']);
+                unset($objectInfo);
+                $notPID = FALSE;
+              }
+              else {
+                // This a simple accumulator, means all is well,
+                // parent is still an index.
+                $parent_hash[$parentup][$parent] = $parent;
+              }
+              $parent = $parentup;
+            }
+          }
+          else {
+            unset($objectInfo);
+          }
         }
       }
-
       if (isset($objectInfo) and !empty($objectInfo)) {
         $info[$index] = $objectInfo;
       }
