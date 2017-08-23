@@ -553,7 +553,6 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
    *  Recomended is a verb in past tense.
    *  
    * @return string
-   
    */
   public function getRepositoryActionDescription() {
     if ($this->preprocessorParameters['action'] == 'update') {
