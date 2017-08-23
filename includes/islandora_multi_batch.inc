@@ -391,7 +391,7 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
     $this->objectInfo = $object_info;
     $this->resources = array();
     $this->preprocessorParameters = $preprocessor_parameters;
-    $this->currentState = 'ISLANDORA_BATCH_STATE__NOT_READY';
+    $this->currentState = ISLANDORA_BATCH_STATE__READY;
   }
 
   /**
