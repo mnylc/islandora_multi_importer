@@ -180,8 +180,21 @@ function islandora_multi_importer_form(array $form, array &$form_state) {
       }
       break;
   }
-
+  if (($step == 3) || ($step ==4)) {
+    $step_forms['action'] = array(
+      '#type' => 'select',
+      '#title' => t('What type of Batch Action to execute?'),
+      '#options' => array('ingest'=>'ingest new objects','update'=>'update existing objects'),
+      '#default_value' => 'ingest' ,
+      '#ajax' => array(
+        'callback' => 'islandora_multi_importer_changeaction_ajax',
+        'wrapper' => 'islandora-multi-top',
+      ),
+    );
+  }
   $form = $step_forms;
+  $form['#prefix'] = '<div id="islandora-multi-top">';
+  $form['#suffix'] = '</div>';
   $form['#tree'] = TRUE;
   return $form;
 }
@@ -701,6 +714,8 @@ function islandora_multi_importer_cmodelmapping_form(array $form, array &$form_s
     }
     else {
       drupal_set_message(t('No valid cmodels found, please check spelling for select field value'), 'warning');
+      unset($form_state['storage']['values']['general']['computed_cmodels']);
+      unset($form_state['storage']['values']['general']['computed_derivatives']);
     }
 
   }
@@ -881,6 +896,11 @@ function islandora_multi_importer_objectmapping_form($form, &$form_state, $file_
       'pidtype' => array(
         '#type' => 'checkbox',
         '#description' => t('Check to let Islandora build PID for you and ignore the Object PID source fields'),
+        '#states' => array(
+        	'visible' => array(
+        		':input[name=action]' => array('value' => 'ingest'),
+        	),
+        ),
       ),
       'stub' => array(
         '#markup' => '&nbsp;',
@@ -891,15 +911,26 @@ function islandora_multi_importer_objectmapping_form($form, &$form_state, $file_
       'label' => array(
         '#markup' => t('Parent Object'),
       ),
+    
       'parentmap' => array(
         '#type' => 'select',
         '#attributes' => '',
         '#description' => t('Select the source field to use as parent Object'),
         '#options' => $file_data['headers'],
+        '#states' => array(
+        	'enabled' => array(
+        		':input[name=action]' => array('value' => 'ingest'),
+        	),
+        ),
       ),
       'parenttype' => array(
         '#type' => 'checkbox',
         '#description' => t('If value is not a well formed PID, assume it is a row index present in the same data'),
+        '#states' => array(
+        	'enabled' => array(
+        		':input[name=action]' => array('value' => 'ingest'),
+        	),
+        ),
       ),
       'stub' => array(
         '#markup' => '&nbsp;',
@@ -933,6 +964,11 @@ function islandora_multi_importer_objectmapping_form($form, &$form_state, $file_
         '#attributes' => '',
         '#description' => t('Select the source field to use as Sequence order index in multi child objects'),
         '#options' => $file_data['headers'],
+        '#states' => array(
+        	'enabled' => array(
+        		':input[name=action]' => array('value' => 'ingest'),
+        	),
+        ),
       ),
       'stub1' => array(
         '#markup' => '&nbsp;',
@@ -995,6 +1031,14 @@ function islandora_multi_importer_form_upload_zip_callback($form, $form_state) {
 function islandora_multi_importer_previs_ajax($form, &$form_state) {
   return $form['step3']['sheet_content']['rows'];
 }
+
+/**
+ * Previsualization callback for ajax driven form.
+ */
+function islandora_multi_importer_changeaction_ajax($form, &$form_state) {
+  return $form;
+}
+
 
 /**
  * Twig Previsualization callback for ajax driven form.
@@ -1153,7 +1197,12 @@ function islandora_multi_importer_form_submit($form, &$form_state) {
       $parameters = $form_state['storage']['values']['step4'];
       $parameters['source_binaries'] = $form_state['values']['last']['file2'];
     }
-
+    
+    // Default action will be ingest.
+    // Actually in IslandoraMultiBatch all defaults to ingest
+    // except for "update" which means updating existing objects.
+    $parameters['action'] = isset($form_state['values']['action']) ? $form_state['values']['action'] : 'ingest';
+    dpm($parameters);
     $connection = islandora_get_tuque_connection();
     // kpr($parameters);
     $preprocessor = new IslandoraMultiBatch($connection, $parameters);
