@@ -917,20 +917,10 @@ function islandora_multi_importer_objectmapping_form($form, &$form_state, $file_
         '#attributes' => '',
         '#description' => t('Select the source field to use as parent Object'),
         '#options' => $file_data['headers'],
-        '#states' => array(
-        	'enabled' => array(
-        		':input[name=action]' => array('value' => 'ingest'),
-        	),
-        ),
       ),
       'parenttype' => array(
         '#type' => 'checkbox',
         '#description' => t('If value is not a well formed PID, assume it is a row index present in the same data'),
-        '#states' => array(
-        	'enabled' => array(
-        		':input[name=action]' => array('value' => 'ingest'),
-        	),
-        ),
       ),
       'stub' => array(
         '#markup' => '&nbsp;',
