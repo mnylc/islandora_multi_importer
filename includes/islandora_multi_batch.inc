@@ -874,10 +874,10 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
    */
   public function addRelationships() {
     if ($this->preprocessorParameters['action'] == 'update') {
-      addRelationshipsforUpdate(); 
+      $this->addRelationshipsforUpdate(); 
     }
     else {
-      addRelationshipsforIngest(); 
+      $this->addRelationshipsforIngest(); 
     }
 
    
