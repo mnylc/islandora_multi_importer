@@ -921,7 +921,7 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
   /**
    * Add inheritXacmlFrom relationship.
    */
-  protected function inheritXacmlPoliciesUpdate() {
+  protected function inheritXacmlPoliciesForUpdate() {
     if (module_exists('islandora_xacml_editor')) {
       $collection = $this->objectInfo['parent'];
       $parent = islandora_object_load($collection);
