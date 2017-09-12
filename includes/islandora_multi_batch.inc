@@ -400,10 +400,10 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
   public function batchProcess() {
     
     if ($this->preprocessorParameters['action'] == 'update') {
-      return batchProcessforUpdate(); 
+      return $this->batchProcessforUpdate(); 
     }
     else {
-      return batchProcessforIngest(); 
+      return $this->batchProcessforIngest(); 
     }
   }
   /**
