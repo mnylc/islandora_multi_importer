@@ -541,7 +541,7 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
       
     } 
     else {
-      return parent::getRepositoryActionDescription();
+      return parent::batchRepositoryAction();
     }
     // need to define a wording for this like "ingest", "update, etc" This needs to return
     // an Array full of little funny data
