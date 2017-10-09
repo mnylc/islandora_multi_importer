@@ -158,12 +158,14 @@ function islandora_multi_importer_twigcreateinternals_form($form, &$form_state, 
     $twig->parse($twig->tokenize($twig_template));
   }
   catch (Exception $e) {
+   $validated = FALSE;
     // TODO: We should encourage this to be as explicit
     // to final user as possible.
     error_log(get_class($e));
   }
   catch (Twig_Error_Runtime $e) {
     $validated = FALSE;
+    error_log("was twig_Error_Runtime");
     // In case there is a previous exception, re-throw the previous exception,
     // so that the original exception is shown, rather than
     // \Twig_Template::displayWithErrorHandling()'s exception.
@@ -177,6 +179,7 @@ function islandora_multi_importer_twigcreateinternals_form($form, &$form_state, 
   catch (Twig_Error_Syntax $e) {
     // $template contains one or more syntax errors.
     $validated = FALSE;
+    error_log("was twig_Error_Syntax");
     drupal_set_message(t('Your template has Runtime errors, please review and fix: @error', array('@error' => $e->getRawMessage())), 'error');
     $output = '';
   }
