@@ -188,7 +188,7 @@ function islandora_multi_importer_xml_highlight($s){
 function islandora_multi_importer_remote_file_get($url) {
     $parsed_url = parse_url($url);
     $remote_schemes = array('http', 'https', 'ftp', 'ftps', 'smb', 'nfs');
-    if (!in_array($parsed_url['scheme'], $remote_schemes)) {
+    if (!isset($parsed_url['scheme']) || (isset($parsed_url['scheme']) &&!in_array($parsed_url['scheme'], $remote_schemes))) {
       // if local file, return the path.
       return drupal_realpath($url);
     }
