@@ -65,7 +65,7 @@ function islandora_multi_importer_form(array $form, array &$form_state) {
       break;
     
     case 2:
-      drupal_set_title(t("Islandora Multi importer - Data Source: Google SpreadSheet info"));
+      drupal_set_title(t("Islandora Multi importer - Data Source: Google Sheet info"));
       $step_forms['#tree'] = TRUE;
         //$step_forms['#validate'] = array('islandora_multi_importer_form_check_fileisuploaded');
       $step_forms['step2'] = islandora_multi_importer_google_form($form, $form_state);
@@ -257,7 +257,7 @@ function islandora_multi_importer_upload_form($form, &$form_state) {
 
 
 /**
- * Google Spreadsheet ID
+ * Google Sheet ID
  */
 function islandora_multi_importer_google_form($form, &$form_state) {
   
@@ -276,15 +276,15 @@ function islandora_multi_importer_google_form($form, &$form_state) {
     'spreadsheet_id' => array(
       '#type' => 'textfield',
       '#required' => TRUE,
-      '#title' => t('ID of your Google Spreadsheet'),
-      '#description' => ' If shared at https://docs.google.com/spreadsheets/d/aaBAccEEFfC_aBC-aBc0d1EF/edit, use aaBAccEEFfC_aBC-aBc0d1EF as ID.',
+      '#title' => t('ID or full URL of your Google Sheet'),
+      '#description' => ' Example: https://docs.google.com/spreadsheets/d/aaBAccEEFfC_aBC-aBc0d1EF/edit, use aaBAccEEFfC_aBC-aBc0d1EF portion as the ID.',
       '#default_value' => $stored_defaults['spreadsheet_id'],
     ),
     'spreadsheet_range' => array(
       '#type' => 'textfield',
       '#required' => TRUE,
       '#title' =>  t('Cell Range'),
-      '#description' => t('Cell Range for your Google Spreadsheet, in the form of SheetName!A1:B10'),
+      '#description' => t('Cell range from your Google Sheet, in the form of SheetName!A1:B10'),
       '#default_value' => $stored_defaults['spreadsheet_range'],
     ),
    ); 
@@ -320,8 +320,8 @@ function islandora_multi_importer_choosesource_form($form, &$form_state) {
       '#prefix' => '<div class="help" id="islandora-multi-source">',
       '#suffix' => '</div>',
       '#type' => 'select',
-      '#title' => t('Choose your Data source type'),
-      '#options' => array('file' => 'Spreadsheet File to be uploaded','google' => 'Google Spreadsheet URL'),
+      '#title' => t('Choose your data source type'),
+      '#options' => array('file' => 'Spreadsheet file to be uploaded','google' => 'Google Sheet URL'),
       '#default_value' => 'file',
     ),
   );
@@ -329,7 +329,7 @@ function islandora_multi_importer_choosesource_form($form, &$form_state) {
 }
 
 /**
- * Spreadsheet previsualization form.
+ * Spreadsheet pre-visualization form.
  */
 function islandora_multi_importer_previs_form($form, &$form_state, &$file_data) {
 
@@ -427,25 +427,30 @@ function islandora_multi_importer_twig_form($form, &$form_state, $file_data) {
 
   if (isset($form_state['values']['step3']['sheet_content'])) {
     $current_row = isset($form_state['values']['step3']['sheet_content']['rows']) && !empty($form_state['values']['step3']['sheet_content']['rows']) ? $form_state['values']['step3']['sheet_content']['rows'] : key($file_data['data']);
-    $current_record_record_data = array('data' => array_combine($file_data['headers'], $file_data['data'][$current_row]));
-
-    
+    try {
+      $current_record_record_data = array('data' => array_combine($file_data['headers'], $file_data['data'][$current_row]));
+    } catch (Exception $e) {
+      drupal_set_message('Caught exception: '.$e->getMessage(), "info");
+    }
   }
   else {
     if ((!empty($file_data)) and !empty($file_data['headers'])) {
       $current_row = key($file_data['data']);
-      $current_record_record_data = array('data' => array_combine($file_data['headers'], $file_data['data'][$current_row]));
-      
+      try {
+        $current_record_record_data = array('data' => array_combine($file_data['headers'], $file_data['data'][$current_row]));
+      } catch (Exception $e) {
+        drupal_set_message('Caught exception: '.$e->getMessage(), "info");
+      }
     }
     else {
-      // We should be never get here. If we are here our file has not data? WE need to push the user back to another step
+      // We should be never get here. If we are here our file has no data? We need to push the user back to another step.
       $current_record_record_data = array('name' => 'metro.org');
       
       if ($form_state['storage']['values']['step0']['data_source'] == 'google') {
-        drupal_set_message(t('Seems like your Google Spreadsheet has no data, no headers or we are having trouble fetching it. Try selecting another one or a different Range.'),'warning');
+        drupal_set_message(t('Seems like your Google Sheet has no data, no headers, or we are having trouble fetching it. Try selecting another one or a different range.'),'warning');
       }
       else {
-        drupal_set_message(t('Seems like your File has no data, no headers or we are having trouble fetching it. Try selecting another file.'),'warning');
+        drupal_set_message(t('Seems like your File has no data, no headers, or we are having trouble fetching it. Try selecting another file.'),'warning');
       }
 
     }
@@ -818,6 +823,20 @@ function islandora_multi_importer_cmodeldsmapping_form(array &$form_state, array
 
         // Individual Options for each DSID.
         $options = array();
+
+        // Fetch Derivative options from computed ones (if any).
+        //   MAM moved this code 'up' so this choice becomes the default when available and it appears to work for some content models,
+        //   or perhaps for the first content model, but NOT for others???
+        if (isset($form_state['storage']['values']['general']['computed_derivatives'][$cmodel])) {
+          foreach ($form_state['storage']['values']['general']['computed_derivatives'][$cmodel] as $key => $derivative) {
+            // If destination DSID of this derivative matches
+            // current DSID add as default option.
+            if ($derivative['destination_dsid'] == $dsid) {
+              $options['Derivatives'] = array('derivative|0' => 'Build using derivative from ' . $derivative['source_dsid']);
+            }
+          }
+        }
+
         // Exception for DC, allow XSLT.
         if ($dsid == 'DC') {
           // @TODO add XLST options and other sources diff than mods
@@ -844,7 +863,7 @@ function islandora_multi_importer_cmodeldsmapping_form(array &$form_state, array
           }
         }
 
-        // Fetch Derivative options from computed ones (if any)
+        /* Fetch Derivative options from computed ones (if any).  This code moved 'up'...see above.
         if (isset($form_state['storage']['values']['general']['computed_derivatives'][$cmodel])) {
           foreach ($form_state['storage']['values']['general']['computed_derivatives'][$cmodel] as $key => $derivative) {
             // If destination DSID of this derivative matches
@@ -853,7 +872,8 @@ function islandora_multi_importer_cmodeldsmapping_form(array &$form_state, array
               $options['Derivatives'] = array('derivative|0' => 'Build using derivative from ' . $derivative['source_dsid']);
             }
           }
-        }
+        } */
+
         // Check if DS is optional or not, we enforce not optional ones.
         $defaults[$dsid] = !$dsidinfo['optional'];
         $form[$cmodel]['dsid']['rows'][$dsid] = array(
@@ -895,7 +915,7 @@ function islandora_multi_importer_objectmapping_form($form, &$form_state, $file_
       ),
       'pidtype' => array(
         '#type' => 'checkbox',
-        '#description' => t('Check to let Islandora build PID for you and ignore the Object PID source fields'),
+        '#description' => t('Check to let Islandora build PID for you<br/> and ignore the Object PID source fields'),
         '#states' => array(
         	'visible' => array(
         		':input[name=action]' => array('value' => 'ingest'),
@@ -920,7 +940,7 @@ function islandora_multi_importer_objectmapping_form($form, &$form_state, $file_
       ),
       'parenttype' => array(
         '#type' => 'checkbox',
-        '#description' => t('If value is not a well formed PID, assume it is a row index present in the same data'),
+        '#description' => t('If value is not a well formed PID,<br/> assume it is a row index present in the same data'),
       ),
       'stub' => array(
         '#markup' => '&nbsp;',
@@ -944,6 +964,7 @@ function islandora_multi_importer_objectmapping_form($form, &$form_state, $file_
         '#markup' => '&nbsp;',
       ),
     ),
+
     'sequencemap_row' => array(
       '#id' => drupal_html_id('islandora-multi-parentmap'),
       'label' => array(
@@ -967,6 +988,31 @@ function islandora_multi_importer_objectmapping_form($form, &$form_state, $file_
         '#markup' => '&nbsp;',
       ),
     ),
+
+    /* MAM. Added to support issue #20...but this element currently does NOTHING so it's been commented out.
+    'indexmap_row' => array(
+      '#id' => drupal_html_id('islandora-multi-indexmap'),
+      'label' => array(
+        '#markup' => t('Import Index'),
+      ),
+      'indexmap' => array(
+        '#type' => 'select',
+        '#attributes' => '',
+        '#description' => t('Select the source field to use as an Import Index for imported objects'),
+        '#options' => array_merge(array('None' => 'Use row number'), $file_data['headers'])),
+        '#states' => array(
+          'enabled' => array(
+            ':input[name=action]' => array('value' => 'ingest'),
+          ),
+        ),
+      ),
+      'stub1' => array(
+      '#markup' => '&nbsp;',
+      ),
+      'stub2' => array(
+        '#markup' => '&nbsp;',
+      ), */
+
     'dsmap_row' => array(
       '#id' => drupal_html_id('islandora-multi-dsmap'),
       'label' => array(
@@ -984,6 +1030,7 @@ function islandora_multi_importer_objectmapping_form($form, &$form_state, $file_
       ),
     ),
   );
+
   $form['objectmapping'] = array(
     '#prefix' => '<div id="islandora-multi-basemapping">',
     '#suffix' => '</div>',
@@ -1151,6 +1198,15 @@ function islandora_multi_importer_form_submit($form, &$form_state) {
      
       if ($form_state['storage']['values']['step0']['data_source'] == 'google' && !empty($form_state['storage']['values']['step2']['google_api']['spreadsheet_id'])) {
         $spreadsheetId = trim($form_state['storage']['values']['step2']['google_api']['spreadsheet_id']);
+
+        // MAM Parse the ID from the URL if a full URL was provied.
+        if ($parsed = parse_url($spreadsheetId)) {
+          if (isset($parsed['scheme'])) {
+            $parts = explode('/', $parsed['path']);
+            $spreadsheetId = $parts[3];
+          }
+        }
+
         $range = trim($form_state['storage']['values']['step2']['google_api']['spreadsheet_range']);
         $newfile_fid= islandora_multi_importer_read_googledata($spreadsheetId, $range, -1, 0);
         $form_state['storage']['values']['step1']['file'] = islandora_multi_importer_csv_save($newfile_fid);
@@ -1192,7 +1248,7 @@ function islandora_multi_importer_form_submit($form, &$form_state) {
     // Actually in IslandoraMultiBatch all defaults to ingest
     // except for "update" which means updating existing objects.
     $parameters['action'] = isset($form_state['values']['action']) ? $form_state['values']['action'] : 'ingest';
-    dpm($parameters);
+    // dpm($parameters);
     $connection = islandora_get_tuque_connection();
     // kpr($parameters);
     $preprocessor = new IslandoraMultiBatch($connection, $parameters);
