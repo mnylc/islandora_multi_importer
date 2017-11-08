@@ -21,10 +21,20 @@
  * @return array
  *   array of associative arrays containing header and data as header => value pairs
  */
-function islandora_multi_importer_datasource_loader(array $form_state, $page = 0, $per_page = 20) {
+function islandora_multi_importer_datasource_loader(array $form_state, $page = 0, $per_page = -1) {
   //dpm($form_state);
   if ($form_state['storage']['values']['step0']['data_source'] == 'google' && !empty($form_state['storage']['values']['step2']['google_api']['spreadsheet_id'])) {
     $spreadsheetId = trim($form_state['storage']['values']['step2']['google_api']['spreadsheet_id']);
+
+    // Parse the ID from the URL if a full URL was provided.
+    // Addresses https://github.com/mnylc/islandora_multi_importer/issues/44
+    if ($parsed = parse_url($spreadsheetId)) {
+      if (isset($parsed['scheme'])) {
+        $parts = explode('/', $parsed['path']);
+        $spreadsheetId = $parts[3];
+      }
+    }
+
     $range = trim($form_state['storage']['values']['step2']['google_api']['spreadsheet_range']);
     //dpm($range);
     $file_data = islandora_multi_importer_read_googledata($spreadsheetId, $range, $per_page, $page * $per_page);
@@ -56,9 +66,7 @@ function islandora_multi_importer_read_filedata($file_path, $numrows = 20, $offs
   $tabdata = array('headers' => array(), 'data' => array(), 'totalrows' => 0);
   try {
     $inputFileType = PHPExcel_IOFactory::identify($file_path);
-  
     $objReader = PHPExcel_IOFactory::createReader($inputFileType);
-   
     $objReader->setReadDataOnly(true);
     $objPHPExcel = $objReader->load($file_path);
   } catch(Exception $e) {
@@ -91,12 +99,17 @@ function islandora_multi_importer_read_filedata($file_path, $numrows = 20, $offs
             // @TODO check if this is not being overriden at line 64
             break;
           }
-          $table[$rowindex] = $datarow[0];
+
+          // If a row begins with a hashtag, it's a comment...skip it
+          // This partially addresses https://github.com/mnylc/islandora_multi_importer/issues/15
+          if ($flat[0] != '#') {
+            $table[$rowindex] = $datarow[0];
+            $maxRow = $rowindex;
           }
-      $maxRow = $rowindex;
+        }
       }
   }
-  $tabdata = array('headers' =>  $rowHeaders_utf8, 'data' => $table, 'totalrows'=> $maxRow);
+  $tabdata = array('headers' =>  $rowHeaders_utf8, 'data' => $table, 'totalrows'=> $maxRow);  // Addresses https://github.com/mnylc/islandora_multi_importer/issues/43
   $objPHPExcel->disconnectWorksheets();
   return $tabdata;
   }
@@ -119,13 +132,11 @@ function islandora_multi_importer_read_filedata($file_path, $numrows = 20, $offs
     $tabdata = array('headers' => array(), 'data' => array(), 'totalrows' => 0);
     $sp_data = array();
     $rowdata = array();
- 
-    
+
     // Establish a connection first
     $client = islandora_multi_importer_googleclient_connect();
     try {
          $service = new Google_Service_Sheets($client);
-         
          $response = $service->spreadsheets_values->get($spreadsheetId, $range);
          $sp_data = $response->getValues();
     } catch( Google_Service_Exception $e )  {
@@ -143,6 +154,17 @@ function islandora_multi_importer_read_filedata($file_path, $numrows = 20, $offs
       $rowHeaders_utf8=array_map('utf8_encode',$rowHeaders_utf8);
       $rowHeaders_utf8=array_map('strtolower',$rowHeaders_utf8);
       $rowHeaders_utf8=array_map('trim',$rowHeaders_utf8);
+
+      // Append the $spreadsheetId and placeholder for the sheet row number (import_index) to the headers.
+      // Addresses https://github.com/mnylc/islandora_multi_importer/issues/20 and https://github.com/mnylc/islandora_multi_importer/issues/42
+      $rowHeaders_utf8[] = 'import_source';
+      if (array_search('import_index',$rowHeaders_utf8) === FALSE) {
+        $rowHeaders_utf8[] = 'import_index';
+        $append_import_index = TRUE;
+      } else {
+        $append_import_index = FALSE;
+      }
+
       foreach ($sp_data as $rowindex => $row) {
         // Google Spreadsheets start with Index 0. But PHPEXCEL, parent`s
         // function does with 1.
@@ -158,12 +180,25 @@ function islandora_multi_importer_read_filedata($file_path, $numrows = 20, $offs
               $maxRow = $rowindex;
               break;
             }
-            $table[$rowindex] = $row;
+
+            if ($flat[0] != '#') {
+              $row[] = "$spreadsheetId : $range";   // Append the $spreadsheetId and $range to the end of the row as import_source. Addresses https://github.com/mnylc/islandora_multi_importer/issues/42
+              if ($append_import_index) { $row[] = $rowindex; }  // MAM. Append the $rowindex to the end of the row as import_index.  Addresses https://github.com/mnylc/islandora_multi_importer/issues/20
+              $table[$rowindex] = $row;  // Partially addresses https://github.com/mnylc/islandora_multi_importer/issues/15
+              $maxRow = $rowindex;
             }
-        $maxRow = $rowindex;
+          }
         }
     }
-  $tabdata = array('headers' => $sp_data[0], 'data' => $table, 'totalrows'=> $maxRow);
+  $tabdata = array('headers' => $rowHeaders_utf8, 'data' => $table, 'totalrows'=> $maxRow);
+
+  // If the $range returns no data...let the user know and leave them in the current screen.
+  // Addresses https://github.com/mnylc/islandora_multi_importer/issues/45
+  if ($maxRow === 0) {
+    $msg = "Retrieve of Google Sheet '$spreadsheetId' and range '$range' returned NO active data.";
+    drupal_set_message($msg, 'warning');
+    drupal_goto('/multi_importer');
+  }
   
   return $tabdata;
 }
@@ -185,11 +220,18 @@ function islandora_multi_importer_xml_highlight($s){
       return nl2br($s);
   }
 
-function islandora_multi_importer_remote_file_get($url) {
+function islandora_multi_importer_remote_file_get($url, $pid=NULL) {
     $parsed_url = parse_url($url);
     $remote_schemes = array('http', 'https', 'ftp', 'ftps', 'smb', 'nfs');
-    if (!isset($parsed_url['scheme']) || (isset($parsed_url['scheme']) &&!in_array($parsed_url['scheme'], $remote_schemes))) {
-      // if local file, return the path.
+    if (!isset($parsed_url['scheme']) || (isset($parsed_url['scheme']) && !in_array($parsed_url['scheme'], $remote_schemes))) {
+
+      // If local file, engage any hook_islandora_multi_importer_remote_file_get and return the real path.
+      // Addresses https://github.com/mnylc/islandora_multi_importer/issues/41
+      $urls = array( );
+      $urls = module_invoke_all('islandora_multi_importer_remote_file_get', $url);
+      if (!empty($urls)) {
+        return drupal_realpath($urls[0]);
+      }
       return drupal_realpath($url);
     }
 
@@ -253,6 +295,7 @@ function islandora_multi_importer_twig_fetch($twig_name) {
   }
 return $twig_template_from_db;
 }
+
 /**
  * Fetches a twig template by it's id.
  *
