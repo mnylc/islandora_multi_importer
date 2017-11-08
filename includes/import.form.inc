@@ -824,19 +824,6 @@ function islandora_multi_importer_cmodeldsmapping_form(array &$form_state, array
         // Individual Options for each DSID.
         $options = array();
 
-        // Fetch Derivative options from computed ones (if any).
-        //   MAM moved this code 'up' so this choice becomes the default when available and it appears to work for some content models,
-        //   or perhaps for the first content model, but NOT for others???
-        if (isset($form_state['storage']['values']['general']['computed_derivatives'][$cmodel])) {
-          foreach ($form_state['storage']['values']['general']['computed_derivatives'][$cmodel] as $key => $derivative) {
-            // If destination DSID of this derivative matches
-            // current DSID add as default option.
-            if ($derivative['destination_dsid'] == $dsid) {
-              $options['Derivatives'] = array('derivative|0' => 'Build using derivative from ' . $derivative['source_dsid']);
-            }
-          }
-        }
-
         // Exception for DC, allow XSLT.
         if ($dsid == 'DC') {
           // @TODO add XLST options and other sources diff than mods
@@ -863,7 +850,7 @@ function islandora_multi_importer_cmodeldsmapping_form(array &$form_state, array
           }
         }
 
-        /* Fetch Derivative options from computed ones (if any).  This code moved 'up'...see above.
+        // Fetch Derivative options from computed ones (if any).
         if (isset($form_state['storage']['values']['general']['computed_derivatives'][$cmodel])) {
           foreach ($form_state['storage']['values']['general']['computed_derivatives'][$cmodel] as $key => $derivative) {
             // If destination DSID of this derivative matches
@@ -872,7 +859,7 @@ function islandora_multi_importer_cmodeldsmapping_form(array &$form_state, array
               $options['Derivatives'] = array('derivative|0' => 'Build using derivative from ' . $derivative['source_dsid']);
             }
           }
-        } */
+        }
 
         // Check if DS is optional or not, we enforce not optional ones.
         $defaults[$dsid] = !$dsidinfo['optional'];
@@ -1190,8 +1177,11 @@ function islandora_multi_importer_form_submit($form, &$form_state) {
     }
   }
 
-  // Handle the ingest buttom.
+  // Handle the ingest button.
   if ($form_state['triggering_element']['#value'] == t('Ingest')) {
+    // Save all of the $form_state['input']... #options values for all 'select' type inputs
+    islandora_multi_importer_form_save_selections($form_state, $form);
+
     // Check if a ZIP file needs to be uploaded.
     if ($form_state['storage']['step'] == 3) {
       // Lets check if Google was used as source. I should
@@ -1199,7 +1189,7 @@ function islandora_multi_importer_form_submit($form, &$form_state) {
       if ($form_state['storage']['values']['step0']['data_source'] == 'google' && !empty($form_state['storage']['values']['step2']['google_api']['spreadsheet_id'])) {
         $spreadsheetId = trim($form_state['storage']['values']['step2']['google_api']['spreadsheet_id']);
 
-        // MAM Parse the ID from the URL if a full URL was provied.
+        // Parse the ID from the URL if a full URL was provided.  Addresses https://github.com/mnylc/islandora_multi_importer/issues/44
         if ($parsed = parse_url($spreadsheetId)) {
           if (isset($parsed['scheme'])) {
             $parts = explode('/', $parsed['path']);
@@ -1296,3 +1286,185 @@ function islandora_multi_importer_startprocessing($parameters) {
   // islandora-multi-importer-zeroMQboot > /dev/null &");
   // islandora_multi_importer_client_task();
 }
+
+/**
+ * Implements hook_form_alter.
+ *
+ * This function implements hook_form_alter with intent to set defaults
+ * for islandora_multi_importer_form fields.
+ *
+ * @param $form
+ * @param $form_state
+ * @param $form_id
+ */
+function islandora_multi_importer_form_alter(&$form, &$form_state, $form_id) {
+
+  // The big switch...
+  switch($form_id) {
+
+    // islandora_multi_importer_form
+    case 'islandora_multi_importer_form':
+      islandora_multi_importer_form_restore_selections($form);
+      break;
+
+  }
+
+  return;
+}
+
+/**
+ * islandora_multi_importer_form_save_selections( )
+ *
+ * Addresses https://github.com/mnylc/islandora_multi_importer/issues/22
+ *
+ * @param $form_state - $form_state array.
+ * @param $form - The full $form array.
+ *
+ */
+function islandora_multi_importer_form_save_selections($form_state, $form) {
+  $keys = islandora_multi_importer_form_save_paths();
+
+  // If $form['step4'] exists...check $form_state['values'] looking for arrays with keys matching $keys
+  if (isset($form['step4'])) {
+    foreach ($keys as $k) {
+      $burst = explode('|', $k);
+      $count = count($burst);
+      $val = FALSE;
+
+      switch ($count) {
+        case 5:
+          list($a,$b,$c,$d,$e) = $burst;
+          if (isset($form_state['input']['cmodelmap'][$a][$b][$c][$d][$e])) {
+            $val = $form_state['input']['cmodelmap'][$a][$b][$c][$d][$e];
+          } else if (isset($form_state['values'][$a][$b][$c][$d][$e])) {
+            $val = $form_state['values'][$a][$b][$c][$d][$e];
+          }
+          break;
+        case 6:
+          list($a,$b,$c,$d,$e,$f) = $burst;
+          if (isset($form_state['input']['cmodelmap'][$a][$b][$c][$d][$e][$f])) {
+            $val = $form_state['input']['cmodelmap'][$a][$b][$c][$d][$e][$f];
+          } else if (isset($form_state['values'][$a][$b][$c][$d][$e][$f])) {
+            $val = $form_state['values'][$a][$b][$c][$d][$e][$f];
+          }
+          break;
+        case 7:
+          list($a,$b,$c,$d,$e,$f,$g) = $burst;
+          if (isset($form_state['input']['cmodelmap'][$a][$b][$c][$d][$e][$f][$g])) {
+            $val = $form_state['input']['cmodelmap'][$a][$b][$c][$d][$e][$f][$g];
+          } else if (isset($form_state['values'][$a][$b][$c][$d][$e][$f][$g])) {
+            $val = $form_state['values'][$a][$b][$c][$d][$e][$f][$g];
+          }
+          break;
+      }
+      if ($val) {
+        // Build a variable to save $val as the #default_value for $key
+        $name = "islandora_multi_key-$k";
+        variable_set($name, $val);
+      }
+    }
+  }
+  return;
+}
+
+/**
+ * islandora_multi_importer_form_restore_selections( )
+ *
+ * Addresses https://github.com/mnylc/islandora_multi_importer/issues/22
+ *
+ * @param $form - The full $form array.
+ *
+ */
+function islandora_multi_importer_form_restore_selections(&$form) {
+  $keys = islandora_multi_importer_form_save_paths();
+
+  // If $form['step4'] exists...check variables defined by $keys and save corresponding values
+  //   as #default_value for appropriate $form elements
+  if (isset($form['step4'])) {
+    foreach ($keys as $k) {
+      $name = "islandora_multi_key-$k";
+      if ($val = variable_get($name, FALSE)) {
+        $burst = explode('|', $k);
+        $count = count($burst);
+
+        switch ($count) {
+          case 5:
+            list($a,$b,$c,$d,$e) = $burst;
+            if (isset($form['cmodelmap'][$a][$b][$c][$d][$e])) {
+              $form['cmodelmap'][$a][$b][$c][$d][$e]['#default_value'] = $val;
+            } else if (isset($form[$a][$b][$c][$d][$e])) {
+              $form[$a][$b][$c][$d][$e]['#default_value'] = $val;
+            }
+            break;
+          case 6:
+            list($a,$b,$c,$d,$e,$f) = $burst;
+            if (isset($form['cmodelmap'][$a][$b][$c][$d][$e][$f])) {
+              $form['cmodelmap'][$a][$b][$c][$d][$e][$f]['#default_value'] = $val;
+            } else if (isset($form[$a][$b][$c][$d][$e][$f])) {
+              $form[$a][$b][$c][$d][$e][$f]['#default_value'] = $val;
+            }
+            break;
+          case 7:
+            list($a,$b,$c,$d,$e,$f,$g) = $burst;
+            if (isset($form['cmodelmap'][$a][$b][$c][$d][$e][$f][$g])) {
+              $form['cmodelmap'][$a][$b][$c][$d][$e][$f][$g]['#default_value'] = $val;
+            } else if (isset($form[$a][$b][$c][$d][$e][$f][$g])) {
+              $form[$a][$b][$c][$d][$e][$f][$g]['#default_value'] = $val;
+            }
+            break;
+        }
+      }
+    }
+  }
+  return;
+}
+
+/**
+ * This function returns an array of form elements (paths) that should be
+ * saved upon ingest and retrieved as #default_values whenever a form is reloaded.
+ *
+ * Intended for use in islandora_multi_importer_form_save_selections() and
+ * islandora_multi_importer_form_restore_selections( ).
+ *
+ * @return array
+ */
+function islandora_multi_importer_form_save_paths( ) {
+  return array(
+    // cmodel column
+    "cmodelmap|basemapping|rows|cmodelmap_row|cmodelmap",
+
+    // object map fields
+    "objectmap|objectmapping|rows|pidmap_row|pidmap",
+    "objectmap|objectmapping|rows|parentmap_row|parentmap",
+    "objectmap|objectmapping|rows|labelmap_row|labelmap",
+    "objectmap|objectmapping|rows|sequencemap_row|sequencemap",
+    "objectmap|objectmapping|rows|dsmap_row|dsremote",
+
+    // islandora:sp_large_image_cmdodel
+    "cmodels|islandora:sp_large_image_cmodel|dsid|rows|DC|method|data",
+    "cmodels|islandora:sp_large_image_cmodel|dsid|rows|MODS|method|data",
+    "cmodels|islandora:sp_large_image_cmodel|dsid|rows|OBJ|method|data",
+    "cmodels|islandora:sp_large_image_cmodel|dsid|rows|TN|method|data",
+    "cmodels|islandora:sp_large_image_cmodel|dsid|rows|JPG|method|data",
+    "cmodels|islandora:sp_large_image_cmodel|dsid|rows|JP2|method|data",
+
+    // islandora:sp_basic_image
+    "cmodels|islandora:sp_basic_image|dsid|rows|DC|method|data",
+    "cmodels|islandora:sp_basic_image|dsid|rows|MODS|method|data",
+    "cmodels|islandora:sp_basic_image|dsid|rows|OBJ|method|data",
+    "cmodels|islandora:sp_basic_image|dsid|rows|TN|method|data",
+    "cmodels|islandora:sp_basic_image|dsid|rows|MEDIUM_SIZE|method|data",
+
+    // islandora:sp_pdf
+    "cmodels|islandora:sp_pdf|dsid|rows|DC|method|data",
+    "cmodels|islandora:sp_pdf|dsid|rows|MODS|method|data",
+    "cmodels|islandora:sp_pdf|dsid|rows|OBJ|method|data",
+    "cmodels|islandora:sp_pdf|dsid|rows|PDFA|method|data",
+    "cmodels|islandora:sp_pdf|dsid|rows|TN|method|data",
+    "cmodels|islandora:sp_pdf|dsid|rows|FULL_TEXT|method|data",
+    "cmodels|islandora:sp_pdf|dsid|rows|PREVIEW|method|data",
+
+  );
+
+}
+
