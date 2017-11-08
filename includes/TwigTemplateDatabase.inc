@@ -36,6 +36,26 @@ class TwigTemplateDatabase {
     return $count == 1;
   }
 
+
+  /**
+   * Checks to see if the given Twig Template exists in the database.
+   *
+   * @param int $twig_id
+   *   The unique id of the Twig Template.
+   *
+   * @return bool
+   *   TRUE if the given Twig Template exists, FALSE otherwise.
+   */
+  public static function ExistsbyId($twig_id) {
+    $count = db_select('islandora_multi_importer_twig_templates', 'tw')
+      ->condition('tw.id', $twig_id)
+      ->fields('tw', array('name'))
+      ->execute()
+      ->rowCount();
+
+    return $count == 1;
+  }
+
   /**
    * Checks to see if the given Twig Template exists in the database and is valid.
    *
@@ -71,6 +91,21 @@ class TwigTemplateDatabase {
     }
     return FALSE;
   }
+  
+  /**
+   * Gets the Twig Template identified by id.
+   *
+   * @param int $id
+   *   The name of the Twig Template.
+   *
+   * @return Array
+   *   A full record with all the info
+   */
+  public static function GetbyId($id) {
+      $query = db_query('SELECT twig, name, updated FROM {islandora_multi_importer_twig_templates} WHERE id = :id', array(':id' => $id));
+      $twiginfo = $query->fetchAssoc('id');
+      return $twiginfo;
+  }
 
 
 
@@ -89,7 +124,23 @@ class TwigTemplateDatabase {
     }
     return $names;
   }
-
+  
+  /**
+   * Gets a list of all defined Twig Template names.
+   *
+   * @return array
+   *   An array of defined Twig Template names, where both the key and the value are the
+   *   Twig Template's name; e.g. array('name' => 'name').
+   */
+  public static function GetIdsAndNames() {
+    $names = array();
+    $result = db_query('SELECT id, name FROM {islandora_multi_importer_twig_templates}');
+  
+    while ($data = $result->fetchAssoc('id')) {
+      $names[$data['id']] = $data['name'];
+    }
+    return $names;
+  }
 
 
   /**
@@ -135,6 +186,7 @@ class TwigTemplateDatabase {
     return FALSE;
   }
 
+  
   /**
    * Updates the Twig Template with the given Twig Template name; the previous definition is lost.
    *
@@ -148,12 +200,12 @@ class TwigTemplateDatabase {
    * @returns bool
    *   TRUE if successful; FALSE otherwise.
    */
-  public static function Update($twig_name, $twigTemplate) {
-    if (self::Exists($twig_name)) {
+  public static function UpdatebyId($twig_id, $twig_name, $twigTemplate) {
+    if (self::ExistsById($twig_id)) {
      
       $num = db_update(self::TABLE)
-        ->fields(array('twig' => $twigTemplate, 'updated' => time()))
-        ->condition('name', $twig_name)
+        ->fields(array('twig' => $twigTemplate, 'updated' => time(),'name' => trim($twig_name)))
+        ->condition('id', $twig_id)
         ->execute();
       if ($num) {
         return TRUE;
@@ -174,10 +226,10 @@ class TwigTemplateDatabase {
    * @return bool
    *   TRUE if successful; FALSE otherwise.
    */
-  public static function Delete($twig_name) {
-    if (self::Exists($twig_name)) {
+  public static function DeleteById($twig_id) {
+    if (self::ExistsById($twig_id)) {
       $num = db_delete(self::TABLE)
-        ->condition('name', $twig_name)
+        ->condition('id', $twig_id)
         ->execute();
       if ($num) {
         return TRUE;
