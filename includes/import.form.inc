@@ -266,7 +266,8 @@ function islandora_multi_importer_google_form($form, &$form_state) {
   
   if (isset($form_state['storage']['values']['step'.$form_state['storage']['step']])) {
      $stored_defaults['spreadsheet_id'] = $form_state['storage']['values']['step'.$form_state['storage']['step']]['google_api']['spreadsheet_id'];
-     $stored_defaults['spreadsheet_range'] = $form_state['storage']['values']['step'.$form_state['storage']['step']]['google_api']['spreadsheet_range'];
+    $stored_defaults['spreadsheet_range'] = $form_state['storage']['values']['step'.$form_state['storage']['step']]['google_api']['spreadsheet_range'];
+    $stored_defaults['googlesheet_tracking'] = $form_state['storage']['values']['step'.$form_state['storage']['step']]['google_api']['googlesheet_tracking'];
   }
   
   $form['google_api']= array(
@@ -287,7 +288,14 @@ function islandora_multi_importer_google_form($form, &$form_state) {
       '#description' => t('Cell range from your Google Sheet, in the form of SheetName!A1:B10'),
       '#default_value' => $stored_defaults['spreadsheet_range'],
     ),
-   ); 
+    'googlesheet_tracking' => array(
+      '#type' => 'textfield',
+      '#required' => FALSE,
+      '#title' =>  t('Track this Google Sheet data source?'),
+      '#description' => t('Text appended to each ingested object for source tracking. Leave blank for NO tracking.'),
+      '#default_value' => date('c'),
+    ),
+   );
   return $form;
 }
 
@@ -718,7 +726,7 @@ function islandora_multi_importer_cmodelmapping_form(array $form, array &$form_s
       $form_state['storage']['values']['general']['computed_derivatives'] = $derivatives_available;
     }
     else {
-      drupal_set_message(t('No valid cmodels found, please check spelling for select field value'), 'warning');
+      drupal_set_message(t('No valid CModels found, please check spelling for select field value'), 'warning');
       unset($form_state['storage']['values']['general']['computed_cmodels']);
       unset($form_state['storage']['values']['general']['computed_derivatives']);
     }
@@ -902,7 +910,7 @@ function islandora_multi_importer_objectmapping_form($form, &$form_state, $file_
       ),
       'pidtype' => array(
         '#type' => 'checkbox',
-        '#description' => t('Check to let Islandora build PID for you<br/> and ignore the Object PID source fields'),
+        '#description' => t('Check to let Islandora build a PID for you<br/> and ignore the Object PID source fields'),
         '#states' => array(
         	'visible' => array(
         		':input[name=action]' => array('value' => 'ingest'),
@@ -976,30 +984,6 @@ function islandora_multi_importer_objectmapping_form($form, &$form_state, $file_
       ),
     ),
 
-    /* MAM. Added to support issue #20...but this element currently does NOTHING so it's been commented out.
-    'indexmap_row' => array(
-      '#id' => drupal_html_id('islandora-multi-indexmap'),
-      'label' => array(
-        '#markup' => t('Import Index'),
-      ),
-      'indexmap' => array(
-        '#type' => 'select',
-        '#attributes' => '',
-        '#description' => t('Select the source field to use as an Import Index for imported objects'),
-        '#options' => array_merge(array('None' => 'Use row number'), $file_data['headers'])),
-        '#states' => array(
-          'enabled' => array(
-            ':input[name=action]' => array('value' => 'ingest'),
-          ),
-        ),
-      ),
-      'stub1' => array(
-      '#markup' => '&nbsp;',
-      ),
-      'stub2' => array(
-        '#markup' => '&nbsp;',
-      ), */
-
     'dsmap_row' => array(
       '#id' => drupal_html_id('islandora-multi-dsmap'),
       'label' => array(
@@ -1014,6 +998,12 @@ function islandora_multi_importer_objectmapping_form($form, &$form_state, $file_
           'LOCAL' => 'local*',
           'ZIP' => 'ZIP',
         ),
+      ),
+      'stub1' => array(
+        '#markup' => '&nbsp;',
+      ),
+      'stub2' => array(
+        '#markup' => '&nbsp;',
       ),
     ),
   );
@@ -1189,7 +1179,7 @@ function islandora_multi_importer_form_submit($form, &$form_state) {
       if ($form_state['storage']['values']['step0']['data_source'] == 'google' && !empty($form_state['storage']['values']['step2']['google_api']['spreadsheet_id'])) {
         $spreadsheetId = trim($form_state['storage']['values']['step2']['google_api']['spreadsheet_id']);
 
-        // Parse the ID from the URL if a full URL was provided.  Addresses https://github.com/mnylc/islandora_multi_importer/issues/44
+        // Parse the ID from the URL if a full URL was provided.
         if ($parsed = parse_url($spreadsheetId)) {
           if (isset($parsed['scheme'])) {
             $parts = explode('/', $parsed['path']);
@@ -1198,7 +1188,9 @@ function islandora_multi_importer_form_submit($form, &$form_state) {
         }
 
         $range = trim($form_state['storage']['values']['step2']['google_api']['spreadsheet_range']);
-        $newfile_fid= islandora_multi_importer_read_googledata($spreadsheetId, $range, -1, 0);
+        $sourcetracking_text = trim($form_state['storage']['values']['step2']['google_api']['googlesheet_tracking']);
+
+        $newfile_fid = islandora_multi_importer_read_googledata($spreadsheetId, $range, -1, 0, $sourcetracking_text);
         $form_state['storage']['values']['step1']['file'] = islandora_multi_importer_csv_save($newfile_fid);
       }
 
@@ -1287,35 +1279,13 @@ function islandora_multi_importer_startprocessing($parameters) {
   // islandora_multi_importer_client_task();
 }
 
-/**
- * Implements hook_form_alter.
- *
- * This function implements hook_form_alter with intent to set defaults
- * for islandora_multi_importer_form fields.
- *
- * @param $form
- * @param $form_state
- * @param $form_id
- */
-function islandora_multi_importer_form_alter(&$form, &$form_state, $form_id) {
-
-  // The big switch...
-  switch($form_id) {
-
-    // islandora_multi_importer_form
-    case 'islandora_multi_importer_form':
-      islandora_multi_importer_form_restore_selections($form);
-      break;
-
-  }
-
-  return;
-}
+/* The next three functions are provided temporarily until a complete form save and restore
+     process is available like those provided for Twig templates by class::TwigTemplateDatabase.
+   You must call islandora_multi_importer_form_restore_selections from a hook_form_alter
+     implementation in order to take advantage of this code.  */
 
 /**
  * islandora_multi_importer_form_save_selections( )
- *
- * Addresses https://github.com/mnylc/islandora_multi_importer/issues/22
  *
  * @param $form_state - $form_state array.
  * @param $form - The full $form array.
@@ -1369,8 +1339,6 @@ function islandora_multi_importer_form_save_selections($form_state, $form) {
 
 /**
  * islandora_multi_importer_form_restore_selections( )
- *
- * Addresses https://github.com/mnylc/islandora_multi_importer/issues/22
  *
  * @param $form - The full $form array.
  *
@@ -1439,6 +1407,7 @@ function islandora_multi_importer_form_save_paths( ) {
     "objectmap|objectmapping|rows|labelmap_row|labelmap",
     "objectmap|objectmapping|rows|sequencemap_row|sequencemap",
     "objectmap|objectmapping|rows|dsmap_row|dsremote",
+
 
     // islandora:sp_large_image_cmdodel
     "cmodels|islandora:sp_large_image_cmodel|dsid|rows|DC|method|data",

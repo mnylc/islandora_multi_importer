@@ -175,3 +175,5 @@ function islandora_multi_importer_test() {
   $ds->setContentFromFile($file2);
 
 }
+
+
