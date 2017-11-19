@@ -292,7 +292,7 @@ function islandora_multi_importer_google_form($form, &$form_state) {
 }
 
 /**
- * Submit handler for islandora_multi_importer_upload_form.
+ * ZIP Upload sub-form for islandora_multi_importer_upload_form.
  */
 function islandora_multi_importer_zip_upload_form($form, &$form_state) {
   $upload_size = min((int) ini_get('post_max_size'), (int) ini_get('upload_max_filesize'));
@@ -302,6 +302,32 @@ function islandora_multi_importer_zip_upload_form($form, &$form_state) {
       '#required' => TRUE,
       '#title' => t('ZIP file containing the files referenced in the source data'),
       '#size' => 48,
+      '#description' => t('Select a file to upload.<br/>Files must be less than <strong>@size MB.</strong>', array('@size' => $upload_size)),
+      '#default_value' => isset($form_state['values']['file3']) ? $form_state['values']['file3'] : NULL,
+      '#upload_location' => file_default_scheme() . '://',
+      '#upload_validators' => array(
+        'file_validate_extensions' => array('zip'),
+        'file_validate_size' => array($upload_size * 1024 * 1024),
+      ),
+    ),
+  );
+  return $form;
+}
+
+/**
+ * ZIP Plupload sub-form for islandora_multi_importer_upload_form.
+ */
+function islandora_multi_importer_zip_plupload_form($form, &$form_state) {
+  $upload_size = min((int) ini_get('post_max_size'), (int) ini_get('upload_max_filesize'));
+  $form = array(
+    'file2' => array(
+      '#type' => 'plupload',
+      '#required' => TRUE,
+      '#title' => t('ZIP file containing the files referenced in the source data'),
+      '#plupload_settings' => array(
+             'runtimes' => 'html5', // Also consider the order of technologies.
+             'chunk_size' => '5mb',
+             'unique_names' => TRUE,
       '#description' => t('Select a file to upload.<br/>Files must be less than <strong>@size MB.</strong>', array('@size' => $upload_size)),
       '#default_value' => isset($form_state['values']['file3']) ? $form_state['values']['file3'] : NULL,
       '#upload_location' => file_default_scheme() . '://',
@@ -1183,7 +1209,15 @@ function islandora_multi_importer_form_submit($form, &$form_state) {
         );
       }
     }
-    else {
+    else  {
+      // Means ZIP was selected, or step is last.
+      dpm($form_state['storage']['step']);
+      
+      // Check if plupload was used
+      
+      $scheme = 'private://';
+      dpm($form_state['values']['last']['file2']);
+      
       $parameters = $form_state['storage']['values']['step4'];
       $parameters['source_binaries'] = $form_state['values']['last']['file2'];
     }
