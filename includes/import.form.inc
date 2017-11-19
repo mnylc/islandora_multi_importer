@@ -65,7 +65,7 @@ function islandora_multi_importer_form(array $form, array &$form_state) {
       break;
     
     case 2:
-      drupal_set_title(t("Islandora Multi importer - Data Source: Google SpreadSheet info"));
+      drupal_set_title(t("Islandora Multi importer - Data Source: Google Sheet info"));
       $step_forms['#tree'] = TRUE;
         //$step_forms['#validate'] = array('islandora_multi_importer_form_check_fileisuploaded');
       $step_forms['step2'] = islandora_multi_importer_google_form($form, $form_state);
@@ -257,7 +257,7 @@ function islandora_multi_importer_upload_form($form, &$form_state) {
 
 
 /**
- * Google Spreadsheet ID
+ * Google Sheet ID
  */
 function islandora_multi_importer_google_form($form, &$form_state) {
   
@@ -266,7 +266,8 @@ function islandora_multi_importer_google_form($form, &$form_state) {
   
   if (isset($form_state['storage']['values']['step'.$form_state['storage']['step']])) {
      $stored_defaults['spreadsheet_id'] = $form_state['storage']['values']['step'.$form_state['storage']['step']]['google_api']['spreadsheet_id'];
-     $stored_defaults['spreadsheet_range'] = $form_state['storage']['values']['step'.$form_state['storage']['step']]['google_api']['spreadsheet_range'];
+    $stored_defaults['spreadsheet_range'] = $form_state['storage']['values']['step'.$form_state['storage']['step']]['google_api']['spreadsheet_range'];
+    $stored_defaults['googlesheet_tracking'] = $form_state['storage']['values']['step'.$form_state['storage']['step']]['google_api']['googlesheet_tracking'];
   }
   
   $form['google_api']= array(
@@ -276,18 +277,25 @@ function islandora_multi_importer_google_form($form, &$form_state) {
     'spreadsheet_id' => array(
       '#type' => 'textfield',
       '#required' => TRUE,
-      '#title' => t('ID of your Google Spreadsheet'),
-      '#description' => ' If shared at https://docs.google.com/spreadsheets/d/aaBAccEEFfC_aBC-aBc0d1EF/edit, use aaBAccEEFfC_aBC-aBc0d1EF as ID.',
+      '#title' => t('ID or full URL of your Google Sheet'),
+      '#description' => ' Example: https://docs.google.com/spreadsheets/d/aaBAccEEFfC_aBC-aBc0d1EF/edit, use aaBAccEEFfC_aBC-aBc0d1EF portion as the ID.',
       '#default_value' => $stored_defaults['spreadsheet_id'],
     ),
     'spreadsheet_range' => array(
       '#type' => 'textfield',
       '#required' => TRUE,
       '#title' =>  t('Cell Range'),
-      '#description' => t('Cell Range for your Google Spreadsheet, in the form of SheetName!A1:B10'),
+      '#description' => t('Cell range from your Google Sheet, in the form of SheetName!A1:B10'),
       '#default_value' => $stored_defaults['spreadsheet_range'],
     ),
-   ); 
+    'googlesheet_tracking' => array(
+      '#type' => 'textfield',
+      '#required' => FALSE,
+      '#title' =>  t('Track this Google Sheet data source?'),
+      '#description' => t('Text appended to each ingested object for source tracking. Leave blank for NO tracking.'),
+      '#default_value' => date('c'),
+    ),
+   );
   return $form;
 }
 
@@ -320,8 +328,8 @@ function islandora_multi_importer_choosesource_form($form, &$form_state) {
       '#prefix' => '<div class="help" id="islandora-multi-source">',
       '#suffix' => '</div>',
       '#type' => 'select',
-      '#title' => t('Choose your Data source type'),
-      '#options' => array('file' => 'Spreadsheet File to be uploaded','google' => 'Google Spreadsheet URL'),
+      '#title' => t('Choose your data source type'),
+      '#options' => array('file' => 'Spreadsheet file to be uploaded','google' => 'Google Sheet URL'),
       '#default_value' => 'file',
     ),
   );
@@ -329,7 +337,7 @@ function islandora_multi_importer_choosesource_form($form, &$form_state) {
 }
 
 /**
- * Spreadsheet previsualization form.
+ * Spreadsheet pre-visualization form.
  */
 function islandora_multi_importer_previs_form($form, &$form_state, &$file_data) {
 
@@ -427,25 +435,30 @@ function islandora_multi_importer_twig_form($form, &$form_state, $file_data) {
 
   if (isset($form_state['values']['step3']['sheet_content'])) {
     $current_row = isset($form_state['values']['step3']['sheet_content']['rows']) && !empty($form_state['values']['step3']['sheet_content']['rows']) ? $form_state['values']['step3']['sheet_content']['rows'] : key($file_data['data']);
-    $current_record_record_data = array('data' => array_combine($file_data['headers'], $file_data['data'][$current_row]));
-
-    
+    try {
+      $current_record_record_data = array('data' => array_combine($file_data['headers'], $file_data['data'][$current_row]));
+    } catch (Exception $e) {
+      drupal_set_message('Caught exception: '.$e->getMessage(), "info");
+    }
   }
   else {
     if ((!empty($file_data)) and !empty($file_data['headers'])) {
       $current_row = key($file_data['data']);
-      $current_record_record_data = array('data' => array_combine($file_data['headers'], $file_data['data'][$current_row]));
-      
+      try {
+        $current_record_record_data = array('data' => array_combine($file_data['headers'], $file_data['data'][$current_row]));
+      } catch (Exception $e) {
+        drupal_set_message('Caught exception: '.$e->getMessage(), "info");
+      }
     }
     else {
-      // We should be never get here. If we are here our file has not data? WE need to push the user back to another step
+      // We should be never get here. If we are here our file has no data? We need to push the user back to another step.
       $current_record_record_data = array('name' => 'metro.org');
       
       if ($form_state['storage']['values']['step0']['data_source'] == 'google') {
-        drupal_set_message(t('Seems like your Google Spreadsheet has no data, no headers or we are having trouble fetching it. Try selecting another one or a different Range.'),'warning');
+        drupal_set_message(t('Seems like your Google Sheet has no data, no headers, or we are having trouble fetching it. Try selecting another one or a different range.'),'warning');
       }
       else {
-        drupal_set_message(t('Seems like your File has no data, no headers or we are having trouble fetching it. Try selecting another file.'),'warning');
+        drupal_set_message(t('Seems like your File has no data, no headers, or we are having trouble fetching it. Try selecting another file.'),'warning');
       }
 
     }
@@ -713,7 +726,7 @@ function islandora_multi_importer_cmodelmapping_form(array $form, array &$form_s
       $form_state['storage']['values']['general']['computed_derivatives'] = $derivatives_available;
     }
     else {
-      drupal_set_message(t('No valid cmodels found, please check spelling for select field value'), 'warning');
+      drupal_set_message(t('No valid CModels found, please check spelling for select field value'), 'warning');
       unset($form_state['storage']['values']['general']['computed_cmodels']);
       unset($form_state['storage']['values']['general']['computed_derivatives']);
     }
@@ -818,6 +831,7 @@ function islandora_multi_importer_cmodeldsmapping_form(array &$form_state, array
 
         // Individual Options for each DSID.
         $options = array();
+
         // Exception for DC, allow XSLT.
         if ($dsid == 'DC') {
           // @TODO add XLST options and other sources diff than mods
@@ -844,7 +858,7 @@ function islandora_multi_importer_cmodeldsmapping_form(array &$form_state, array
           }
         }
 
-        // Fetch Derivative options from computed ones (if any)
+        // Fetch Derivative options from computed ones (if any).
         if (isset($form_state['storage']['values']['general']['computed_derivatives'][$cmodel])) {
           foreach ($form_state['storage']['values']['general']['computed_derivatives'][$cmodel] as $key => $derivative) {
             // If destination DSID of this derivative matches
@@ -854,6 +868,7 @@ function islandora_multi_importer_cmodeldsmapping_form(array &$form_state, array
             }
           }
         }
+
         // Check if DS is optional or not, we enforce not optional ones.
         $defaults[$dsid] = !$dsidinfo['optional'];
         $form[$cmodel]['dsid']['rows'][$dsid] = array(
@@ -895,7 +910,7 @@ function islandora_multi_importer_objectmapping_form($form, &$form_state, $file_
       ),
       'pidtype' => array(
         '#type' => 'checkbox',
-        '#description' => t('Check to let Islandora build PID for you and ignore the Object PID source fields'),
+        '#description' => t('Check to let Islandora build a PID for you<br/> and ignore the Object PID source fields'),
         '#states' => array(
         	'visible' => array(
         		':input[name=action]' => array('value' => 'ingest'),
@@ -920,7 +935,7 @@ function islandora_multi_importer_objectmapping_form($form, &$form_state, $file_
       ),
       'parenttype' => array(
         '#type' => 'checkbox',
-        '#description' => t('If value is not a well formed PID, assume it is a row index present in the same data'),
+        '#description' => t('If value is not a well formed PID,<br/> assume it is a row index present in the same data'),
       ),
       'stub' => array(
         '#markup' => '&nbsp;',
@@ -944,6 +959,7 @@ function islandora_multi_importer_objectmapping_form($form, &$form_state, $file_
         '#markup' => '&nbsp;',
       ),
     ),
+
     'sequencemap_row' => array(
       '#id' => drupal_html_id('islandora-multi-parentmap'),
       'label' => array(
@@ -967,6 +983,7 @@ function islandora_multi_importer_objectmapping_form($form, &$form_state, $file_
         '#markup' => '&nbsp;',
       ),
     ),
+
     'dsmap_row' => array(
       '#id' => drupal_html_id('islandora-multi-dsmap'),
       'label' => array(
@@ -982,8 +999,15 @@ function islandora_multi_importer_objectmapping_form($form, &$form_state, $file_
           'ZIP' => 'ZIP',
         ),
       ),
+      'stub1' => array(
+        '#markup' => '&nbsp;',
+      ),
+      'stub2' => array(
+        '#markup' => '&nbsp;',
+      ),
     ),
   );
+
   $form['objectmapping'] = array(
     '#prefix' => '<div id="islandora-multi-basemapping">',
     '#suffix' => '</div>',
@@ -1143,16 +1167,30 @@ function islandora_multi_importer_form_submit($form, &$form_state) {
     }
   }
 
-  // Handle the ingest buttom.
+  // Handle the ingest button.
   if ($form_state['triggering_element']['#value'] == t('Ingest')) {
+    // Save all of the $form_state['input']... #options values for all 'select' type inputs
+    islandora_multi_importer_form_save_selections($form_state, $form);
+
     // Check if a ZIP file needs to be uploaded.
     if ($form_state['storage']['step'] == 3) {
       // Lets check if Google was used as source. I should
      
       if ($form_state['storage']['values']['step0']['data_source'] == 'google' && !empty($form_state['storage']['values']['step2']['google_api']['spreadsheet_id'])) {
         $spreadsheetId = trim($form_state['storage']['values']['step2']['google_api']['spreadsheet_id']);
+
+        // Parse the ID from the URL if a full URL was provided.
+        if ($parsed = parse_url($spreadsheetId)) {
+          if (isset($parsed['scheme'])) {
+            $parts = explode('/', $parsed['path']);
+            $spreadsheetId = $parts[3];
+          }
+        }
+
         $range = trim($form_state['storage']['values']['step2']['google_api']['spreadsheet_range']);
-        $newfile_fid= islandora_multi_importer_read_googledata($spreadsheetId, $range, -1, 0);
+        $sourcetracking_text = trim($form_state['storage']['values']['step2']['google_api']['googlesheet_tracking']);
+
+        $newfile_fid = islandora_multi_importer_read_googledata($spreadsheetId, $range, -1, 0, $sourcetracking_text);
         $form_state['storage']['values']['step1']['file'] = islandora_multi_importer_csv_save($newfile_fid);
       }
 
@@ -1192,7 +1230,7 @@ function islandora_multi_importer_form_submit($form, &$form_state) {
     // Actually in IslandoraMultiBatch all defaults to ingest
     // except for "update" which means updating existing objects.
     $parameters['action'] = isset($form_state['values']['action']) ? $form_state['values']['action'] : 'ingest';
-    dpm($parameters);
+    // dpm($parameters);
     $connection = islandora_get_tuque_connection();
     // kpr($parameters);
     $preprocessor = new IslandoraMultiBatch($connection, $parameters);
@@ -1240,3 +1278,162 @@ function islandora_multi_importer_startprocessing($parameters) {
   // islandora-multi-importer-zeroMQboot > /dev/null &");
   // islandora_multi_importer_client_task();
 }
+
+/* The next three functions are provided temporarily until a complete form save and restore
+     process is available like those provided for Twig templates by class::TwigTemplateDatabase.
+   You must call islandora_multi_importer_form_restore_selections from a hook_form_alter
+     implementation in order to take advantage of this code.  */
+
+/**
+ * islandora_multi_importer_form_save_selections( )
+ *
+ * @param $form_state - $form_state array.
+ * @param $form - The full $form array.
+ *
+ */
+function islandora_multi_importer_form_save_selections($form_state, $form) {
+  $keys = islandora_multi_importer_form_save_paths();
+
+  // If $form['step4'] exists...check $form_state['values'] looking for arrays with keys matching $keys
+  if (isset($form['step4'])) {
+    foreach ($keys as $k) {
+      $burst = explode('|', $k);
+      $count = count($burst);
+      $val = FALSE;
+
+      switch ($count) {
+        case 5:
+          list($a,$b,$c,$d,$e) = $burst;
+          if (isset($form_state['input']['cmodelmap'][$a][$b][$c][$d][$e])) {
+            $val = $form_state['input']['cmodelmap'][$a][$b][$c][$d][$e];
+          } else if (isset($form_state['values'][$a][$b][$c][$d][$e])) {
+            $val = $form_state['values'][$a][$b][$c][$d][$e];
+          }
+          break;
+        case 6:
+          list($a,$b,$c,$d,$e,$f) = $burst;
+          if (isset($form_state['input']['cmodelmap'][$a][$b][$c][$d][$e][$f])) {
+            $val = $form_state['input']['cmodelmap'][$a][$b][$c][$d][$e][$f];
+          } else if (isset($form_state['values'][$a][$b][$c][$d][$e][$f])) {
+            $val = $form_state['values'][$a][$b][$c][$d][$e][$f];
+          }
+          break;
+        case 7:
+          list($a,$b,$c,$d,$e,$f,$g) = $burst;
+          if (isset($form_state['input']['cmodelmap'][$a][$b][$c][$d][$e][$f][$g])) {
+            $val = $form_state['input']['cmodelmap'][$a][$b][$c][$d][$e][$f][$g];
+          } else if (isset($form_state['values'][$a][$b][$c][$d][$e][$f][$g])) {
+            $val = $form_state['values'][$a][$b][$c][$d][$e][$f][$g];
+          }
+          break;
+      }
+      if ($val) {
+        // Build a variable to save $val as the #default_value for $key
+        $name = "islandora_multi_key-$k";
+        variable_set($name, $val);
+      }
+    }
+  }
+  return;
+}
+
+/**
+ * islandora_multi_importer_form_restore_selections( )
+ *
+ * @param $form - The full $form array.
+ *
+ */
+function islandora_multi_importer_form_restore_selections(&$form) {
+  $keys = islandora_multi_importer_form_save_paths();
+
+  // If $form['step4'] exists...check variables defined by $keys and save corresponding values
+  //   as #default_value for appropriate $form elements
+  if (isset($form['step4'])) {
+    foreach ($keys as $k) {
+      $name = "islandora_multi_key-$k";
+      if ($val = variable_get($name, FALSE)) {
+        $burst = explode('|', $k);
+        $count = count($burst);
+
+        switch ($count) {
+          case 5:
+            list($a,$b,$c,$d,$e) = $burst;
+            if (isset($form['cmodelmap'][$a][$b][$c][$d][$e])) {
+              $form['cmodelmap'][$a][$b][$c][$d][$e]['#default_value'] = $val;
+            } else if (isset($form[$a][$b][$c][$d][$e])) {
+              $form[$a][$b][$c][$d][$e]['#default_value'] = $val;
+            }
+            break;
+          case 6:
+            list($a,$b,$c,$d,$e,$f) = $burst;
+            if (isset($form['cmodelmap'][$a][$b][$c][$d][$e][$f])) {
+              $form['cmodelmap'][$a][$b][$c][$d][$e][$f]['#default_value'] = $val;
+            } else if (isset($form[$a][$b][$c][$d][$e][$f])) {
+              $form[$a][$b][$c][$d][$e][$f]['#default_value'] = $val;
+            }
+            break;
+          case 7:
+            list($a,$b,$c,$d,$e,$f,$g) = $burst;
+            if (isset($form['cmodelmap'][$a][$b][$c][$d][$e][$f][$g])) {
+              $form['cmodelmap'][$a][$b][$c][$d][$e][$f][$g]['#default_value'] = $val;
+            } else if (isset($form[$a][$b][$c][$d][$e][$f][$g])) {
+              $form[$a][$b][$c][$d][$e][$f][$g]['#default_value'] = $val;
+            }
+            break;
+        }
+      }
+    }
+  }
+  return;
+}
+
+/**
+ * This function returns an array of form elements (paths) that should be
+ * saved upon ingest and retrieved as #default_values whenever a form is reloaded.
+ *
+ * Intended for use in islandora_multi_importer_form_save_selections() and
+ * islandora_multi_importer_form_restore_selections( ).
+ *
+ * @return array
+ */
+function islandora_multi_importer_form_save_paths( ) {
+  return array(
+    // cmodel column
+    "cmodelmap|basemapping|rows|cmodelmap_row|cmodelmap",
+
+    // object map fields
+    "objectmap|objectmapping|rows|pidmap_row|pidmap",
+    "objectmap|objectmapping|rows|parentmap_row|parentmap",
+    "objectmap|objectmapping|rows|labelmap_row|labelmap",
+    "objectmap|objectmapping|rows|sequencemap_row|sequencemap",
+    "objectmap|objectmapping|rows|dsmap_row|dsremote",
+
+
+    // islandora:sp_large_image_cmdodel
+    "cmodels|islandora:sp_large_image_cmodel|dsid|rows|DC|method|data",
+    "cmodels|islandora:sp_large_image_cmodel|dsid|rows|MODS|method|data",
+    "cmodels|islandora:sp_large_image_cmodel|dsid|rows|OBJ|method|data",
+    "cmodels|islandora:sp_large_image_cmodel|dsid|rows|TN|method|data",
+    "cmodels|islandora:sp_large_image_cmodel|dsid|rows|JPG|method|data",
+    "cmodels|islandora:sp_large_image_cmodel|dsid|rows|JP2|method|data",
+
+    // islandora:sp_basic_image
+    "cmodels|islandora:sp_basic_image|dsid|rows|DC|method|data",
+    "cmodels|islandora:sp_basic_image|dsid|rows|MODS|method|data",
+    "cmodels|islandora:sp_basic_image|dsid|rows|OBJ|method|data",
+    "cmodels|islandora:sp_basic_image|dsid|rows|TN|method|data",
+    "cmodels|islandora:sp_basic_image|dsid|rows|MEDIUM_SIZE|method|data",
+
+    // islandora:sp_pdf
+    "cmodels|islandora:sp_pdf|dsid|rows|DC|method|data",
+    "cmodels|islandora:sp_pdf|dsid|rows|MODS|method|data",
+    "cmodels|islandora:sp_pdf|dsid|rows|OBJ|method|data",
+    "cmodels|islandora:sp_pdf|dsid|rows|PDFA|method|data",
+    "cmodels|islandora:sp_pdf|dsid|rows|TN|method|data",
+    "cmodels|islandora:sp_pdf|dsid|rows|FULL_TEXT|method|data",
+    "cmodels|islandora:sp_pdf|dsid|rows|PREVIEW|method|data",
+
+  );
+
+}
+

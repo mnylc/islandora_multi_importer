@@ -21,15 +21,27 @@
  * @return array
  *   array of associative arrays containing header and data as header => value pairs
  */
-function islandora_multi_importer_datasource_loader(array $form_state, $page = 0, $per_page = 20) {
-  //dpm($form_state);
+function islandora_multi_importer_datasource_loader(array $form_state, $page = 0, $per_page = -1) {
   if ($form_state['storage']['values']['step0']['data_source'] == 'google' && !empty($form_state['storage']['values']['step2']['google_api']['spreadsheet_id'])) {
     $spreadsheetId = trim($form_state['storage']['values']['step2']['google_api']['spreadsheet_id']);
+
+    // Parse the ID from the URL if a full URL was provided.
+    if ($parsed = parse_url($spreadsheetId)) {
+      if (isset($parsed['scheme'])) {
+        $parts = explode('/', $parsed['path']);
+        $spreadsheetId = $parts[3];
+      }
+    }
     $range = trim($form_state['storage']['values']['step2']['google_api']['spreadsheet_range']);
-    //dpm($range);
-    $file_data = islandora_multi_importer_read_googledata($spreadsheetId, $range, $per_page, $page * $per_page);
-   
-  } 
+
+    if ($form_state['storage']['values']['step0']['data_source'] == 'google' && !empty($form_state['storage']['values']['step2']['google_api']['googlesheet_tracking'])) {
+      $source_tracking = $form_state['storage']['values']['step2']['google_api']['googlesheet_tracking'];
+    } else {
+      $source_tracking = "";
+    }
+
+    $file_data = islandora_multi_importer_read_googledata($spreadsheetId, $range, $per_page, $page * $per_page, $source_tracking);
+  }
   else {
     $file = file_load($form_state['storage']['values']['step1']['file']);
     $file_path = drupal_realpath($file->uri);
@@ -56,9 +68,7 @@ function islandora_multi_importer_read_filedata($file_path, $numrows = 20, $offs
   $tabdata = array('headers' => array(), 'data' => array(), 'totalrows' => 0);
   try {
     $inputFileType = PHPExcel_IOFactory::identify($file_path);
-  
     $objReader = PHPExcel_IOFactory::createReader($inputFileType);
-   
     $objReader->setReadDataOnly(true);
     $objPHPExcel = $objReader->load($file_path);
   } catch(Exception $e) {
@@ -71,31 +81,33 @@ function islandora_multi_importer_read_filedata($file_path, $numrows = 20, $offs
   $worksheet = $objPHPExcel->getActiveSheet();
   $highestRow =  $worksheet->getHighestRow(); 
   $highestColumn =  $worksheet->getHighestColumn();
+
   if (($highestRow)>1) {
     // Returns Row Headers.
-    $rowHeaders =  $worksheet->rangeToArray('A1:'.$highestColumn.'1', NULL, TRUE, TRUE,FALSE);
-    $rowHeaders_utf8=array_map('stripslashes',$rowHeaders[0]);
-    $rowHeaders_utf8=array_map('utf8_encode',$rowHeaders_utf8);
-    $rowHeaders_utf8=array_map('strtolower',$rowHeaders_utf8);
-    $rowHeaders_utf8=array_map('trim',$rowHeaders_utf8);
+    $rowHeaders = $worksheet->rangeToArray('A1:' . $highestColumn . '1', NULL, TRUE, TRUE, FALSE);
+    $rowHeaders_utf8 = array_map('stripslashes', $rowHeaders[0]);
+    $rowHeaders_utf8 = array_map('utf8_encode', $rowHeaders_utf8);
+    $rowHeaders_utf8 = array_map('strtolower', $rowHeaders_utf8);
+    $rowHeaders_utf8 = array_map('trim', $rowHeaders_utf8);
+
     foreach ($worksheet->getRowIterator() as $row) {
-        $rowindex = $row->getRowIndex(); 
-        if (($rowindex > 1) && ($rowindex > ($offset)) && (($rowindex <=($offset + $numrows +1)) || $numrows == -1 )) {
-          $rowdata = array();
-          // gets one row data
-          $datarow =  $worksheet->rangeToArray("A{$rowindex}:".$highestColumn.$rowindex, NULL, TRUE, TRUE,FALSE);//Devuelve los titulos de cada columna
-          $flat = trim(implode('', $datarow[0]));
-          //check for empty row...if found stop there.
-          if (strlen($flat) == 0) {
-            $maxRow = $rowindex;
-            // @TODO check if this is not being overriden at line 64
-            break;
-          }
-          $table[$rowindex] = $datarow[0];
-          }
-      $maxRow = $rowindex;
+      $rowindex = $row->getRowIndex();
+      if (($rowindex > 1) && ($rowindex > ($offset)) && (($rowindex <= ($offset + $numrows + 1)) || $numrows == -1)) {
+        // Gets one row data
+        $datarow = $worksheet->rangeToArray("A{$rowindex}:" . $highestColumn . $rowindex, NULL, TRUE, TRUE, FALSE);// Devuelve los titulos de cada columna
+        $flat = trim(implode('', $datarow[0]));
+        // Check for empty row...if found stop there.
+        if (strlen($flat) == 0) {
+          $maxRow = $rowindex;
+          // @TODO check if this is not being overriden at line 64
+          break;
+        }
+        $table[$rowindex] = $datarow[0];
       }
+      $maxRow = $rowindex;
+    }
   }
+
   $tabdata = array('headers' =>  $rowHeaders_utf8, 'data' => $table, 'totalrows'=> $maxRow);
   $objPHPExcel->disconnectWorksheets();
   return $tabdata;
@@ -112,20 +124,22 @@ function islandora_multi_importer_read_filedata($file_path, $numrows = 20, $offs
    *   Number of rows to return, -1 magic number means all
    * @param int $offset
    *   Offset for rows to return
+   * @param string $source_tracking
+   *   Empty for no tracking, or the text to be appended to each row of data.
+   *
    * @return array
-   *   array of associative arrays containing header and data as header => value pairs
+   *   Array of associative arrays containing header and data as header => value pairs
    */
-  function islandora_multi_importer_read_googledata($spreadsheetId, $range = 'Sheet1!A1:B10', $numrows = 20, $offset = 0) {
+  function islandora_multi_importer_read_googledata($spreadsheetId, $range = 'Sheet1!A1:B10',
+                                                    $numrows = 20, $offset = 0, $source_tracking = "") {
     $tabdata = array('headers' => array(), 'data' => array(), 'totalrows' => 0);
     $sp_data = array();
     $rowdata = array();
- 
-    
+
     // Establish a connection first
     $client = islandora_multi_importer_googleclient_connect();
     try {
          $service = new Google_Service_Sheets($client);
-         
          $response = $service->spreadsheets_values->get($spreadsheetId, $range);
          $sp_data = $response->getValues();
     } catch( Google_Service_Exception $e )  {
@@ -135,7 +149,8 @@ function islandora_multi_importer_read_filedata($file_path, $numrows = 20, $offs
     $table = array();
     $headers = array();
     $maxRow = 0;
-    $highestRow =  count($sp_data);
+    $highestRow = count($sp_data);
+
     if (($highestRow)>1) {
       // Returns Row Headers.
       $rowHeaders = $sp_data[0];
@@ -143,27 +158,37 @@ function islandora_multi_importer_read_filedata($file_path, $numrows = 20, $offs
       $rowHeaders_utf8=array_map('utf8_encode',$rowHeaders_utf8);
       $rowHeaders_utf8=array_map('strtolower',$rowHeaders_utf8);
       $rowHeaders_utf8=array_map('trim',$rowHeaders_utf8);
+
+      // If $source_tracking is On, append an 'imi_import_source_tracking' field to the headers.
+      if (!empty($source_tracking)) { $rowHeaders_utf8[] = 'imi_import_source_tracking'; }
+
       foreach ($sp_data as $rowindex => $row) {
         // Google Spreadsheets start with Index 0. But PHPEXCEL, parent`s
         // function does with 1.
-        // To keep both function responses in sync using the same params, i will compensate offsets here: 
-          
-          if (($rowindex >= 1) && ($rowindex > ($offset-1)) && (($rowindex <=($offset + $numrows)) || $numrows == -1 )) {
-            $rowdata = array();
-            // gets one row data
-            
-            $flat = trim(implode('', $row));
-            //check for empty row...if found stop there.
-            if (strlen($flat) == 0) {
-              $maxRow = $rowindex;
-              break;
-            }
-            $table[$rowindex] = $row;
-            }
-        $maxRow = $rowindex;
+        // To keep both function responses in sync using the same params, i will compensate offsets here:
+
+        if (($rowindex >= 1) && ($rowindex > ($offset-1)) && (($rowindex <=($offset + $numrows)) || $numrows == -1 )) {
+          $flat = trim(implode('', $row));
+          // Check for empty row...if found stop there.
+          if (strlen($flat) == 0) {
+            $maxRow = $rowindex;
+            break;
+          }
+          // If $source_tracking is On, append $source_tracking to the $row along with the row number of the record.
+          if (!empty($source_tracking)) { $row[] = "$source_tracking : $rowindex"; }
+          $table[$rowindex] = $row;
         }
+        $maxRow = $rowindex;
+      }
     }
-  $tabdata = array('headers' => $sp_data[0], 'data' => $table, 'totalrows'=> $maxRow);
+  $tabdata = array('headers' => $rowHeaders_utf8, 'data' => $table, 'totalrows'=> $maxRow);
+
+  // If the $range returns no data...let the user know and leave them in the current screen.
+  if ($maxRow === 0) {
+    $msg = "Retrieve of Google Sheet '$spreadsheetId' and range '$range' returned NO active data.";
+    drupal_set_message($msg, 'warning');
+    drupal_goto('/multi_importer');
+  }
   
   return $tabdata;
 }
@@ -185,11 +210,17 @@ function islandora_multi_importer_xml_highlight($s){
       return nl2br($s);
   }
 
-function islandora_multi_importer_remote_file_get($url) {
+function islandora_multi_importer_remote_file_get($url, $pid=NULL) {
     $parsed_url = parse_url($url);
     $remote_schemes = array('http', 'https', 'ftp', 'ftps', 'smb', 'nfs');
-    if (!isset($parsed_url['scheme']) || (isset($parsed_url['scheme']) &&!in_array($parsed_url['scheme'], $remote_schemes))) {
-      // if local file, return the path.
+    if (!isset($parsed_url['scheme']) || (isset($parsed_url['scheme']) && !in_array($parsed_url['scheme'], $remote_schemes))) {
+
+      // If local file, engage any hook_islandora_multi_importer_remote_file_get and return the real path.
+      $urls = array( );
+      $urls = module_invoke_all('islandora_multi_importer_remote_file_get', $url);
+      if (!empty($urls)) {
+        return drupal_realpath($urls[0]);
+      }
       return drupal_realpath($url);
     }
 
@@ -253,6 +284,7 @@ function islandora_multi_importer_twig_fetch($twig_name) {
   }
 return $twig_template_from_db;
 }
+
 /**
  * Fetches a twig template by it's id.
  *
