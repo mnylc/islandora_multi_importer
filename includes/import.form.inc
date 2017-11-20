@@ -311,6 +311,7 @@ function islandora_multi_importer_zip_upload_form($form, &$form_state) {
       ),
     ),
   );
+ 
   return $form;
 }
 
@@ -328,6 +329,7 @@ function islandora_multi_importer_zip_plupload_form($form, &$form_state) {
         'runtimes' => 'html5', // Also consider the order of technologies.
         'chunk_size' => '5mb',
         'unique_names' => TRUE,
+        'max_file_count' => 1,
       ),
       '#description' => t('Select a file to upload.<br/>Files must be less than <strong>@size MB.</strong>', array('@size' => $upload_size)),
       '#default_value' => isset($form_state['values']['file3']) ? $form_state['values']['file3'] : NULL,
@@ -338,8 +340,30 @@ function islandora_multi_importer_zip_plupload_form($form, &$form_state) {
       ),
     ),
   );
+  $form['file2']['#element_validate'][] = 'islandora_multi_importer_plupload_element_validate';
   return $form;
 }
+
+/**
+ * ZIP Plupload element file formatter disguised as validator.
+ */
+function islandora_multi_importer_plupload_element_validate($element, &$form_state) {
+  $saved_file = 0; // means no fid;
+  $scheme = file_default_scheme() . '://';
+  foreach ($form_state['values']['last'][$element['#name']] as $uploaded_file) {
+    if ($uploaded_file['status'] == 'done') {
+      $source = $uploaded_file['tmppath'];
+      $destination = file_stream_wrapper_uri_normalize($scheme . $uploaded_file['name']);
+      $destination = file_unmanaged_move($source, $destination, FILE_EXISTS_RENAME);
+      $file = plupload_file_uri_to_object($destination);
+      file_save($file);
+      // Yes, we do a single one only.
+      $saved_file = $file->fid; 
+    }
+  }
+  $form_state['values']['last'][$element['#name']] =  $saved_file;
+}
+
 
 function islandora_multi_importer_choosesource_form($form, &$form_state) {
   $form =  array(
