@@ -351,7 +351,8 @@ function islandora_multi_importer_plupload_element_validate($element, &$form_sta
   $saved_file = 0; // means no fid;
   $scheme = file_default_scheme() . '://';
   dpm($form_state);
-  foreach ($form_state['values']['last'][$element['#name']] as $uploaded_file) {
+  dpm($form_state['values']['last']['file2']);
+  foreach ($form_state['values']['last']['file2'] as $uploaded_file) {
     if ($uploaded_file['status'] == 'done') {
       $source = $uploaded_file['tmppath'];
       $destination = file_stream_wrapper_uri_normalize($scheme . $uploaded_file['name']);
@@ -362,7 +363,7 @@ function islandora_multi_importer_plupload_element_validate($element, &$form_sta
       $saved_file = $file->fid; 
     }
   }
-  $form_state['values']['last'][$element['#name']] =  $saved_file;
+  $form_state['values']['last']['file2'] =  $saved_file;
 }
 
 
