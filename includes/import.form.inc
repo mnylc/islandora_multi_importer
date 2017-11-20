@@ -163,7 +163,7 @@ function islandora_multi_importer_form(array $form, array &$form_state) {
 
     case 4:
       drupal_set_title(t("Islandora Multi importer - Binary Source ZIP upload step"));
-      $step_forms['last'] = islandora_multi_importer_zip_upload_form($form, $form_state);
+      $step_forms['last'] = !variable_get('islandora_multi_importer_plupload', FALSE) ? islandora_multi_importer_zip_upload_form($form, $form_state) : islandora_multi_importer_zip_plupload_form($form, $form_state);
       $step_forms['ingest'] = array(
         '#type' => 'submit',
         '#value' => t('Ingest'),
@@ -325,9 +325,10 @@ function islandora_multi_importer_zip_plupload_form($form, &$form_state) {
       '#required' => TRUE,
       '#title' => t('ZIP file containing the files referenced in the source data'),
       '#plupload_settings' => array(
-             'runtimes' => 'html5', // Also consider the order of technologies.
-             'chunk_size' => '5mb',
-             'unique_names' => TRUE,
+        'runtimes' => 'html5', // Also consider the order of technologies.
+        'chunk_size' => '5mb',
+        'unique_names' => TRUE,
+      ),
       '#description' => t('Select a file to upload.<br/>Files must be less than <strong>@size MB.</strong>', array('@size' => $upload_size)),
       '#default_value' => isset($form_state['values']['file3']) ? $form_state['values']['file3'] : NULL,
       '#upload_location' => file_default_scheme() . '://',
