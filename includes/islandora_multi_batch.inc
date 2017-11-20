@@ -263,6 +263,12 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
           $parent = $objectInfo['parent'];
           $parent_hash[$parent][$index] = $index;
           $parentchilds = array();
+          // Lets check if the index actually exists before going crazy.
+          if (!isset($file_data_all['data'][$parent])) {
+            $invalid[$parent] = $parent;
+            $invalid[$index] = $index;
+          }
+          
           if ((!isset($invalid[$index])) && (!isset($invalid[$parent]))) {
             // Only traverse if we don't have this index or the parent one
             // in the invalid register.
