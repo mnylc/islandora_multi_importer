@@ -350,8 +350,6 @@ function islandora_multi_importer_zip_plupload_form($form, &$form_state) {
 function islandora_multi_importer_plupload_element_validate($element, &$form_state) {
   $saved_file = 0; // means no fid;
   $scheme = file_default_scheme() . '://';
-  dpm($form_state);
-  dpm($form_state['values']['last']['file2']);
   foreach ($form_state['values']['last']['file2'] as $uploaded_file) {
     if ($uploaded_file['status'] == 'done') {
       $source = $uploaded_file['tmppath'];
@@ -1238,13 +1236,6 @@ function islandora_multi_importer_form_submit($form, &$form_state) {
     }
     else  {
       // Means ZIP was selected, or step is last.
-      dpm($form_state['storage']['step']);
-      
-      // Check if plupload was used
-      
-      $scheme = 'private://';
-      dpm($form_state['values']['last']['file2']);
-      
       $parameters = $form_state['storage']['values']['step4'];
       $parameters['source_binaries'] = $form_state['values']['last']['file2'];
     }
@@ -1253,7 +1244,7 @@ function islandora_multi_importer_form_submit($form, &$form_state) {
     // Actually in IslandoraMultiBatch all defaults to ingest
     // except for "update" which means updating existing objects.
     $parameters['action'] = isset($form_state['values']['action']) ? $form_state['values']['action'] : 'ingest';
-    dpm($parameters);
+    
     $connection = islandora_get_tuque_connection();
     // kpr($parameters);
     $preprocessor = new IslandoraMultiBatch($connection, $parameters);
@@ -1261,6 +1252,7 @@ function islandora_multi_importer_form_submit($form, &$form_state) {
     $preprocessed = islandora_batch_handle_preprocessor($preprocessor);
     // Extra: Lets make sure the CSV file is marked as used by the set:
     $setID = $preprocessor->getSetId();
+    watchdog('islandora_multi_importer', 'Parameters for Set @set <pre>@print_r</pre>', array('@print_r' => print_r( $parameters, TRUE), '@set' => $setID), WATCHDOG_INFO);
     //@TODO: switch needed here in case we are dealing with FULL CRUD and not only new objects
     // Since those will basically run differently.
     $file = file_load($form_state['storage']['values']['step1']['file']);
