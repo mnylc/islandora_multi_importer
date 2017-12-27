@@ -25,7 +25,18 @@ function islandora_multi_importer_admin_form($form, $form_state) {
     '#prefix' => '<div id="islandora_multi_importer_wrapper">',
     '#suffix' => '</div>',
   );
-  
+  $form['islandora_multi_importer_generalsettings_fieldset'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Multi Importer general settings'),
+  );
+  $form['islandora_multi_importer_generalsettings_fieldset']['islandora_multi_importer_plupload'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Use Plupload for ZIP file'),
+    '#description' => t('Use Plupload, requires the Drupal plupload module and Library enabled.'),
+    '#default_value' => variable_get('islandora_multi_importer_plupload', FALSE),
+  );
+    
+    
   $form['islandora_multi_importer_googleapi_fieldset'] = array(
     '#type' => 'fieldset',
     '#title' => t('Google API OAuth2 Credentials'),

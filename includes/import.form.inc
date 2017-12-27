@@ -163,7 +163,7 @@ function islandora_multi_importer_form(array $form, array &$form_state) {
 
     case 4:
       drupal_set_title(t("Islandora Multi importer - Binary Source ZIP upload step"));
-      $step_forms['last'] = islandora_multi_importer_zip_upload_form($form, $form_state);
+      $step_forms['last'] = !variable_get('islandora_multi_importer_plupload', FALSE) ? islandora_multi_importer_zip_upload_form($form, $form_state) : islandora_multi_importer_zip_plupload_form($form, $form_state);
       $step_forms['ingest'] = array(
         '#type' => 'submit',
         '#value' => t('Ingest'),
@@ -292,7 +292,7 @@ function islandora_multi_importer_google_form($form, &$form_state) {
 }
 
 /**
- * Submit handler for islandora_multi_importer_upload_form.
+ * ZIP Upload sub-form for islandora_multi_importer_upload_form.
  */
 function islandora_multi_importer_zip_upload_form($form, &$form_state) {
   $upload_size = min((int) ini_get('post_max_size'), (int) ini_get('upload_max_filesize'));
@@ -311,8 +311,59 @@ function islandora_multi_importer_zip_upload_form($form, &$form_state) {
       ),
     ),
   );
+ 
   return $form;
 }
+
+/**
+ * ZIP Plupload sub-form for islandora_multi_importer_upload_form.
+ */
+function islandora_multi_importer_zip_plupload_form($form, &$form_state) {
+  $upload_size = min((int) ini_get('post_max_size'), (int) ini_get('upload_max_filesize'));
+  $form = array(
+    'file2' => array(
+      '#type' => 'plupload',
+      '#required' => TRUE,
+      '#title' => t('ZIP file containing the files referenced in the source data'),
+      '#plupload_settings' => array(
+        'runtimes' => 'html5', // Also consider the order of technologies.
+        'chunk_size' => '5mb',
+        'unique_names' => TRUE,
+        'max_file_count' => 1,
+      ),
+      '#description' => t('Select a file to upload.<br/>Files must be less than <strong>@size MB.</strong>', array('@size' => $upload_size)),
+      '#default_value' => isset($form_state['values']['file3']) ? $form_state['values']['file3'] : NULL,
+      '#upload_location' => file_default_scheme() . '://',
+      '#upload_validators' => array(
+        'file_validate_extensions' => array('zip'),
+        'file_validate_size' => array($upload_size * 1024 * 1024),
+      ),
+    ),
+  );
+  $form['file2']['#element_validate'][] = 'islandora_multi_importer_plupload_element_validate';
+  return $form;
+}
+
+/**
+ * ZIP Plupload element file formatter disguised as validator.
+ */
+function islandora_multi_importer_plupload_element_validate($element, &$form_state) {
+  $saved_file = 0; // means no fid;
+  $scheme = file_default_scheme() . '://';
+  foreach ($form_state['values']['last']['file2'] as $uploaded_file) {
+    if ($uploaded_file['status'] == 'done') {
+      $source = $uploaded_file['tmppath'];
+      $destination = file_stream_wrapper_uri_normalize($scheme . $uploaded_file['name']);
+      $destination = file_unmanaged_move($source, $destination, FILE_EXISTS_RENAME);
+      $file = plupload_file_uri_to_object($destination);
+      file_save($file);
+      // Yes, we do a single one only.
+      $saved_file = $file->fid; 
+    }
+  }
+  $form_state['values']['last']['file2'] =  $saved_file;
+}
+
 
 function islandora_multi_importer_choosesource_form($form, &$form_state) {
   $form =  array(
@@ -1183,7 +1234,8 @@ function islandora_multi_importer_form_submit($form, &$form_state) {
         );
       }
     }
-    else {
+    else  {
+      // Means ZIP was selected, or step is last.
       $parameters = $form_state['storage']['values']['step4'];
       $parameters['source_binaries'] = $form_state['values']['last']['file2'];
     }
@@ -1192,7 +1244,7 @@ function islandora_multi_importer_form_submit($form, &$form_state) {
     // Actually in IslandoraMultiBatch all defaults to ingest
     // except for "update" which means updating existing objects.
     $parameters['action'] = isset($form_state['values']['action']) ? $form_state['values']['action'] : 'ingest';
-    dpm($parameters);
+    
     $connection = islandora_get_tuque_connection();
     // kpr($parameters);
     $preprocessor = new IslandoraMultiBatch($connection, $parameters);
@@ -1200,6 +1252,7 @@ function islandora_multi_importer_form_submit($form, &$form_state) {
     $preprocessed = islandora_batch_handle_preprocessor($preprocessor);
     // Extra: Lets make sure the CSV file is marked as used by the set:
     $setID = $preprocessor->getSetId();
+    watchdog('islandora_multi_importer', 'Parameters for Set @set <pre>@print_r</pre>', array('@print_r' => print_r( $parameters, TRUE), '@set' => $setID), WATCHDOG_INFO);
     //@TODO: switch needed here in case we are dealing with FULL CRUD and not only new objects
     // Since those will basically run differently.
     $file = file_load($form_state['storage']['values']['step1']['file']);

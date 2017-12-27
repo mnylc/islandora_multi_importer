@@ -263,6 +263,12 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
           $parent = $objectInfo['parent'];
           $parent_hash[$parent][$index] = $index;
           $parentchilds = array();
+          // Lets check if the index actually exists before going crazy.
+          if (!isset($file_data_all['data'][$parent])) {
+            $invalid[$parent] = $parent;
+            $invalid[$index] = $index;
+          }
+          
           if ((!isset($invalid[$index])) && (!isset($invalid[$parent]))) {
             // Only traverse if we don't have this index or the parent one
             // in the invalid register.
@@ -637,10 +643,17 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
                     error_log('will try to get '.$this->objectInfo['data'][$method[1]]. 'remotely');
                     $fileurl = islandora_multi_importer_remote_file_get(trim($this->objectInfo['data'][$method[1]]));
                     if ($fileurl) {
+                      $themime = $this->getMimetype(drupal_basename($fileurl));
+                        if ($dsid == "HOCR" && $themime == "application/octet-stream") {
+                            $themime = "text/html";
+                        }
+                        if ($dsid == "OCR" && $themime == "application/octet-stream") {
+                          $themime = "text/plain";
+                        }
                       $datastreams[$dsid] = array(
                         'dsid' => $dsid,
                         'label' => "$dsid datastream",
-                        'mimetype' => $this->getMimetype(drupal_basename($fileurl)),
+                        'mimetype' => $themime,
                         'datastream_file' => $fileurl,
                         'filename' => drupal_basename($fileurl),
                         'control_group' => 'M',
@@ -667,10 +680,17 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
                 // This will handle all cases, except ZIP.
                 $fileurl = islandora_multi_importer_remote_file_get(trim($this->objectInfo['data'][$method[1]]));
                 if ($fileurl) {
+                  $themime = $this->getMimetype(drupal_basename($fileurl));
+                      if ($dsid == "HOCR" && $themime == "application/octet-stream") {
+                          $themime = "text/html";
+                      }
+                      if ($dsid == "OCR" && $themime == "application/octet-stream") {
+                          $themime = "text/plain";
+                      }
                   $datastreams[$dsid] = array(
                     'dsid' => $dsid,
                     'label' => "$dsid datastream",
-                    'mimetype' => $this->getMimetype(drupal_basename($fileurl)),
+                    'mimetype' => $themime,
                     'datastream_file' => $fileurl,
                     'filename' => drupal_basename($fileurl),
                     'control_group' => 'M',
