@@ -661,11 +661,23 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
                       );
                     break;
                     }
+                  } 
+                  else {
+                    // Deal with non extensions when inside a ZIP
+                    $themime = $this->getMimetype($path_info['basename']);
+                    if ($dsid == "HOCR" && $themime == "application/octet-stream") {
+                        $themime = "text/html";
+                    }
+                    if ($dsid == "OCR" && $themime == "application/octet-stream") {
+                      $themime = "text/plain";
+                    }
+                    
                   }
+                  
                   $datastreams[$dsid] = array(
                     'dsid' => $dsid,
                     'label' => "$dsid datastream",
-                    'mimetype' => $this->getMimetype($path_info['basename']),
+                    'mimetype' => $themime,
                     'datastream_file' => "zip://" . $this->preprocessorParameters['zipfile'] . "#" . $this->objectInfo['data'][$method[1]],
                     'filename' => $path_info['basename'],
                     'control_group' => 'M',
