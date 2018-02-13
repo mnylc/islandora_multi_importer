@@ -171,7 +171,7 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
    * {@inheritdoc}
    */
   protected function getIngestInfo() {
-    error_log('running getIngestInfo');
+    error_log('Running Multi Importer getIngestInfo');
     $file = file_load($this->parameters['source_data']);
     $file_path = drupal_realpath($file->uri);
     $file_data_all = islandora_multi_importer_read_filedata($file_path, -1, $offset = 0);
@@ -183,6 +183,30 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
       // during datastream creation.
       $zipfile = file_load($this->parameters['source_binaries']);
       $this->parameters['zipfile'] = drupal_realpath($zipfile->uri);
+      // Lets check this one. So many times everything fails because of a
+      // bad Zip file.
+      $z = new ZipArchive();
+      $opened = FALSE;
+      $opened = $z->open($this->preprocessorParameters['zipfile']);
+      $z->close();
+      if ($opened !== TRUE) {
+        $this->processedObjectsInfo = array(
+          'success' => array(),
+          'error' => array_keys($file_data_all),
+          'fatal' => t('Provided ZIP file %zipfile can not be opened or is invalid. Dropping all preprocessing.Sorry, can not continued. Code %errorcode.',
+                        array(
+                          '%zipfile' => $this->preprocessorParameters['zipfile'],
+                          '%errorcode' => (int)$opened,
+                        )
+                      ),
+        );
+        return array();
+        // Means the provided ZIP file can not be read. Gosh!
+        // Let's let the user know this
+      }
+      else {
+        file_usage_add($zipfile, 'islandora_batch', 'islandora_batch_object', $this->getBatchId());
+      }
     }
 
     $namespace_hash = array();
@@ -630,17 +654,28 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
               // if URL just fetch the damn thing.
               if ($this->preprocessorParameters['type'] == 'ZIP') {
                 // Fetch one file from provided ZIP file.
-                $path_info = pathinfo(trim($this->objectInfo['data'][$method[1]]));
+                $path_info = pathinfo(str_replace(" ", "\x20", trim($this->objectInfo['data'][$method[1]])));
                 $z = new ZipArchive();
-                error_log($this->preprocessorParameters['zipfile']);
-                if ($z->open($this->preprocessorParameters['zipfile'])) {
+                $opened = FALSE;
+                $opened = $z->open($this->preprocessorParameters['zipfile']);
+                if ($opened === TRUE) {
                   $fp = $z->getStream($this->objectInfo['data'][$method[1]]);
                   if (!$fp) {
-                    error_log('not found for ' . $this->id);
+                    $errors[] = array(
+                      t('For Object %id, %dsid datastream: %filename was not found inside the provided ZIP file %zipfile'),
+                      array(
+                        '%filename' => trim($this->objectInfo['data'][$method[1]]),
+                        '%zipfile' => $this->preprocessorParameters['zipfile'],
+                        '%dsid' => $dsid,
+                        '%id' => $this->id,
+                      ),
+                    );
+                    error_log('will try to get '.$this->objectInfo['data'][$method[1]]. 'remotely');
+                    error_log($this->objectInfo['data'][$method[1]] .' not found for .' . $this->id);
                     // The file does not exist.
                     // @TODO add this to errors
                     // try to get it now from remote
-                    error_log('will try to get '.$this->objectInfo['data'][$method[1]]. 'remotely');
+
                     $fileurl = islandora_multi_importer_remote_file_get(trim($this->objectInfo['data'][$method[1]]));
                     if ($fileurl) {
                       $themime = $this->getMimetype(drupal_basename($fileurl));
@@ -678,14 +713,21 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
                     'dsid' => $dsid,
                     'label' => "$dsid datastream",
                     'mimetype' => $themime,
-                    'datastream_file' => "zip://" . $this->preprocessorParameters['zipfile'] . "#" . $this->objectInfo['data'][$method[1]],
+                    'datastream_file' => "zip://" . str_replace(" ", "\x20", $this->preprocessorParameters['zipfile']) . "#" . trim($this->objectInfo['data'][$method[1]]),
                     'filename' => $path_info['basename'],
                     'control_group' => 'M',
                   );
-                  // $z->close();
+                  $z->close();
                 }
                 else {
-                  error_log('can not open ' . $this->preprocessorParameters['zipfile']);
+                  $errors[] = array(
+                      t('Provided ZIP file %zipfile can not be opened or is invalid. Code %errorcode.'),
+                      array(
+                        '%zipfile' => $this->preprocessorParameters['zipfile'],
+                        '%errorcode' => (int)$opened,
+                      ),
+                    );
+                  error_log('can not open ' . $this->preprocessorParameters['zipfile'] . ' with code:'. (int)$opened);
                 }
               }
               else {
@@ -707,6 +749,17 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
                     'filename' => drupal_basename($fileurl),
                     'control_group' => 'M',
                   // 'file' => $file,.
+                  );
+                } 
+                else { 
+                  $errors[] = array(
+                    t('We tried, but we could not find the requested %filename'),
+                    t('We tried!, but For Object %id, %dsid datastream: %filename was no where to found'),
+                    array(
+                      '%filename' => trim($this->objectInfo['data'][$method[1]]),
+                      '%dsid' => $dsid,
+                      '%id' => $this->id,
+                    ),
                   );
                 }
               }

@@ -327,7 +327,7 @@ function islandora_multi_importer_zip_plupload_form($form, &$form_state) {
       '#title' => t('ZIP file containing the files referenced in the source data'),
       '#plupload_settings' => array(
         'runtimes' => 'html5', // Also consider the order of technologies.
-        'chunk_size' => '5mb',
+        'chunk_size' => '1mb',
         'unique_names' => TRUE,
         'max_file_count' => 1,
       ),
@@ -1262,12 +1262,19 @@ function islandora_multi_importer_form_submit($form, &$form_state) {
     $theProcessedInfo = $preprocessor->getProcessedObjectsInfo();
     $good_objects = format_plural(count($theProcessedInfo['success']), '%num Objects added successfully to set', '%num Object added successfully to set', array('%num' => count($theProcessedInfo['success'])));
     $bad_objects = format_plural(count($theProcessedInfo['error']), 'Row with issue(s) that could not be translated to Object: %errored', 'Rows with issue(s) that could not be translated to Objects: %errored', array('%errored' => implode(",", $theProcessedInfo['error'])));
+    if (isset($theProcessedInfo['fatal']) && !empty($theProcessedInfo['fatal'])) {
+      drupal_set_message($theProcessedInfo['fatal'], 'error');
+    }
     if (count($theProcessedInfo['error']) > 0) {
       drupal_set_message($bad_objects, 'error');
     }
-    drupal_set_message($good_objects, 'status');
+    if (count($theProcessedInfo['success']) > 0) {
+      drupal_set_message($good_objects, 'status');
+    }
+
+
     // islandora_multi_importer_startprocessing($parameters);
-    $form_state['rebuild'] = TRUE;
+    // $form_state['rebuild'] = TRUE;
     return $form;
   }
 
