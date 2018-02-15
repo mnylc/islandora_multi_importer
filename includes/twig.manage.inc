@@ -31,7 +31,7 @@ function islandora_multi_importer_twiglistpage_callback() {
       ),
       array(
         'data' => t('Operations'),
-        'colspan' => 6,
+        'colspan' => 5,
       ),
       array(
         'data' => t('Last Modified'),
@@ -42,7 +42,7 @@ function islandora_multi_importer_twiglistpage_callback() {
 
   foreach ($twig_templates_from_db as $key => $form_props) {
     $name = $form_props['name'];
-    $lastmod = $form_props['updated'];
+    $lastmod = date('r', $form_props['updated']);
     $edit = l(t('Edit'), "admin/islandora/twigtemplates/{$key}/edit");
     $delete = l(t('Delete'), "admin/islandora/twigtemplates/{$key}/delete");
   
