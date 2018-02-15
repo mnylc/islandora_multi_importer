@@ -3,6 +3,8 @@ description = Multiple use Islandora Objects Importer
 dependencies[] = islandora
 dependencies[] = islandora_batch
 dependencies[] = field_group
+dependencies[] = xml_form_builder
+
 package = Islandora
 core = 7.x
 files[] = includes/islandora_multi_batch.inc

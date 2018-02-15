@@ -129,15 +129,16 @@ class TwigTemplateDatabase {
    * Gets a list of all defined Twig Template names.
    *
    * @return array
-   *   An array of defined Twig Template names, where both the key and the value are the
-   *   Twig Template's name; e.g. array('name' => 'name').
+   *   An array of defined Twig Template names, where key is the unique id of 
+   *   the Twig Template's and value associative array of 
+   *   'name' => thename and 'updated' => date updated
    */
-  public static function GetIdsAndNames() {
+  public static function GetProperties() {
     $names = array();
-    $result = db_query('SELECT id, name FROM {islandora_multi_importer_twig_templates}');
+    $result = db_query('SELECT id, name,updated FROM {islandora_multi_importer_twig_templates}');
   
     while ($data = $result->fetchAssoc('id')) {
-      $names[$data['id']] = $data['name'];
+      $names[$data['id']] = array('name' => $data['name'], 'updated' => $data['updated']);
     }
     return $names;
   }

@@ -17,7 +17,7 @@
 function islandora_multi_importer_twiglistpage_callback() {
 
   module_load_include('inc', 'islandora_multi_importer', 'includes/TwigTemplateDatabase');
-  $twig_templates_from_db = TwigTemplateDatabase::GetIdsAndNames();
+  $twig_templates_from_db = TwigTemplateDatabase::GetProperties();
 
   // No forms exist can only create.
   if (count($twig_templates_from_db ) == 0) {
@@ -33,12 +33,16 @@ function islandora_multi_importer_twiglistpage_callback() {
         'data' => t('Operations'),
         'colspan' => 6,
       ),
+      array(
+        'data' => t('Last Modified'),
+      ),
     ),
     'rows' => array(),
   );
 
-  foreach ($twig_templates_from_db as $key => $form_name) {
-    $name = $form_name;
+  foreach ($twig_templates_from_db as $key => $form_props) {
+    $name = $form_props['name'];
+    $lastmod = $form_props['updated'];
     $edit = l(t('Edit'), "admin/islandora/twigtemplates/{$key}/edit");
     $delete = l(t('Delete'), "admin/islandora/twigtemplates/{$key}/delete");
   
@@ -54,6 +58,7 @@ function islandora_multi_importer_twiglistpage_callback() {
       $view,
       $export,
       $delete,
+      $lastmod,
     );
   }
 

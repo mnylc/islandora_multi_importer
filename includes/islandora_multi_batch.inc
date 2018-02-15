@@ -145,7 +145,7 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
   }
 
   /**
-   * Perform preprocessing of the scanned resources.
+   * Perform the actual preprocessing of the resources.
    */
   public function preprocess() {
     $added = array();
@@ -205,6 +205,7 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
         // Let's let the user know this
       }
       else {
+        // Add this ZIP to the file usage table. That way it will stay even if drupal crons it out.
         file_usage_add($zipfile, 'islandora_batch', 'islandora_batch_object', $this->getBatchId());
       }
     }
@@ -380,6 +381,7 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
     $this->processedObjectsInfo = array(
       'success' => array_keys($info),
       'error' => array_keys($invalid),
+      'fatal' => array(),
     );
 
     return $info;
@@ -406,7 +408,28 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
    * @var modsToDcTransform
    */
   public $modsToDcTransform;
+  
+  /**
+   * If IMI needs to deal with MODS to DC
+   *
+   * @var $deriveDC
+   */
   public $deriveDC;
+  
+  /**
+   * Path to MODS SELF transform XSLT.
+   *
+   * @var $modsCleanUpTransform
+   */
+  public $modsCleanUpTransform;
+  
+  /**
+   * If MODS self transform is desired.
+   *
+   * @var $cleanMODS;
+   */
+  public $cleanMODS;
+    
 
   /**
    * Constructor for the IslandoraScanBatchObject.
@@ -416,8 +439,10 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
     // Checks if DC is set as derivative, if so,
     // we can safely let the derivative process deal with this.
     $this->deriveDC = !variable_get('xml_form_builder_use_default_dc_xslts', FALSE);
-    $this->modsToDcTransform = drupal_get_path('module', 'islandora_batch') . '/transforms/mods_to_dc.xsl';
+    $this->modsToDcTransform = drupal_get_path('module', 'islandora_multi_importer') . '/xslt/mods_to_dc.xsl';
+    $this->modsCleanUpTransform = drupal_get_path('module', 'islandora_multi_importer') . '/xslt/islandora_cleanup_mods_extended_strict.xsl';
     $this->baseName = $base_name;
+    $this->cleanMODS = variable_get('islandora_multi_importer_modsself', FALSE);
     $this->objectInfo = $object_info;
     $this->resources = array();
     $this->preprocessorParameters = $preprocessor_parameters;
@@ -461,6 +486,8 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
       file_save($file);
       file_usage_add($file, 'islandora_batch', 'islandora_batch_object', $this->getBatchId());
     }
+    // We need this to check if we have mods
+    $dowehaveMODS = false;
     
     foreach ($datastreams as $ds) {
       $ds_uri = isset($ds['file']) ?
@@ -472,8 +499,10 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
       $datastream->mimetype = $ds['mimetype'];
       error_log($ds_uri);
      
+     
       $datastream->setContentFromFile($ds_uri);
       $this->ingestDatastream($datastream);
+      $dowehaveMODS = $ds['dsid'] == "MODS" ? true : false; 
     }
     $this->currentState = ISLANDORA_BATCH_STATE__DONE;
     return ISLANDORA_BATCH_STATE__DONE;
@@ -628,19 +657,39 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
               $twig_input['name'] = $method[1];
               $twig_input['template'] = $template;
               $twig_input['data'] = array('data' => array_combine($this->preprocessorParameters['data']['headers'], $this->objectInfo['data']));
-              // @TODO should we validate the template again here?
-              $output = islandora_multi_importer_twig_process($twig_input);
-              // We need to make sure that $output is in fact an valid XML file.
+              // @TODO should we validate the template again heincludesre?
+              $twig_output = islandora_multi_importer_twig_process($twig_input);
+              // Check if this is can be a DomDocument of some sort.
+              $docmimetype = $this->preprocessorParameters['computed_cmodels'][$this->objectInfo['cmodel']][$dsid]['mime'][0];
+              
+              if (($this->cleanMODS) && ($dsid == 'MODS')) { 
+                module_load_include('xml_form_builder','inc','includes/associations');
+                $twig_output = xml_form_builder_transform_document($this->modsCleanUpTransform, $twig_output);
+              }
+              // FAIL!
+              if ($twig_output == NULL) {
+                $errors[] = array(
+                  t('For Object %id, %dsid datastream: twig %template processing had some serious problems. Skipping this object entirely'),
+                  array(
+                    '%template' => $twig_input['name'],
+                    '%dsid' => $dsid,
+                    '%id' => $this->id,
+                  ),
+                );
+                $datastreams = array(); // Yeah, we need to roll back all our hard work
+              break 2;
+              }  
+              // We need to make sure that $output is in fact a valid XML file.
               $newfileName = "{$dsid}" . "_" . $method[0] . '_' . urlencode($this->objectInfo['pid']) . '_' . time() . '.xml';
               // $tmp_directory = islandora_multi_importer_temp_directory();
-              $newfile = file_save_data($output, "public://" . $newfileName, FILE_EXISTS_RENAME);
+              $newfile = file_save_data($twig_output, "public://" . $newfileName, FILE_EXISTS_RENAME);
               // We are assumming the twig template complies with
               // mimetype. TODO enforce this somehow.
               $file[] = $newfile;
               $datastreams[$dsid] = array(
                 'dsid' => $dsid,
-                'label' => "$dsid datastream",
-                'mimetype' => $this->preprocessorParameters['computed_cmodels'][$this->objectInfo['cmodel']][$dsid]['mime'][0],
+                'label' => "$dsid datastream ",
+                'mimetype' => $docmimetype,
                 'datastream_file' => drupal_realpath($newfile->uri),
                 'filename' => $newfileName,
                 'control_group' => 'M',
@@ -775,6 +824,10 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
     return $datastreams;
   }
 
+  protected function 
+
+
+
   /**
    * Determine the Mimetype for the given file name.
    *
@@ -842,56 +895,6 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
 
     // XXX: Suppressing warnings regarding unregistered prefixes.
     return $processor->transformToXML($input);
-  }
-
-  /**
-   * Function to get dc.
-   */
-  protected function getDc() {
-    if (!isset($this['DC'])) {
-      $ingest_dc = FALSE;
-      // TODO: Create the DC datastream on this object.
-      $dc_datastream = $this->constructDatastream('DC', 'M');
-      $dc_datastream->mimetype = 'application/xml';
-      $dc_datastream->label = 'DC Record';
-
-      if (isset($this->objectInfo['xml'])) {
-        $xml = file_get_contents($this->objectInfo['xml']->uri);
-
-        if ($xml) {
-          $s_xml = new SimpleXMLElement($xml);
-          if ($s_xml->getName() == 'dc') {
-            // XXX: Should probably create a resource entry.
-            $dc_datastream->setContentFromFile($this->objectInfo['xml']->uri, FALSE);
-            $ingest_dc = TRUE;
-          }
-        }
-      }
-
-      // Get the DC by transforming from MODS.
-      if (!isset($dc_datastream->content)) {
-        // XXX: Might want to make this use a file, instead of staging the DC
-        // in the database table (inside the object we serialize).
-        $mods_content = $this->getMods();
-        if ($mods_content) {
-          $new_dc = static::runXslTransform(
-            array(
-              'xsl' => $this->modsToDcTransform,
-              'input' => $mods_content,
-            )
-          );
-        }
-        if (isset($new_dc)) {
-          $ingest_dc = TRUE;
-          $dc_datastream->content = $new_dc;
-        }
-      }
-      if ($ingest_dc) {
-        $this->ingestDatastream($dc_datastream);
-      }
-    }
-
-    return isset($this['DC']) ? $this['DC']->content : FALSE;
   }
 
   /**
