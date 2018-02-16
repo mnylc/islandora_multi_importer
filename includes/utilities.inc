@@ -33,7 +33,7 @@ function islandora_multi_importer_datasource_loader(array $form_state, $page = 0
       $spreadsheetId = $parts[3];
      }
    }
-    
+    dpm($spreadsheetId);
     $range = trim($form_state['storage']['values']['step2']['google_api']['spreadsheet_range']);
     //dpm($range);
     $file_data = islandora_multi_importer_read_googledata($spreadsheetId, $range, $per_page, $page * $per_page);
