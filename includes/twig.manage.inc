@@ -194,7 +194,7 @@ function islandora_multi_importer_twigcreateinternals_form($form, &$form_state, 
       // The $template syntax is valid, but still can throw run time errors.
       $template = $twig->createTemplate($twig_template);
       $output = $template->render($current_record_record_data);
-      //Remove those nasty emtpy lines...
+      //Remove those nasty empty lines...
       // @TODO add a toogle for this?
       $output = preg_replace("/(^[\r\n]*|[\r\n]+)[\s\t]*[\r\n]+/", "\n", $output);
     }

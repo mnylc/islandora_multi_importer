@@ -65,7 +65,7 @@ function islandora_multi_importer_form(array $form, array &$form_state) {
       break;
     
     case 2:
-      drupal_set_title(t("Islandora Multi importer - Data Source: Google SpreadSheet info"));
+      drupal_set_title(t("Islandora Multi importer - Data Source: Google Sheet info"));
       $step_forms['#tree'] = TRUE;
         //$step_forms['#validate'] = array('islandora_multi_importer_form_check_fileisuploaded');
       $step_forms['step2'] = islandora_multi_importer_google_form($form, $form_state);
@@ -257,7 +257,7 @@ function islandora_multi_importer_upload_form($form, &$form_state) {
 
 
 /**
- * Google Spreadsheet ID
+ * Google Sheet ID
  */
 function islandora_multi_importer_google_form($form, &$form_state) {
   
@@ -276,15 +276,15 @@ function islandora_multi_importer_google_form($form, &$form_state) {
     'spreadsheet_id' => array(
       '#type' => 'textfield',
       '#required' => TRUE,
-      '#title' => t('ID of your Google Spreadsheet'),
-      '#description' => ' If shared at https://docs.google.com/spreadsheets/d/aaBAccEEFfC_aBC-aBc0d1EF/edit, use aaBAccEEFfC_aBC-aBc0d1EF as ID.',
+      '#title' => t('ID of your Google Sheet'),
+      '#description' => 'Example: https://docs.google.com/spreadsheets/d/aaBAccEEFfC_aBC-aBc0d1EF/edit, use aaBAccEEFfC_aBC-aBc0d1EF portion as the ID or full URL',
       '#default_value' => $stored_defaults['spreadsheet_id'],
     ),
     'spreadsheet_range' => array(
       '#type' => 'textfield',
       '#required' => TRUE,
       '#title' =>  t('Cell Range'),
-      '#description' => t('Cell Range for your Google Spreadsheet, in the form of SheetName!A1:B10'),
+      '#description' => t('Cell Range for your Google Sheet, in the form of SheetName!A1:B10'),
       '#default_value' => $stored_defaults['spreadsheet_range'],
     ),
    ); 
@@ -372,7 +372,7 @@ function islandora_multi_importer_choosesource_form($form, &$form_state) {
       '#suffix' => '</div>',
       '#type' => 'select',
       '#title' => t('Choose your Data source type'),
-      '#options' => array('file' => 'Spreadsheet File to be uploaded','google' => 'Google Spreadsheet URL'),
+      '#options' => array('file' => 'Spreadsheet File to be uploaded','google' => 'Google Sheet URL'),
       '#default_value' => 'file',
     ),
   );
@@ -1202,6 +1202,15 @@ function islandora_multi_importer_form_submit($form, &$form_state) {
      
       if ($form_state['storage']['values']['step0']['data_source'] == 'google' && !empty($form_state['storage']['values']['step2']['google_api']['spreadsheet_id'])) {
         $spreadsheetId = trim($form_state['storage']['values']['step2']['google_api']['spreadsheet_id']);
+        // Parse the ID from the URL if a full URL was provided.
+        // @author of following chunk is Mark Mcfate @McFateM!
+        if ($parsed = parse_url($spreadsheetId)) {
+          if (isset($parsed['scheme'])) {
+          $parts = explode('/', $parsed['path']);
+          $spreadsheetId = $parts[3];
+         }
+       }
+        
         $range = trim($form_state['storage']['values']['step2']['google_api']['spreadsheet_range']);
         $newfile_fid= islandora_multi_importer_read_googledata($spreadsheetId, $range, -1, 0);
         $form_state['storage']['values']['step1']['file'] = islandora_multi_importer_csv_save($newfile_fid);
