@@ -25,6 +25,15 @@ function islandora_multi_importer_datasource_loader(array $form_state, $page = 0
   //dpm($form_state);
   if ($form_state['storage']['values']['step0']['data_source'] == 'google' && !empty($form_state['storage']['values']['step2']['google_api']['spreadsheet_id'])) {
     $spreadsheetId = trim($form_state['storage']['values']['step2']['google_api']['spreadsheet_id']);
+    // Parse the ID from the URL if a full URL was provided.
+    // @author of following chunk is Mark Mcfate @McFateM!
+    if ($parsed = parse_url($spreadsheetId)) {
+      if (isset($parsed['scheme'])) {
+      $parts = explode('/', $parsed['path']);
+      $spreadsheetId = $parts[3];
+     }
+   }
+    
     $range = trim($form_state['storage']['values']['step2']['google_api']['spreadsheet_range']);
     //dpm($range);
     $file_data = islandora_multi_importer_read_googledata($spreadsheetId, $range, $per_page, $page * $per_page);
