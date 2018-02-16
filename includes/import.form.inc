@@ -409,6 +409,7 @@ function islandora_multi_importer_previs_form($form, &$form_state, &$file_data) 
   $headercount = count($header);
   $rowcount = count($row);
   dpm($file_data['data']);
+  dpm($file_data['headers']);
 
 
   $form['sheet_content'] = array(
