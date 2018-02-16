@@ -32,6 +32,7 @@ function islandora_multi_importer_googleclient() {
   $client->setDeveloperKey("AIzaSyCJs54GGXJMYkTv5gh5LawpZeTEFqXsDmA");
 
   $client->setAccessType('offline');
+  //  $accessToken = $client->fetchAccessTokenWithAuthCode($authCode);
   return $client;
 }
 
