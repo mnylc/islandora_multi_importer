@@ -1218,6 +1218,7 @@ function islandora_multi_importer_form_submit($form, &$form_state) {
         
         $range = trim($form_state['storage']['values']['step2']['google_api']['spreadsheet_range']);
         $googledata = islandora_multi_importer_read_googledata($spreadsheetId, $range, -1, 0);
+        dpm($googledata);
         if (empty($googledata)) {
           drupal_set_message(t('Seems like your Google Spreadsheet has no data, no headers or we are having trouble fetching it. Try selecting another one or a different Range.'),'warning');
           $form_state['storage']['step'] = 2 ;
