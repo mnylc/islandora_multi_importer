@@ -406,6 +406,10 @@ function islandora_multi_importer_previs_form($form, &$form_state, &$file_data) 
   $pages = range(1, $numpages);
   $offset_notice = $page * $per_page + $per_page;
   $showingof = $offset_notice < $offset_notice ? $file_data['totalrows'] : $offset_notice;
+  $headercount = count($header);
+  $rowcount = count($row);
+  dpm($file_data['data']);
+
 
   $form['sheet_content'] = array(
     '#type' => 'fieldset',
