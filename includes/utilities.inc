@@ -23,6 +23,7 @@
  */
 function islandora_multi_importer_datasource_loader(array $form_state, $page = 0, $per_page = 20) {
   //dpm($form_state);
+  dpm($form_state['storage']['values']);
   if ($form_state['storage']['values']['step0']['data_source'] == 'google' && !empty($form_state['storage']['values']['step2']['google_api']['spreadsheet_id'])) {
     $spreadsheetId = trim($form_state['storage']['values']['step2']['google_api']['spreadsheet_id']);
     // Parse the ID from the URL if a full URL was provided.
@@ -70,7 +71,7 @@ function islandora_multi_importer_read_filedata($file_path, $numrows = 20, $offs
     $objReader->setReadDataOnly(true);
     $objPHPExcel = $objReader->load($file_path);
   } catch(Exception $e) {
-    drupal_set_message(t('Could not parse file with error: @error', array('@error'=>$e->getMessage())));
+      drupal_set_message(t('Could not parse file with error: @error', array('@error'=>$e->getMessage())));
     return $tabdata;
   }
   $table = array();
