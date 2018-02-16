@@ -60,7 +60,7 @@ function islandora_multi_importer_googleclient_authwithtoken($client, $tokens) {
 function islandora_multi_importer_googleclient_connect() {
 
   $client = islandora_multi_importer_googleclient();
-  $tokens = variable_set('islandora_multi_importer_googleToken', FALSE);
+  $tokens = variable_get('islandora_multi_importer_googleToken', FALSE);
   if ($tokens) {
     // This should auth and refresh. 
     $client = islandora_multi_importer_googleclient_token($client ,$tokens);

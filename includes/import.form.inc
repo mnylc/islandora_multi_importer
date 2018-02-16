@@ -947,6 +947,7 @@ function islandora_multi_importer_objectmapping_form($form, &$form_state, $file_
       'pidtype' => array(
         '#type' => 'checkbox',
         '#description' => t('Check to let Islandora build PID for you and ignore the Object PID source fields'),
+        '#default_value' => TRUE,
         '#states' => array(
         	'visible' => array(
         		':input[name=action]' => array('value' => 'ingest'),
@@ -972,6 +973,7 @@ function islandora_multi_importer_objectmapping_form($form, &$form_state, $file_
       'parenttype' => array(
         '#type' => 'checkbox',
         '#description' => t('If value is not a well formed PID, assume it is a row index present in the same data'),
+        '#default_value' =>TRUE,
       ),
       'stub' => array(
         '#markup' => '&nbsp;',
