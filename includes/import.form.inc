@@ -496,14 +496,12 @@ function islandora_multi_importer_twig_form($form, &$form_state, $file_data) {
       
       if ($form_state['storage']['values']['step0']['data_source'] == 'google') {
         drupal_set_message(t('Seems like your Google Spreadsheet has no data, no headers or we are having trouble fetching it. Try selecting another one or a different Range.'),'warning');
-        $form_state['storage']['step'] = 2;
+       
       }
       else {
         drupal_set_message(t('Seems like your File has no data, no headers or we are having trouble fetching it. Try selecting another file.'),'warning');
-        $form_state['storage']['step'] = 1;
+        
       }
-      $form_state['rebuild'] = true;
-      return $form;
     }
   }
   
@@ -1219,7 +1217,12 @@ function islandora_multi_importer_form_submit($form, &$form_state) {
        }
         
         $range = trim($form_state['storage']['values']['step2']['google_api']['spreadsheet_range']);
-        $newfile_fid = islandora_multi_importer_read_googledata($spreadsheetId, $range, -1, 0);
+        $googledata = islandora_multi_importer_read_googledata($spreadsheetId, $range, -1, 0);
+        if (empty($googledata)) {
+          drupal_set_message(t('Seems like your Google Spreadsheet has no data, no headers or we are having trouble fetching it. Try selecting another one or a different Range.'),'warning');
+          $form_state['rebuild'] = TRUE;
+          return $form;
+        }
         $form_state['storage']['values']['step1']['file'] = islandora_multi_importer_csv_save($newfile_fid);
       }
 
