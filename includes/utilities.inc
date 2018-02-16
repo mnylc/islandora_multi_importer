@@ -378,3 +378,33 @@ function islandora_multi_importer_csv_save(array $data) {
     
     return $file->fid;
 }
+
+/**
+ * Deal with different sized arrays for combining
+ *
+ * @param array $header
+ *   a CSV header row
+ * @param array $row
+*   a CSV data row
+ *
+ * @return array
+ * combined array
+ */
+function islandora_multi_importer_array_combine_special($header, $row) {
+    $headercount = count($header);
+    $rowcount = count($row);
+    if ($headercount > $rowcount) {
+        $more = $headercount - $rowcount;
+        for($i = 0; $i < $more; $i++) {
+            $row[] = "";
+        }
+    
+    } 
+    else if ($headercount < $rowcount) {
+      // more fields than headers
+      // Header wins always
+      $row = array_slice($row, 0, $headercount);
+    }  
+        
+    return array_combine($header, $row);
+}
