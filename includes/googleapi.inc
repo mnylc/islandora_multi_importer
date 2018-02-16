@@ -22,9 +22,9 @@ function islandora_multi_importer_googleclient() {
   // We won´t be using setAuthConfig here because
   // it depends on an actual file. We will make our 
   // own tiny one settings setter from DB.
-  error_log(variable_get('islandora_multi_importer_googleClientID', ''));
-  error_log(variable_get('islandora_multi_importer_googleClientSecret', ''));
-  error_log(variable_get('islandora_multi_importer_googleToken', FALSE));
+  dpm(variable_get('islandora_multi_importer_googleClientID'));
+  dpm(variable_get('islandora_multi_importer_googleClientSecret'));
+  dpm(variable_get('islandora_multi_importer_googleClientToken'));
   
   $client->setClientId(variable_get('islandora_multi_importer_googleClientID', ''));
   $client->setClientSecret(variable_get('islandora_multi_importer_googleClientSecret', ''));
@@ -52,7 +52,7 @@ function islandora_multi_importer_googleclient_authwithtoken($client, $tokens) {
     $tokens = $client->fetchAccessTokenWithRefreshToken($tokens['refresh_token']);
     if ($tokens && isset($tokens['access_token'])) {
       // Don't store wrong credentials!
-       variable_set('islandora_multi_importer_googleToken', $tokens);
+       variable_set('islandora_multi_importer_googleClientToken', $tokens);
     }
     else {
       drupal_set_message(t('Google Error, probably your credentials expired'));
@@ -64,7 +64,7 @@ function islandora_multi_importer_googleclient_authwithtoken($client, $tokens) {
 function islandora_multi_importer_googleclient_connect() {
 
   $client = islandora_multi_importer_googleclient();
-  $tokens = variable_get('islandora_multi_importer_googleToken', FALSE);
+  $tokens = variable_get('islandora_multi_importer_googleClientToken', FALSE);
   error_log($tokens);
   if ($tokens) {
     // This should auth and refresh. 

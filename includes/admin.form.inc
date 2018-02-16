@@ -141,8 +141,6 @@ function islandora_multi_importer_admin_form_validate($form, &$form_state) {
  * @todo Should we just be using a system settings form instead of this.
  */
 function islandora_multi_importer_admin_submit_form($form, &$form_state) {
-  // Should probably check that the fits executable is correct.
-  //dpm($form_state['values']);
   foreach ($form_state['values'] as $key => $value) {
     if (is_array($value) && isset($form_state['values']['array_filter'])) {
       $value = array_keys(array_filter($value));
