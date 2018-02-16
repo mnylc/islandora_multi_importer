@@ -187,7 +187,7 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
       // bad Zip file.
       $z = new ZipArchive();
       $opened = FALSE;
-      $opened = $z->open($this->preprocessorParameters['zipfile']);
+      $opened = $z->open($this->parameters['zipfile']);
       $z->close();
       if ($opened !== TRUE) {
         $this->processedObjectsInfo = array(
