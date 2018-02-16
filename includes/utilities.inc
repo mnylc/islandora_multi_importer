@@ -138,7 +138,7 @@ function islandora_multi_importer_read_filedata($file_path, $numrows = 20, $offs
          $response = $service->spreadsheets_values->get($spreadsheetId, $range);
          $sp_data = $response->getValues();
     } catch( Google_Service_Exception $e )  {
-        drupal_set_message(t('Google API Error: @e',array('@e' => $e->getMessage())), 'error');
+        drupal_set_message(t('Google API Error: @e',array('@e' => $e->getDetails())), 'error');
         return $tabdata;
     }
     $table = array();
