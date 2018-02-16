@@ -1214,7 +1214,7 @@ function islandora_multi_importer_form_submit($form, &$form_state) {
        }
         
         $range = trim($form_state['storage']['values']['step2']['google_api']['spreadsheet_range']);
-        $newfile_fid= islandora_multi_importer_read_googledata($spreadsheetId, $range, -1, 0);
+        $newfile_fid = islandora_multi_importer_read_googledata($spreadsheetId, $range, -1, 0);
         $form_state['storage']['values']['step1']['file'] = islandora_multi_importer_csv_save($newfile_fid);
       }
 

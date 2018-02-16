@@ -23,7 +23,6 @@
  */
 function islandora_multi_importer_datasource_loader(array $form_state, $page = 0, $per_page = 20) {
   //dpm($form_state);
-  dpm($form_state['storage']['values']);
   if ($form_state['storage']['values']['step0']['data_source'] == 'google' && !empty($form_state['storage']['values']['step2']['google_api']['spreadsheet_id'])) {
     $spreadsheetId = trim($form_state['storage']['values']['step2']['google_api']['spreadsheet_id']);
     // Parse the ID from the URL if a full URL was provided.
@@ -357,10 +356,11 @@ function islandora_multi_importer_csv_save(array $data) {
       drupal_set_message( t('Error reading back the just written file!.'), 'error' );
       return;
     }
-   
+      array_walk($data['headers'],'htmlspecialchars');
       fputcsv($fh, $data['headers']);
     
     foreach ($data['data'] as $row) {
+      array_walk($row,'htmlspecialchars');
       fputcsv($fh, $row);
     }
     fclose($fh);
