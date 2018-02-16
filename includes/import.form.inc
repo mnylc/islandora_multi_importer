@@ -1270,8 +1270,11 @@ function islandora_multi_importer_form_submit($form, &$form_state) {
     // Since those will basically run differently.
     $file = file_load($form_state['storage']['values']['step1']['file']);
     file_usage_add($file, 'islandora_batch', 'islandora_batch_set', $setID);
+
+    $batchsetid = $preprocessor->getSetId();
+        
+    drupal_set_message(t('You are all set( <a href="@setreport">id = @set</a>)!', array('@set' => $batchsetid, '@setreport'=>url('admin/reports/islandora_batch_queue/'.$batchsetid))), 'status');
     
-    drupal_set_message(t('You are all set(id = @set)!', array('@set' => $preprocessor->getSetId())), 'status');
     $theProcessedInfo = $preprocessor->getProcessedObjectsInfo();
     $good_objects = format_plural(count($theProcessedInfo['success']), '%num Objects added successfully to set', '%num Object added successfully to set', array('%num' => count($theProcessedInfo['success'])));
     $bad_objects = format_plural(count($theProcessedInfo['error']), 'Row with issue(s) that could not be translated to Object: %errored', 'Rows with issue(s) that could not be translated to Objects: %errored', array('%errored' => implode(",", $theProcessedInfo['error'])));
