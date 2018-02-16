@@ -22,7 +22,10 @@ function islandora_multi_importer_googleclient() {
   // We won´t be using setAuthConfig here because
   // it depends on an actual file. We will make our 
   // own tiny one settings setter from DB.
- 
+  error_log(variable_get('islandora_multi_importer_googleClientID', ''));
+  error_log(variable_get('islandora_multi_importer_googleClientSecret', ''));
+  error_log(variable_get('islandora_multi_importer_googleToken', FALSE));
+  
   $client->setClientId(variable_get('islandora_multi_importer_googleClientID', ''));
   $client->setClientSecret(variable_get('islandora_multi_importer_googleClientSecret', ''));
   $client->setRedirectUri("urn:ietf:wg:oauth:2.0:oob");
