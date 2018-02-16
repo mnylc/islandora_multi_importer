@@ -353,7 +353,7 @@ function islandora_multi_importer_plupload_element_validate($element, &$form_sta
   foreach ($form_state['values']['last']['file2'] as $uploaded_file) {
     if ($uploaded_file['status'] == 'done') {
       $source = $uploaded_file['tmppath'];
-      $destination = file_stream_wrapper_uri_normalize($scheme . $uploaded_file['name']);
+      $destination = file_stream_wrapper_uri_normalize($scheme . "imi_".time()."_".$uploaded_file['name']);
       $destination = file_unmanaged_move($source, $destination, FILE_EXISTS_RENAME);
       $file = plupload_file_uri_to_object($destination);
       file_save($file);
