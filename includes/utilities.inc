@@ -127,15 +127,21 @@ function islandora_multi_importer_read_filedata($file_path, $numrows = 20, $offs
     $tabdata = array('headers' => array(), 'data' => array(), 'totalrows' => 0);
     $sp_data = array();
     $rowdata = array();
- 
+     
     
     // Establish a connection first
     $client = islandora_multi_importer_googleclient_connect();
     try {
          $service = new Google_Service_Sheets($client);
-         
+
          $response = $service->spreadsheets_values->get($spreadsheetId, $range);
          $sp_data = $response->getValues();
+         // Empty value? just return
+         if (($sp_data == NULL) OR empty($sp_data)) {
+           drupal_set_message(t('Nothing to read, check your Data source content'), 'error');
+           return $tabdata;
+
+         }
     } catch( Google_Service_Exception $e )  {
         drupal_set_message(t('Google API Error: @e',array('@e' => $e->getMessage())), 'error');
         return $tabdata;
@@ -144,15 +150,21 @@ function islandora_multi_importer_read_filedata($file_path, $numrows = 20, $offs
     $headers = array();
     $maxRow = 0;
     $highestRow =  count($sp_data);
-    if (($highestRow)>1) {
+    
+    $rowHeaders = $sp_data[0];
+    $rowHeaders_utf8=array_map('stripslashes',$rowHeaders);
+    $rowHeaders_utf8=array_map('utf8_encode',$rowHeaders_utf8);
+    $rowHeaders_utf8=array_map('strtolower',$rowHeaders_utf8);
+    $rowHeaders_utf8=array_map('trim',$rowHeaders_utf8);
+    
+    $headercount = count($rowHeaders);
+
+    if (($highestRow) >=1 ) {
       // Returns Row Headers.
-      $rowHeaders = $sp_data[0];
-      $rowHeaders_utf8=array_map('stripslashes',$rowHeaders);
-      $rowHeaders_utf8=array_map('utf8_encode',$rowHeaders_utf8);
-      $rowHeaders_utf8=array_map('strtolower',$rowHeaders_utf8);
-      $rowHeaders_utf8=array_map('trim',$rowHeaders_utf8);
+    
+      $maxRow = 1; // at least until here.
       foreach ($sp_data as $rowindex => $row) {
-        dpm(count($row));
+       
         // Google Spreadsheets start with Index 0. But PHPEXCEL, parent`s
         // function does with 1.
         // To keep both function responses in sync using the same params, i will compensate offsets here: 
@@ -167,12 +179,13 @@ function islandora_multi_importer_read_filedata($file_path, $numrows = 20, $offs
               $maxRow = $rowindex;
               break;
             }
+            $row = islandora_multi_importer_array_equallyseiz($headercount, $row);
             $table[$rowindex] = $row;
             }
         $maxRow = $rowindex;
         }
     }
-  $tabdata = array('headers' => $sp_data[0], 'data' => $table, 'totalrows'=> $maxRow);
+  $tabdata = array('headers' => $rowHeaders_utf8, 'data' => $table, 'totalrows'=> $maxRow);
   
   return $tabdata;
 }
@@ -408,4 +421,35 @@ function islandora_multi_importer_array_combine_special($header, $row) {
     }  
         
     return array_combine($header, $row);
+}
+
+
+/**
+ * Match different sized arrays.
+ *
+ * @param array $headercount
+ *   an array lenght to check against.
+ * @param array $row
+*   a CSV data row
+ *
+ * @return array
+ *  a resized to header size data row
+ */
+function islandora_multi_importer_array_equallyseize($headercount, $row) {
+
+    $rowcount = count($row);
+    if ($headercount > $rowcount) {
+        $more = $headercount - $rowcount;
+        for($i = 0; $i < $more; $i++) {
+            $row[] = "";
+        }
+    
+    } 
+    else if ($headercount < $rowcount) {
+      // more fields than headers
+      // Header wins always
+      $row = array_slice($row, 0, $headercount);
+    }  
+        
+    return $row;
 }
