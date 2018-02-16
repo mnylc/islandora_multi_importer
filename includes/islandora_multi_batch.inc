@@ -481,6 +481,13 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
         )), WATCHDOG_NOTICE
       );
     }
+    if (empty($datastreams)) {
+      $this->currentState = ISLANDORA_BATCH_STATE__ERROR;
+      return array('message' => 
+        t('Serious datastream issues on %pid have forced us to not ingest it.',
+        array('%pid' => $this->id)), 'state' => ISLANDORA_BATCH_STATE__ERROR);
+    }
+    
     foreach ($files as $file) {
       $file->status &= ~FILE_STATUS_PERMANENT;
       file_save($file);
@@ -505,7 +512,7 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
       $dowehaveMODS = $ds['dsid'] == "MODS" ? true : false; 
     }
     $this->currentState = ISLANDORA_BATCH_STATE__DONE;
-    return ISLANDORA_BATCH_STATE__DONE;
+    return $this->currentState;
   }
 
   /**
