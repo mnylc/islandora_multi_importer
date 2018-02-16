@@ -1202,16 +1202,14 @@ function islandora_multi_importer_form_submit($form, &$form_state) {
      
       if ($form_state['storage']['values']['step0']['data_source'] == 'google' && !empty($form_state['storage']['values']['step2']['google_api']['spreadsheet_id'])) {
         $spreadsheetId = trim($form_state['storage']['values']['step2']['google_api']['spreadsheet_id']);
-        // Parse the ID from the URL if a full URL was provided.
-        // @author of following chunk is Mark Mcfate @McFateM!
-        if ($parsed = parse_url($spreadsheetId)) {
-          dpm($parsed);
-          if (isset($parsed['scheme'])) {
-          $parts = explode('/', $parsed['path']);
-          $spreadsheetId = $parts[3];
-         }
        }
-        
+       // Parse the ID from the URL if a full URL was provided.
+       // @author of following chunk is Mark Mcfate @McFateM!
+       if ($parsed = parse_url($spreadsheetId)) {
+         if (isset($parsed['scheme'])) {
+         $parts = explode('/', $parsed['path']);
+         $spreadsheetId = $parts[3];
+        }
         $range = trim($form_state['storage']['values']['step2']['google_api']['spreadsheet_range']);
         $newfile_fid= islandora_multi_importer_read_googledata($spreadsheetId, $range, -1, 0);
         $form_state['storage']['values']['step1']['file'] = islandora_multi_importer_csv_save($newfile_fid);
