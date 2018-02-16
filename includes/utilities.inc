@@ -179,7 +179,7 @@ function islandora_multi_importer_read_filedata($file_path, $numrows = 20, $offs
               $maxRow = $rowindex;
               break;
             }
-            $row = islandora_multi_importer_array_equallyseiz($headercount, $row);
+            $row = islandora_multi_importer_array_equallyseize($headercount, $row);
             $table[$rowindex] = $row;
             }
         $maxRow = $rowindex;
