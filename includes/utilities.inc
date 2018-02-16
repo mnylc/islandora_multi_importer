@@ -33,7 +33,6 @@ function islandora_multi_importer_datasource_loader(array $form_state, $page = 0
       $spreadsheetId = $parts[3];
      }
    }
-    dpm($spreadsheetId);
     $range = trim($form_state['storage']['values']['step2']['google_api']['spreadsheet_range']);
     //dpm($range);
     $file_data = islandora_multi_importer_read_googledata($spreadsheetId, $range, $per_page, $page * $per_page);
@@ -138,7 +137,7 @@ function islandora_multi_importer_read_filedata($file_path, $numrows = 20, $offs
          $response = $service->spreadsheets_values->get($spreadsheetId, $range);
          $sp_data = $response->getValues();
     } catch( Google_Service_Exception $e )  {
-        drupal_set_message(t('Google API Error: @e',array('@e' => $e->getDetails())), 'error');
+        drupal_set_message(t('Google API Error: @e',array('@e' => $e->getMessage())), 'error');
         return $tabdata;
     }
     $table = array();
