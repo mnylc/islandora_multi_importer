@@ -206,7 +206,7 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
       }
       else {
         // Add this ZIP to the file usage table. That way it will stay even if drupal crons it out.
-        file_usage_add($zipfile, 'islandora_batch', 'islandora_batch_object', $this->getBatchId());
+        file_usage_add($zipfile, 'islandora_batch', 'islandora_batch_object', $this->setId);
       }
     }
 
