@@ -1205,6 +1205,7 @@ function islandora_multi_importer_form_submit($form, &$form_state) {
         // Parse the ID from the URL if a full URL was provided.
         // @author of following chunk is Mark Mcfate @McFateM!
         if ($parsed = parse_url($spreadsheetId)) {
+          dpm($parsed);
           if (isset($parsed['scheme'])) {
           $parts = explode('/', $parsed['path']);
           $spreadsheetId = $parts[3];
