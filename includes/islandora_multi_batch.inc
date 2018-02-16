@@ -824,10 +824,6 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
     return $datastreams;
   }
 
-  protected function 
-
-
-
   /**
    * Determine the Mimetype for the given file name.
    *
