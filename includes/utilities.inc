@@ -152,6 +152,7 @@ function islandora_multi_importer_read_filedata($file_path, $numrows = 20, $offs
       $rowHeaders_utf8=array_map('strtolower',$rowHeaders_utf8);
       $rowHeaders_utf8=array_map('trim',$rowHeaders_utf8);
       foreach ($sp_data as $rowindex => $row) {
+        dpm(count($row));
         // Google Spreadsheets start with Index 0. But PHPEXCEL, parent`s
         // function does with 1.
         // To keep both function responses in sync using the same params, i will compensate offsets here: 
