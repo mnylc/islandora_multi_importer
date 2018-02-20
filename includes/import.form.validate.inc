@@ -46,7 +46,7 @@ function islandora_multi_importer_form(array $form, array &$form_state) {
     case 1:
       drupal_set_title(t("Islandora Multi importer - Data Source: Upload File Step"));
       $step_forms['step1'] = islandora_multi_importer_upload_form($form, $form_state);
-      $step_forms['#validate'] = array('islandora_multi_importer_form_check_fileisuploaded');
+      $step_forms['#validate'] = array('islandora_multi_importer_form_fileisuploaded_validate');
       $step_forms['submit'] = array(
         '#type' => 'submit',
         '#name' => 'preprocess',
@@ -67,7 +67,7 @@ function islandora_multi_importer_form(array $form, array &$form_state) {
     case 2:
       drupal_set_title(t("Islandora Multi importer - Data Source: Google Sheet info"));
       $step_forms['#tree'] = TRUE;
-        //$step_forms['#validate'] = array('islandora_multi_importer_form_check_fileisuploaded');
+        //$step_forms['#validate'] = array('islandora_multi_importer_form_fileisuploaded_validate');
       $step_forms['step2'] = islandora_multi_importer_google_form($form, $form_state);
       $step_forms['#validate'] = array();
       $step_forms['submit'] = array(
@@ -199,7 +199,7 @@ function islandora_multi_importer_form(array $form, array &$form_state) {
   return $form;
 }
 
-function islandora_multi_importer_form_check_fileisuploaded($form, &$form_state) {
+function islandora_multi_importer_form_fileisuploaded_validate($form, &$form_state) {
 
   // If the file passed validation:
   // Weird but once people push the upload button file_save_upload 
@@ -1218,7 +1218,7 @@ function islandora_multi_importer_form_submit($form, &$form_state) {
         
         $range = trim($form_state['storage']['values']['step2']['google_api']['spreadsheet_range']);
         $googledata = islandora_multi_importer_read_googledata($spreadsheetId, $range, -1, 0);
-        if (empty($googledata)) {
+        if ($googledata['totalrows'] == 0 || empty($googledata['headers'])) {
           drupal_set_message(t('Seems like your Google Spreadsheet has no data, no headers or we are having trouble fetching it. we are so sorry.'),'error');
           $form_state['storage']['step'] = 2 ;
           $form_state['rebuild'] = TRUE;
