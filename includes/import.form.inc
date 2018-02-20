@@ -46,7 +46,7 @@ function islandora_multi_importer_form(array $form, array &$form_state) {
     case 1:
       drupal_set_title(t("Islandora Multi importer - Data Source: Upload File Step"));
       $step_forms['step1'] = islandora_multi_importer_upload_form($form, $form_state);
-      $step_forms['#validate'] = array('islandora_multi_importer_form_check_fileisuploaded');
+      $step_forms['#validate'] = array('islandora_multi_importer_form_fileisuploaded_validate');
       $step_forms['submit'] = array(
         '#type' => 'submit',
         '#name' => 'preprocess',
@@ -67,9 +67,9 @@ function islandora_multi_importer_form(array $form, array &$form_state) {
     case 2:
       drupal_set_title(t("Islandora Multi importer - Data Source: Google Sheet info"));
       $step_forms['#tree'] = TRUE;
-        //$step_forms['#validate'] = array('islandora_multi_importer_form_check_fileisuploaded');
+        //$step_forms['#validate'] = array('islandora_multi_importer_form_fileisuploaded_validate');
       $step_forms['step2'] = islandora_multi_importer_google_form($form, $form_state);
-      $step_forms['#validate'] = array();
+      $step_forms['#validate'] = array('islandora_multi_importer_form_googlecanread_validate');
       $step_forms['submit'] = array(
           '#type' => 'submit',
           '#name' => 'preprocess',
@@ -199,7 +199,8 @@ function islandora_multi_importer_form(array $form, array &$form_state) {
   return $form;
 }
 
-function islandora_multi_importer_form_check_fileisuploaded($form, &$form_state) {
+
+function islandora_multi_importer_form_fileisuploaded_validate($form, &$form_state) {
 
   // If the file passed validation:
   // Weird but once people push the upload button file_save_upload 
@@ -230,6 +231,39 @@ function islandora_multi_importer_form_check_fileisuploaded($form, &$form_state)
    }
  }
 }
+
+function islandora_multi_importer_form_googlecanread_validate($form, &$form_state) {
+
+  if ($form_state['clicked_button']['#name'] == 'back') {
+    return;
+  }
+
+  
+  
+  $spreadsheetId = trim($form_state['values']['step2']['google_api']['spreadsheet_id']);
+  $range = trim($form_state['values']['step2']['google_api']['spreadsheet_range']);
+  if (!empty($spreadsheetId) && !empty($range)) {
+  // Parse the ID from the URL if a full URL was provided.
+  // @author of following chunk is Mark Mcfate @McFateM!
+    if ($parsed = parse_url($spreadsheetId)) {
+      if (isset($parsed['scheme'])) {
+        $parts = explode('/', $parsed['path']);
+        $spreadsheetId = $parts[3];
+      }
+    }
+    $googledata = islandora_multi_importer_read_googledata($spreadsheetId, $range, -1, 0);
+    if (empty($googledata)) {
+      drupal_set_message(t('Seems like your Google Spreadsheet has no data, no headers or we are having trouble fetching it. Check your ID,  and try again URL or Range.'),'error');
+      form_set_error('google_api', t('Wrong Google Sheet info provided'));
+    }
+  }
+  else {
+    form_set_error('google_api', t('All Google Sheet info fields are required')); 
+  }
+}
+
+
+
 
 /**
  * Spreadsheet upload data form.
@@ -1145,7 +1179,7 @@ function islandora_multi_importer_form_submit($form, &$form_state) {
      }
      if ($form_state['values'][$current_step]['data_source'] == 'google') {
         $form_state['storage']['step'] = 2;
-         $form_state['rebuild'] = TRUE;
+        $form_state['rebuild'] = TRUE;
       }   
   if (isset($form_state['storage']['values']['general']['file_data']) ) {
     // we need to clear previously loaded source data if we are changing the source data
@@ -1218,9 +1252,8 @@ function islandora_multi_importer_form_submit($form, &$form_state) {
         
         $range = trim($form_state['storage']['values']['step2']['google_api']['spreadsheet_range']);
         $googledata = islandora_multi_importer_read_googledata($spreadsheetId, $range, -1, 0);
-        dpm($googledata);
         if (empty($googledata)) {
-          drupal_set_message(t('Seems like your Google Spreadsheet has no data, no headers or we are having trouble fetching it. Try selecting another one or a different Range.'),'warning');
+          drupal_set_message(t('Seems like your Google Spreadsheet has no data, no headers or we are having trouble fetching it. We are so sorry.'),'error');
           $form_state['storage']['step'] = 2 ;
           $form_state['rebuild'] = TRUE;
           return $form;
