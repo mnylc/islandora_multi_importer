@@ -1123,7 +1123,9 @@ function islandora_multi_importer_changeaction_ajax($form, &$form_state) {
  * Twig Previsualization callback for ajax driven form.
  */
 function islandora_multi_importer_previstwig_ajax($form, &$form_state) {
-  return $form['step4']['group_tabs']['group_twigoutput_tab']['twig'];
+  $commands[] = ajax_command_replace('#islandora-multi-twigoutput', render($form['step4']['group_tabs']['group_twigoutput_tab']['twig']));
+  $commands[] = ajax_command_invoke('#edit-step4-group-tabs-group-twigoutput-tab', 'focus');
+  return array('#type' => 'ajax', '#commands' => $commands);
 }
 
 /**
