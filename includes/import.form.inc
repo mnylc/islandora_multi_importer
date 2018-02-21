@@ -27,7 +27,9 @@ function islandora_multi_importer_form(array $form, array &$form_state) {
   form_load_include($form_state, 'inc', 'islandora_multi_importer', 'includes/utilities');
   form_load_include($form_state, 'inc', 'islandora_multi_importer', 'includes/googleapi');
   form_load_include($form_state, 'inc', 'islandora_multi_importer', 'includes/callbacks');
-
+ 
+  
+  
   $step = empty($form_state['storage']['step']) ? 0 : $form_state['storage']['step'];
   
   $form_state['storage']['step'] = $step;
@@ -192,6 +194,9 @@ function islandora_multi_importer_form(array $form, array &$form_state) {
     );
   }
   $form = $step_forms;
+  // add JS
+  $form['#attached']['js'][] = drupal_get_path('module', 'islandora_multi_importer') . '/js/utils.js';
+ 
   $form['#prefix'] = '<div id="islandora-multi-top">';
   $form['#suffix'] = '</div>';
   $form['#tree'] = TRUE;
@@ -1124,7 +1129,7 @@ function islandora_multi_importer_changeaction_ajax($form, &$form_state) {
  */
 function islandora_multi_importer_previstwig_ajax($form, &$form_state) {
   $commands[] = ajax_command_replace('#islandora-multi-twigoutput', render($form['step4']['group_tabs']['group_twigoutput_tab']['twig']));
-  $commands[] = ajax_command_invoke(NULL, 'jQuery.globalEval', array("$('#edit-step4-group-tabs-group-twigoutput-tab').data('horizontalTab').focus();"));
+  $commands[] = ajax_command_invoke(NULL, 'focusHTab', array("$('#edit-step4-group-tabs-group-twigoutput-tab').data('horizontalTab').focus();"));
   return array('#type' => 'ajax', '#commands' => $commands);
 }
 
