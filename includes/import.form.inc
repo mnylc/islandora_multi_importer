@@ -28,7 +28,10 @@ function islandora_multi_importer_form(array $form, array &$form_state) {
   form_load_include($form_state, 'inc', 'islandora_multi_importer', 'includes/googleapi');
   form_load_include($form_state, 'inc', 'islandora_multi_importer', 'includes/callbacks');
  
-  
+  // Just to be sure Ajax is loaded. if no element makes reference to it 
+  // Drupal skip`s it, but then our custom gives warnings on those steps
+  drupal_add_library('system', 'drupal.ajax');
+  drupal_add_library('system', 'jquery.form');
   
   $step = empty($form_state['storage']['step']) ? 0 : $form_state['storage']['step'];
   
