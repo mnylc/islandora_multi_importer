@@ -1137,7 +1137,7 @@ function islandora_multi_importer_previstwig_ajax($form, &$form_state) {
     'method' => $method,
     'arguments' => $arguments,
   */
-  $commands[] = array('command' => 'focusHTab', 'arguments' => array('tabid' => 'edit-step4-group-tabs-group-twigoutput-tab'));
+  $commands[] = array('command' => 'focusHTab', 'arguments' => array('tabid' => '#edit-step4-group-tabs-group-twigoutput-tab'));
   return array('#type' => 'ajax', '#commands' => $commands);
 }
 
