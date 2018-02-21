@@ -1279,7 +1279,7 @@ function islandora_multi_importer_form_submit($form, &$form_state) {
           $form_state['rebuild'] = TRUE;
           return $form;
         }
-        $form_state['storage']['values']['step1']['file'] = islandora_multi_importer_csv_save($newfile_fid);
+        $form_state['storage']['values']['step1']['file'] = islandora_multi_importer_csv_save($googledata);
       }
 
       if ($form_state['values']['objectmap']['objectmapping']['rows']['dsmap_row']['dsremote'] == 'ZIP') {
