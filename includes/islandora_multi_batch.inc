@@ -160,7 +160,7 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
         $added[] = $ingest_object;
       }
       catch (Exception $e) {
-        watchdog_exception('islandora_batch', $e);
+        watchdog_exception('islandora_batch', $e->getMessage());
       }
     }
 
@@ -473,11 +473,11 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
     $datastreams = array();
     $datastreams = $this->getDatastreams($errors, $files);
     if (!empty($errors)) {
-      watchdog('islandora_multi_importer', t('There were some issues on Batch set id %setid when generating datastreams for PID %PID: %log', 
+      watchdog('islandora_multi_importer', t('There were some issues on Batch set id @setid when generating datastreams for PID @PID: @log', 
         array(
-          '%setid' => $this->getBatchId(),
-          '%pid' => $this->id,
-          '%log' => '<pre>' . print_r($errors, true) . '</pre>',
+          '@setid' => $this->getBatchId(),
+          '@pid' => $this->id,
+          '@log' => print_r($errors, true),
         )), WATCHDOG_NOTICE
       );
     }
