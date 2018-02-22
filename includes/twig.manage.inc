@@ -76,7 +76,8 @@ function islandora_multi_importer_twigcreate_form($form, &$form_state) {
   module_load_include('inc', 'islandora_multi_importer', 'includes/import.form');
   
   $file_data = isset($form_state['storage']['values']['general']['file_data']) ? $form_state['storage']['values']['general']['file_data'] : array();
-  
+  drupal_add_library('system', 'drupal.ajax');
+  drupal_add_library('system', 'jquery.form');
   $form_twigcreate['#tree'] = true;
   $form_twigcreate['#type'] = 'horizontal_tabs';
   $form_twigcreate['twig'] = array();
@@ -87,6 +88,7 @@ function islandora_multi_importer_twigcreate_form($form, &$form_state) {
   $form_twigcreate['twig']['#access'] = TRUE;
   $form_twigcreate['twig']['#type'] = 'fieldset';
   $form_twigcreate['twig']['#title'] = t('Templating');
+  $form_twigcreate['#attached']['js'][] = drupal_get_path('module', 'islandora_multi_importer') . '/js/utils.js';
  
   return $form_twigcreate;
 }
@@ -446,3 +448,6 @@ function islandora_multi_importer_twigdelete_form_submit($form, &$form_state) {
     drupal_set_message(t('The Twig template formerly known as @twig_name has been deleted!', array('@twig_name' => $form_state['twig_name'])));
   }
 }
+
+
+
