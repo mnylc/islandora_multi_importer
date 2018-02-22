@@ -254,7 +254,7 @@ function islandora_multi_importer_twigcreateinternals_form($form, &$form_state, 
     '#value' => t('Preview'),
     '#group' => 'group_tabs',
     '#ajax' => array(
-      'callback' => 'islandora_multi_importer_previstwig_ajax',
+      'callback' => 'islandora_multi_importer_previstwig_edit_ajax',
       'wrapper' => 'islandora-multi-twigoutput',
     ),
   );
@@ -449,5 +449,18 @@ function islandora_multi_importer_twigdelete_form_submit($form, &$form_state) {
   }
 }
 
-
+/**
+ * Twig Previsualization callback for ajax driven form.
+ */
+function islandora_multi_importer_previstwig_edit_ajax($form, &$form_state) {
+  dpm($form);
+  $commands[] = ajax_command_replace('#islandora-multi-twigoutput', render($form['step4']['group_tabs']['group_twigoutput_tab']['twig']));
+  /*   'command' => 'invoke',
+    'selector' => $selector,
+    'method' => $method,
+    'arguments' => $arguments,
+  */
+  $commands[] = array('command' => 'focusHTab', 'arguments' => array('tabid' => '#edit-twig-group-tabs-group-twigoutput-tab'));
+  return array('#type' => 'ajax', '#commands' => $commands);
+}
 
