@@ -112,7 +112,6 @@ function islandora_multi_importer_admin_form_validate($form, &$form_state) {
        // Probably by invoking the Sheets API directly
       // Google_Service_Exception: { "error": { "code": 403, "message": "Google Sheets API has not been used in project dmcny-1329 before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/sheets.googleapis.com/overview?project=dmcny-1329 then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry.", "errors": [ { "message": "Google Sheets API has not been used in project dmcny-1329 before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/sheets.googleapis.com/overview?project=dmcny-1329 then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry.", "domain": "global", "reason": "forbidden" } ], "status": "PERMISSION_DENIED" } } in Google_Http_REST::decodeHttpResponse() (line 118 of /vagrant/islandora_host/islandora_multi_importer/vendor/google/apiclient/src/Google/Http/REST.php).
        
-        dpm($accessToken);
        
        }
        catch (Exception $e) {
@@ -145,7 +144,6 @@ function islandora_multi_importer_admin_submit_form($form, &$form_state) {
     if (is_array($value) && isset($form_state['values']['array_filter'])) {
       $value = array_keys(array_filter($value));
     }
-    dpm(array($key, $value));
     
     variable_set($key, $value);
   }
