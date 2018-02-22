@@ -987,13 +987,6 @@ function islandora_multi_importer_objectmapping_form($form, &$form_state, $file_
         '#attributes' => '',
         '#description' => t('Select the source field to use as Object PID'),
         '#options' => $file_data['headers'],
-        '#states' => array(
-          'visible' => array(
-            array(':input[name=pidtype]' => array('checked' => TRUE)),
-            'or',
-            array(':input[name=action]' => array('value' => 'update')),
-          ),
-        ),
       ),
       'pidtype' => array(
         '#type' => 'checkbox',
