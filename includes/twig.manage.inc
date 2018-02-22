@@ -453,7 +453,6 @@ function islandora_multi_importer_twigdelete_form_submit($form, &$form_state) {
  * Twig Previsualization callback for ajax driven form.
  */
 function islandora_multi_importer_previstwig_edit_ajax($form, &$form_state) {
-  dpm($form['twig']['group_tabs']['group_twigoutput_tab']['twig']);
   $commands[] = ajax_command_replace('#islandora-multi-twigoutput-edit', render($form['twig']['group_tabs']['group_twigoutput_tab']['twig']));
   /*   'command' => 'invoke',
     'selector' => $selector,
