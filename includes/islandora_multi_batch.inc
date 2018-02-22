@@ -473,19 +473,21 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
     $datastreams = array();
     $datastreams = $this->getDatastreams($errors, $files);
     if (!empty($errors)) {
-      watchdog('islandora_multi_importer', t('There were some issues on Batch set id @setid when generating datastreams for PID @PID: @log', 
-        array(
-          '@setid' => $this->getBatchId(),
-          '@pid' => $this->id,
-          '@log' => print_r($errors, true),
-        )), WATCHDOG_NOTICE
-      );
+      foreach ($errors as $error) {
+        watchdog('islandora_multi_importer', t('There were some issues on Batch set id @setid when generating datastreams for PID @PID: @log', 
+          array(
+            '@setid' => $this->getBatchId(),
+            '@pid' => $this->id,
+            '@log' => $error,
+          )), WATCHDOG_NOTICE
+        );
+      }
     }
     if (empty($datastreams)) {
       $this->currentState = ISLANDORA_BATCH_STATE__ERROR;
       return array('message' => 
-        t('Serious datastream issues on %pid have forced us to not ingest it.',
-        array('%pid' => $this->id)), 'state' => ISLANDORA_BATCH_STATE__ERROR);
+        t('Serious datastream issues on @pid have forced us to not ingest it.',
+        array('@pid' => $this->id)), 'state' => ISLANDORA_BATCH_STATE__ERROR);
     }
     
     foreach ($files as $file) {
@@ -778,7 +780,7 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
                       array(
                         '%zipfile' => $this->preprocessorParameters['zipfile'],
                         '%errorcode' => (int)$opened,
-                      ));
+                  ));
                   error_log('can not open ' . $this->preprocessorParameters['zipfile'] . ' with code:'. (int)$opened);
                 }
               }
