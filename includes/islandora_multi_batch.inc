@@ -537,13 +537,15 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
       $datastreams = array();
       $datastreams = $this->getDatastreams($errors, $files);
       if (!empty($errors)) {
-        watchdog('islandora_multi_importer', t('There were some issues on Batch set id %setid when generating datastreams for PID %PID: %log', 
-          array(
-            '%setid' => $this->getBatchId(),
-            '%pid' => $this->id,
-            '%log' => '<pre>' . print_r($errors, true) . '</pre>',
-          )), WATCHDOG_NOTICE
-        );
+        foreach ($errors as $error) {
+          watchdog('islandora_multi_importer', t('There were some issues on Batch set id %setid when generating datastreams for PID %PID: @log', 
+            array(
+              '%setid' => $this->getBatchId(),
+              '%pid' => $this->id,
+              '@log' => $error,
+            )), WATCHDOG_NOTICE
+          );
+        }
       }
       foreach ($files as $file) {
         $file->status &= ~FILE_STATUS_PERMANENT;
@@ -675,14 +677,12 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
               }
               // FAIL!
               if ($twig_output == NULL) {
-                $errors[] = array(
-                  t('For Object %id, %dsid datastream: twig %template processing had some serious problems. Skipping this object entirely'),
+                $errors[] = t('For Object %id, %dsid datastream: twig %template processing had some serious problems. Skipping this object entirely',
                   array(
                     '%template' => $twig_input['name'],
                     '%dsid' => $dsid,
                     '%id' => $this->id,
-                  ),
-                );
+                  ));
                 $datastreams = array(); // Yeah, we need to roll back all our hard work
               break 2;
               }  
@@ -717,15 +717,13 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
                 if ($opened === TRUE) {
                   $fp = $z->getStream($this->objectInfo['data'][$method[1]]);
                   if (!$fp) {
-                    $errors[] = array(
-                      t('For Object %id, %dsid datastream: %filename was not found inside the provided ZIP file %zipfile'),
+                    $errors[] = t('For Object %id, %dsid datastream: %filename was not found inside the provided ZIP file %zipfile',
                       array(
                         '%filename' => trim($this->objectInfo['data'][$method[1]]),
                         '%zipfile' => $this->preprocessorParameters['zipfile'],
                         '%dsid' => $dsid,
                         '%id' => $this->id,
-                      ),
-                    );
+                      ));
                     error_log('will try to get '.$this->objectInfo['data'][$method[1]]. 'remotely');
                     error_log($this->objectInfo['data'][$method[1]] .' not found for .' . $this->id);
                     // The file does not exist.
@@ -776,13 +774,11 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
                   $z->close();
                 }
                 else {
-                  $errors[] = array(
-                      t('Provided ZIP file %zipfile can not be opened or is invalid. Code %errorcode.'),
+                  $errors[] = t('Provided ZIP file %zipfile can not be opened or is invalid. Code %errorcode.',
                       array(
                         '%zipfile' => $this->preprocessorParameters['zipfile'],
                         '%errorcode' => (int)$opened,
-                      ),
-                    );
+                      ));
                   error_log('can not open ' . $this->preprocessorParameters['zipfile'] . ' with code:'. (int)$opened);
                 }
               }
@@ -808,15 +804,12 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
                   );
                 } 
                 else { 
-                  $errors[] = array(
-                    t('We tried, but we could not find the requested %filename'),
-                    t('We tried!, but For Object %id, %dsid datastream: %filename was no where to found'),
+                  $errors[] = t('We tried!, but For Object %id, %dsid datastream: %filename was no where to found',
                     array(
                       '%filename' => trim($this->objectInfo['data'][$method[1]]),
                       '%dsid' => $dsid,
                       '%id' => $this->id,
-                    ),
-                  );
+                    ));
                 }
               }
               break;
