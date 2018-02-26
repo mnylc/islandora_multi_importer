@@ -463,3 +463,151 @@ function islandora_multi_importer_previstwig_edit_ajax($form, &$form_state) {
   return array('#type' => 'ajax', '#commands' => $commands);
 }
 
+/**
+ * Get the Duplicate Twig Form.
+ *
+ * @param array $form
+ *   The Drupal form.
+ * @param array $form_state
+ *   The Drupal Form State.
+ * @param int $twig id
+ *   The id of the twig tempalte copy.
+ *
+ * @return array
+ *   The Drupal Form.
+ */
+function islandora_multi_importer_twigduplicate_form($form, &$form_state, $id) {
+  module_load_include('inc', 'islandora_multi_importer', 'includes/utilities');
+  module_load_include('inc', 'islandora_multi_importer', 'includes/TwigTemplateDatabase');
+  if (isset($_POST['cancel'])) {
+    $form_state['redirect'] = 'admin/islandora/twigtemplates';
+  }
+  
+  $form_state['twig_id'] = $id;
+  $thetemplateinfo = islandora_multi_importer_twig_fetchbyid($id);
+  if (empty($thetemplateinfo)) {
+    drupal_set_message(t('The requested Twig template does not exist'),'warning');
+    drupal_not_found();
+    drupal_exit();
+     
+  }
+  
+  return array(
+    'original' => array(
+      '#type' => 'hidden',
+      '#value' => $thetemplateinfo['name'],
+    ),
+    'twig_name' => array(
+      '#type' => 'textfield',
+      '#title' => t('Form Name'),
+      '#required' => TRUE,
+      '#element_validate' => array('islandora_multi_importer_twigduplicate_validate_name'),
+    ),
+    'copy' => array(
+      '#type' => 'submit',
+      '#value' => t('Duplicate'),
+      '#name' => 'copy',
+    ),
+    'cancel' => array(
+      '#type' => 'submit',
+      '#value' => t('Cancel'),
+      '#name' => 'cancel',
+    ),
+  );
+}
+
+/**
+ * Validates the name Twig template name.
+ *
+ * Ensures that the name doesn't match any existing ones.
+ *
+ * @param array $element
+ *   The name Drupal Form Element.
+ * @param array $form_state
+ *   The Drupal Form State.
+ */
+function islandora_multi_importer_twigduplicate_validate_name(array $element, array &$form_state) {
+  module_load_include('inc', 'islandora_multi_importer', 'TwigTemplateDatabase');
+  $twig_name = &$form_state['values']['twig_name'];
+  if (TwigTemplateDatabase::Exists($twig_name)) {
+    $error_msg = t('The given Twig template name "%name" is already in use. Twig Templates names must be unique.', array('%name' => $twig_name));
+    form_set_error('$twig_name', $error_msg);
+  }
+}
+
+/**
+ * Submit the Duplicate form. Copies a existing Twig definition within the database.
+ *
+ * @param array $form
+ *   The Drupal Form.
+ * @param array $form_state
+ *   The Drupal Form State.
+ */
+function islandora_multi_importer_twigduplicate_submit(array $form, array &$form_state) {
+  module_load_include('inc', 'islandora_multi_importer', 'TwigTemplateDatabase');
+  if ($form_state['clicked_button']['#name'] == 'copy') {
+    $original = $form_state['values']['original'];
+    $twig_name = $form_state['values']['twig_name'];
+    if (TwigTemplateDatabase::Copy($original, $twig_name)) {
+      drupal_set_message(t('Successfully copied Twig Template "%name".', array('%name' => $twig_name)));
+      $form_state['redirect'] = 'admin/islandora/twigtemplates';
+      return;
+    }
+    drupal_set_message(t('Failed to duplicate template "%name".', array('%name' => $twig_name)), 'error');
+  }
+  $form_state['redirect'] = 'admin/islandora/twigtemplates';
+}
+
+/**
+ * Shows Twig template listing.
+ *
+ * Users can CRUD manage their templates. Heavily borrowed 
+ * from XML forms listing.
+ *
+ * @return array
+ *   The table to display.
+ */
+function islandora_multi_importer_twigshow_callback($id) {
+
+  module_load_include('inc', 'islandora_multi_importer', 'includes/utilities');
+  module_load_include('inc', 'islandora_multi_importer', 'includes/TwigTemplateDatabase');
+  
+  $thetemplateinfo = islandora_multi_importer_twig_fetchbyid($id);
+  if (empty($thetemplateinfo)) {
+    drupal_set_message(t('The requested Twig template does not exist'),'warning');
+    drupal_not_found();
+    drupal_exit();
+     
+  }
+  
+  return islandora_multi_importer_xml_highlight($thetemplateinfo['twig']);
+}
+
+
+/**
+ * Shows Twig template listing.
+ *
+ * Users can CRUD manage their templates. Heavily borrowed 
+ * from XML forms listing.
+ *
+ * @return array
+ *   The table to display.
+ */
+function islandora_multi_importer_twigdownload_callback($id) {
+
+  module_load_include('inc', 'islandora_multi_importer', 'includes/utilities');
+  module_load_include('inc', 'islandora_multi_importer', 'includes/TwigTemplateDatabase');
+  
+  $thetemplateinfo = islandora_multi_importer_twig_fetchbyid($id);
+  if (empty($thetemplateinfo)) {
+    drupal_set_message(t('The requested Twig template does not exist'),'warning');
+    drupal_not_found();
+    drupal_exit();
+     
+  }
+  drupal_add_http_header('Content-Type', 'text/html; utf-8');
+  drupal_add_http_header('Content-Disposition', 'attachment; filename ='. $thetemplateinfo['name'].'.html');
+  echo $thetemplateinfo['twig'];
+}
+
+
