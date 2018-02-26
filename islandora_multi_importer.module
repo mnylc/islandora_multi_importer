@@ -9,6 +9,8 @@
 // Permissions.
 define('ISLANDORA_MULTI_IMPORTER_CREATE', 'Import Objects using Islandora Multi Importer');
 define('ISLANDORA_MULTI_IMPORTER_UPDATE', 'Update Objects using Islandora Multi Importer');
+define('ISLANDORA_MULTI_IMPORTER_TWIGMANAGE', "Manage Islandora Multi Importer Twig templates");
+
 
 /**
  * Implements hook_init().
@@ -48,6 +50,77 @@ function islandora_multi_importer_menu() {
       'file' => 'includes/callbacks.inc',
       'type' => MENU_CALLBACK,
     ),
+    'admin/islandora/twigtemplates' => array(
+      'title' => 'Multi Importer Twig templates',
+      'description' => 'Manage stored Twig templates for use inside Multi Importer',
+      'page callback' => 'islandora_multi_importer_twiglistpage_callback',
+      'access arguments' => array(ISLANDORA_MULTI_IMPORTER_TWIGMANAGE),
+      'file' => 'includes/twig.manage.inc',
+      'type' => MENU_NORMAL_ITEM,
+    ),
+    'admin/islandora/twigtemplates/%/edit' => array(
+      'title' => 'Multi Importer Twig templates',
+      'description' => 'Manage stored Twig templates for use inside Multi Importer',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('islandora_multi_importer_twigedit_form', 3),
+      'access arguments' => array(ISLANDORA_MULTI_IMPORTER_TWIGMANAGE),
+      'file' => 'includes/twig.manage.inc',
+      'type' => MENU_NORMAL_ITEM,
+    ),
+    'admin/islandora/twigtemplates/%/delete' => array(
+      'title' => 'Multi Importer Twig templates',
+      'description' => 'Delete stored Twig templates used by Multi Importer',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('islandora_multi_importer_twigdelete_form', 3),
+      'access arguments' => array(ISLANDORA_MULTI_IMPORTER_TWIGMANAGE),
+      'file' => 'includes/twig.manage.inc',
+      'type' => MENU_NORMAL_ITEM,
+    ),
+    'admin/islandora/twigtemplates/%/duplicate' => array(
+      'title' => 'Multi Importer Twig templates',
+      'description' => 'Manage stored Twig templates for use inside Multi Importer',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('islandora_multi_importer_twigduplicate_form', 3),
+      'access arguments' => array(ISLANDORA_MULTI_IMPORTER_TWIGMANAGE),
+      'file' => 'includes/twig.manage.inc',
+      'type' => MENU_NORMAL_ITEM,
+    ),
+    'admin/islandora/twigtemplates/%/download' => array(
+      'title' => 'Multi Importer Twig templates',
+      'description' => 'Download stored Twig template for use inside Multi Importer',
+      'page callback' => 'islandora_multi_importer_twigdownload_callback',
+      'page arguments' => array(3),
+      'access arguments' => array(ISLANDORA_MULTI_IMPORTER_TWIGMANAGE),
+      'file' => 'includes/twig.manage.inc',
+      'type' => MENU_NORMAL_ITEM,
+    ),
+    'admin/islandora/twigtemplates/%/view' => array(
+      'title' => 'Multi Importer Twig templates',
+      'description' => 'View stored Twig template for use inside Multi Importer',
+      'page callback' => 'islandora_multi_importer_twigshow_callback',
+      'page arguments' => array(3),
+      'access arguments' => array(ISLANDORA_MULTI_IMPORTER_TWIGMANAGE),
+      'file' => 'includes/twig.manage.inc',
+      'type' => MENU_NORMAL_ITEM,
+    ),
+    'admin/islandora/twigtemplates/create' => array(
+      'title' => 'New Twig template',
+      'description' => 'Add a new Twig template to your collection',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('islandora_multi_importer_twigcreate_form'),
+      'access arguments' => array(ISLANDORA_MULTI_IMPORTER_TWIGMANAGE),
+      'file' => 'includes/twig.manage.inc',
+      'type' => MENU_LOCAL_ACTION,
+    ),
+    'admin/islandora/tools/multi_importer' => array(
+        'title' => 'Multi Importer settings',
+        'description' => 'Configure the infamous Multi Importer Module.',
+        'type' => MENU_NORMAL_ITEM,
+        'page callback' => 'drupal_get_form',
+        'page arguments' => array('islandora_multi_importer_admin_form'),
+        'file' => 'includes/admin.form.inc',
+        'access arguments' => array('administer site configuration'),
+      ),
   );
 }
 
@@ -63,6 +136,10 @@ function islandora_multi_importer_permission() {
     ISLANDORA_MULTI_IMPORTER_UPDATE => array(
       'title' => t('Update Islandora objects from user-supplied tabulated Data.'),
       'description' => t('Update Islandora objects from user-supplied tabulated Data.'),
+    ),
+    ISLANDORA_MULTI_IMPORTER_TWIGMANAGE => array(
+      'title' => t('Manage Islandora Multi Importer Twig templates'),
+      'description' => t('Manage user-supplied Twig templates'),
     ),
   );
 }
