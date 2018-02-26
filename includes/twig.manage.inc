@@ -543,7 +543,7 @@ function islandora_multi_importer_twigduplicate_validate_name(array $element, ar
  * @param array $form_state
  *   The Drupal Form State.
  */
-function islandora_multi_importer_twigduplicate_submit(array $form, array &$form_state) {
+function islandora_multi_importer_twigduplicate_form_submit(array $form, array &$form_state) {
   module_load_include('inc', 'islandora_multi_importer', 'TwigTemplateDatabase');
   if ($form_state['clicked_button']['#name'] == 'copy') {
     $original = $form_state['values']['original'];
