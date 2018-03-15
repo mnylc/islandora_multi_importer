@@ -565,7 +565,7 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
           $ds['datastream_file'];
         error_log($ds_uri);
         
-        if (empty($existing_object[$ds['dsid']])) {
+        if (!isset($existing_object[$ds['dsid']])) {
           $datastream = $this->constructDatastream($ds['dsid'], $ds['control_group']);
           $datastream->label = $ds['label'];
           $datastream->mimetype = $ds['mimetype'];
@@ -583,7 +583,7 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
         
         $datastream->setContentFromFile($ds_uri);
         //redundant you would say, but i like to check twice.
-        if (empty($existing_object[$ds['dsid']])) {
+        if (!isset($existing_object[$ds['dsid']])) {
           $existing_object->ingestDatastream($datastream);
         }
         //Also, keep a copy in our never to be ingested batchobject
