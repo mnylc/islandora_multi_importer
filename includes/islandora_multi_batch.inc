@@ -176,7 +176,7 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
     $file_path = drupal_realpath($file->uri);
     $file_data_all = islandora_multi_importer_read_filedata($file_path, -1, $offset = 0);
     $this->parameters['data']['headers'] = $file_data_all['headers'];
-
+  
     if ($this->parameters['type'] == 'ZIP') {
       // We don't need to scan the whole zip file,
       // We will try to just fetch the filename comming from the data
@@ -195,7 +195,7 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
           'error' => array_keys($file_data_all),
           'fatal' => t('Provided ZIP file %zipfile can not be opened or is invalid. Dropping all preprocessing.Sorry, can not continued. Code %errorcode.',
                         array(
-                          '%zipfile' => $this->preprocessorParameters['zipfile'],
+                          '%zipfile' => $this->parameters['zipfile'],
                           '%errorcode' => (int)$opened,
                         )
                       ),
@@ -231,9 +231,11 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
        
       // Autogeneration of PID is enabled and a PID column is provided
       // both modes complement/limit each other
-      if (($this->parameters['object_maping']['pidmap_row']['pidtype']) != 1) {
+      // in case of update or any other action that is npt ingest, always check for existing PID
+      if (($this->parameters['object_maping']['pidmap_row']['pidtype']) != 1 || $this->parameters['action']!= 'ingest') {
         // User provided PIDs are not required to respect collection policies, namespace, etc.
         $possiblePID = trim($row[$this->parameters['object_maping']['pidmap_row']['pidmap']]);
+        
         if (!empty($possiblePID)) {
           if (islandora_is_valid_pid($possiblePID)) {
             $objectInfo['pid'] = $possiblePID;

@@ -1312,6 +1312,11 @@ function islandora_multi_importer_form_submit($form, &$form_state) {
     // Actually in IslandoraMultiBatch all defaults to ingest
     // except for "update" which means updating existing objects.
     $parameters['action'] = isset($form_state['values']['action']) ? $form_state['values']['action'] : 'ingest';
+    // LAST CHECK. IF ACTION is not ingest, we need to make sure that 
+    // NO automatic PID is generated.
+    $parameters['object_maping']['pidmap_row']['pidtype'] = $parameters['action'] != 'ingest' ? 0 : $parameters['object_maping']['pidmap_row']['pidtype'];
+   
+    
     
     $connection = islandora_get_tuque_connection();
     // kpr($parameters);
