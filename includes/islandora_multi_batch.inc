@@ -843,8 +843,8 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
 
 
     $datastreams = $this->getDatastreams($errors, $files);
-    
-    if (isset($this['RELS-EXT'])) {
+    dpm($this['RELS-EXT']);
+    if (isset($this['RELS-EXT']) && !empty($this['RELS-EXT'])) {
       // Does out existing object already have a RELS-EXT? 
       // I mean, maybe it is not there? ha.
       if (isset($existing_object['RELS-EXT'])) {
@@ -864,9 +864,8 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
       }
       $newfileNameExt = "RELSEXT_update_". urlencode($this->objectInfo['pid']) . '_' . time() . '.xml';
       // $tmp_directory = islandora_multi_importer_temp_directory();
-      $newfileExt = drupal_tempnam( "public://" . $newfileNameExt , FILE_EXISTS_RENAME);
-      $this['RELS-EXT']->getContent($newfileExt);
-     
+      $newfileExt = file_save_data($this['RELS-EXT'], "public://" . $newfileNameExt , FILE_EXISTS_RENAME);
+      dpm($control);
       $file[] = $newfileExt;
       $datastreams['RELS-EXT'] = array(
         'dsid' => 'RELS-EXT',
@@ -878,7 +877,7 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
       );
     }
     
-    if (isset($this['RELS-INT'])) {
+    if (isset($this['RELS-INT']) && !empty($this['RELS-INT'])) {
       // Does out existing object already have a RELS-INT? 
       // I mean, maybe it is not there? ha x2.
       if (isset($existing_object['RELS-INT'])) {
@@ -895,19 +894,19 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
           'label' => $this['RELS-INT']->label,
         ); 
       }
-      
+      dpm($control);
       $newfileNameInt = "RELSINT_update_". urlencode($this->objectInfo['pid']) . '_' . time() . '.xml';
-      $newfileInt = drupal_tempnam( "public://" . $newfileNameInt , FILE_EXISTS_RENAME);
-      $this['RELS-INT']->getContent($newfileInt);
+      $newfileInt = file_save_data($this['RELS-INT'], "public://" . $newfileNameInt, FILE_EXISTS_RENAME);
       
       $file[] = $newfileInt;
+      
       $datastreams['RELS-INT'] = array(
         'dsid' => 'RELS-INT',
         'label' =>  $control['label'],
         'mimetype' => $control['mimetype'],
         'datastream_file' => drupal_realpath($newfileInt->uri),
         'filename' => $newfileNameInt,
-        'control_group' => $control['control_Group'],
+        'control_group' => $control['control_group'],
       );
     }
        
