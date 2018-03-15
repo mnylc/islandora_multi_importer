@@ -864,7 +864,7 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
       }
       $newfileNameExt = "RELSEXT_update_". urlencode($this->objectInfo['pid']) . '_' . time() . '.xml';
       // $tmp_directory = islandora_multi_importer_temp_directory();
-      $newfileExt = file_save_data($this['RELS-EXT'], "public://" . $newfileNameExt , FILE_EXISTS_RENAME);
+      $newfileExt = file_save_data($this['RELS-EXT']->content, "public://" . $newfileNameExt , FILE_EXISTS_RENAME);
       dpm($control);
       $file[] = $newfileExt;
       $datastreams['RELS-EXT'] = array(
@@ -896,7 +896,7 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
       }
       dpm($control);
       $newfileNameInt = "RELSINT_update_". urlencode($this->objectInfo['pid']) . '_' . time() . '.xml';
-      $newfileInt = file_save_data($this['RELS-INT'], "public://" . $newfileNameInt, FILE_EXISTS_RENAME);
+      $newfileInt = file_save_data($this['RELS-INT']->content, "public://" . $newfileNameInt, FILE_EXISTS_RENAME);
       
       $file[] = $newfileInt;
       
