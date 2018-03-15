@@ -864,9 +864,10 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
       }
       $newfileNameExt = "RELSEXT_update_". urlencode($this->objectInfo['pid']) . '_' . time() . '.xml';
       // $tmp_directory = islandora_multi_importer_temp_directory();
-      $newfileExt = file_save_data($twig_output, "public://" . $newfileNameExt , FILE_EXISTS_RENAME);
-      dpm($control);
-      $file[] = $newfile;
+      $newfileExt = drupal_tempnam( "public://" . $newfileNameExt , FILE_EXISTS_RENAME);
+      $this['RELS-EXT']->getContent($newfileExt);
+     
+      $file[] = $newfileExt;
       $datastreams['RELS-EXT'] = array(
         'dsid' => 'RELS-EXT',
         'label' =>  $control['label'],
@@ -894,12 +895,12 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
           'label' => $this['RELS-INT']->label,
         ); 
       }
-      dpm($control);
+      
       $newfileNameInt = "RELSINT_update_". urlencode($this->objectInfo['pid']) . '_' . time() . '.xml';
-      $newfileInt = file_save_data($twig_output, "public://" . $newfileNameInt, FILE_EXISTS_RENAME);
+      $newfileInt = drupal_tempnam( "public://" . $newfileNameInt , FILE_EXISTS_RENAME);
+      $this['RELS-INT']->getContent($newfileInt);
       
-      $file[] = $newfile;
-      
+      $file[] = $newfileInt;
       $datastreams['RELS-INT'] = array(
         'dsid' => 'RELS-INT',
         'label' =>  $control['label'],
