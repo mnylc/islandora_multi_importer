@@ -870,7 +870,7 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
       $datastreams['RELS-EXT'] = array(
         'dsid' => 'RELS-EXT',
         'label' =>  $control['label'],
-        'mimetype' => $control['mimeType'],
+        'mimetype' => $control['mimetype'],
         'datastream_file' => drupal_realpath($newfileExt->uri),
         'filename' => $newfileNameExt ,
         'control_group' => $control['control_group'],
@@ -903,7 +903,7 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
       $datastreams['RELS-INT'] = array(
         'dsid' => 'RELS-INT',
         'label' =>  $control['label'],
-        'mimetype' => $control['mimeType'],
+        'mimetype' => $control['mimetype'],
         'datastream_file' => drupal_realpath($newfileInt->uri),
         'filename' => $newfileNameInt,
         'control_group' => $control['control_Group'],
