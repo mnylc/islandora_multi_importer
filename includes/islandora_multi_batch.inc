@@ -524,6 +524,7 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
    */
   protected function batchProcessforUpdate() {
     $existing_object = islandora_object_load($this->id);
+    error_log($this->id);
     if ($existing_object) {
         // Kim said so. No CMODEL transmutation for now.
         // But somehow i managed to enable this?
@@ -566,6 +567,7 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
         error_log($ds_uri);
         
         if (!isset($existing_object[$ds['dsid']])) {
+          error_log("constructing {$ds['dsid']} for existing {$existing_object->id}");
           $datastream = $this->constructDatastream($ds['dsid'], $ds['control_group']);
           $datastream->label = $ds['label'];
           $datastream->mimetype = $ds['mimetype'];
@@ -584,6 +586,7 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
         $datastream->setContentFromFile($ds_uri);
         //redundant you would say, but i like to check twice.
         if (!isset($existing_object[$ds['dsid']])) {
+          error_log("ingesting {$ds['dsid']} for existing {$existing_object->id}");
           $existing_object->ingestDatastream($datastream);
         }
         //Also, keep a copy in our never to be ingested batchobject
@@ -845,6 +848,7 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
       // Does out existing object already have a RELS-EXT? 
       // I mean, maybe it is not there? ha.
       if (isset($existing_object['RELS-EXT'])) {
+        error_log("{$existing_object->id} has relsext");
         $control = array(
           'control_group' => $existing_object['RELS-EXT']->controlGroup,
           'mimetype' => $existing_object['RELS-EXT']->mimeType,
@@ -853,15 +857,15 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
       } 
       else {
         $control = array(
-          'control_group' => $this['RELS-INT']->controlGroup,
-          'mimetype' => $this['RELS-INT']->mimeType,
-          'label' => $this['RELS-INT']->label,
+          'control_group' => $this['RELS-EXT']->controlGroup,
+          'mimetype' => $this['RELS-EXT']->mimeType,
+          'label' => $this['RELS-EXT']->label,
         );
       }
       $newfileNameExt = "RELSEXT_update_". urlencode($this->objectInfo['pid']) . '_' . time() . '.xml';
       // $tmp_directory = islandora_multi_importer_temp_directory();
       $newfileExt = file_save_data($twig_output, "public://" . $newfileNameExt , FILE_EXISTS_RENAME);
-      
+      dpm($control);
       $file[] = $newfile;
       $datastreams['RELS-EXT'] = array(
         'dsid' => 'RELS-EXT',
@@ -869,9 +873,10 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
         'mimetype' => $control['mimeType'],
         'datastream_file' => drupal_realpath($newfileExt->uri),
         'filename' => $newfileNameExt ,
-        'control_group' => $control['controlGroup'],
+        'control_group' => $control['control_group'],
       );
     }
+    
     if (isset($this['RELS-INT'])) {
       // Does out existing object already have a RELS-INT? 
       // I mean, maybe it is not there? ha x2.
@@ -889,19 +894,19 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
           'label' => $this['RELS-INT']->label,
         ); 
       }
-      
+      dpm($control);
       $newfileNameInt = "RELSINT_update_". urlencode($this->objectInfo['pid']) . '_' . time() . '.xml';
       $newfileInt = file_save_data($twig_output, "public://" . $newfileNameInt, FILE_EXISTS_RENAME);
       
       $file[] = $newfile;
       
-      $datastreams['RELS-EXT'] = array(
-        'dsid' => 'RELS-EXT',
+      $datastreams['RELS-INT'] = array(
+        'dsid' => 'RELS-INT',
         'label' =>  $control['label'],
         'mimetype' => $control['mimeType'],
         'datastream_file' => drupal_realpath($newfileInt->uri),
-        'filename' => $newfileName,
-        'control_group' => $control['controlGroup'],
+        'filename' => $newfileNameInt,
+        'control_group' => $control['control_Group'],
       );
     }
        
