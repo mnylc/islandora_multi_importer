@@ -166,7 +166,7 @@ function islandora_multi_importer_twigcreateinternals_form($form, &$form_state, 
   }
   catch (Exception $e) {
    $validated = FALSE;
-    // TODO: We should encourage this to be as explicit
+    // @TODO: We should encourage this to be as explicit
     // to final user as possible.
     error_log(get_class($e));
   }

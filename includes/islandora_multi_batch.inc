@@ -524,7 +524,6 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
    */
   protected function batchProcessforUpdate() {
     $existing_object = islandora_object_load($this->id);
-    error_log($this->id);
     if ($existing_object) {
         // Kim said so. No CMODEL transmutation for now.
         // But somehow i managed to enable this?
@@ -590,7 +589,12 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
           $existing_object->ingestDatastream($datastream);
         }
         //Also, keep a copy in our never to be ingested batchobject
-        $this->ingestDatastream($datastream);
+        if (!isset($this[$ds['dsid']])) {
+          // But only "ingest" if not already there. 
+          // adding relationships to an batch Object
+          // also ingests the ds. Obvious!
+          $this->ingestDatastream($datastream);
+        }
       }
 
       $this->currentState = ISLANDORA_BATCH_STATE__DONE;
