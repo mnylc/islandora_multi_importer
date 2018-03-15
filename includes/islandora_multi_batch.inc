@@ -160,7 +160,7 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
         $added[] = $ingest_object;
       }
       catch (Exception $e) {
-        watchdog_exception('islandora_batch', $e->getMessage());
+        watchdog_exception('islandora_batch', $e);
       }
     }
 
