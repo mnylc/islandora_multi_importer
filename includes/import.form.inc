@@ -1051,11 +1051,6 @@ function islandora_multi_importer_objectmapping_form($form, &$form_state, $file_
         '#attributes' => '',
         '#description' => t('Select the source field to use as Sequence order index in multi child objects'),
         '#options' => $file_data['headers'],
-        '#states' => array(
-        	'enabled' => array(
-        		':input[name=action]' => array('value' => 'ingest'),
-        	),
-        ),
       ),
       'stub1' => array(
         '#markup' => '&nbsp;',
