@@ -845,14 +845,12 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
     module_load_include('inc', 'islandora', 'includes/utilities');
     module_load_include('inc', 'islandora_multi_importer', 'includes/utilities');
 
-
     $datastreams = $this->getDatastreams($errors, $files);
-    dpm($this['RELS-EXT']);
     if (isset($this['RELS-EXT']) && !empty($this['RELS-EXT'])) {
       // Does out existing object already have a RELS-EXT? 
       // I mean, maybe it is not there? ha.
       if (isset($existing_object['RELS-EXT'])) {
-        error_log("{$existing_object->id} has relsext");
+        
         $control = array(
           'control_group' => $existing_object['RELS-EXT']->controlGroup,
           'mimetype' => $existing_object['RELS-EXT']->mimeType,
@@ -869,7 +867,6 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
       $newfileNameExt = "RELSEXT_update_". urlencode($this->objectInfo['pid']) . '_' . time() . '.xml';
       // $tmp_directory = islandora_multi_importer_temp_directory();
       $newfileExt = file_save_data($this['RELS-EXT']->content, "public://" . $newfileNameExt , FILE_EXISTS_RENAME);
-      dpm($control);
       $file[] = $newfileExt;
       $datastreams['RELS-EXT'] = array(
         'dsid' => 'RELS-EXT',
