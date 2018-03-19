@@ -160,7 +160,7 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
         $added[] = $ingest_object;
       }
       catch (Exception $e) {
-        watchdog_exception('islandora_batch', $e->getMessage());
+        watchdog_exception('islandora_batch', $e);
       }
     }
 
@@ -176,7 +176,7 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
     $file_path = drupal_realpath($file->uri);
     $file_data_all = islandora_multi_importer_read_filedata($file_path, -1, $offset = 0);
     $this->parameters['data']['headers'] = $file_data_all['headers'];
-
+  
     if ($this->parameters['type'] == 'ZIP') {
       // We don't need to scan the whole zip file,
       // We will try to just fetch the filename comming from the data
@@ -195,7 +195,7 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
           'error' => array_keys($file_data_all),
           'fatal' => t('Provided ZIP file %zipfile can not be opened or is invalid. Dropping all preprocessing.Sorry, can not continued. Code %errorcode.',
                         array(
-                          '%zipfile' => $this->preprocessorParameters['zipfile'],
+                          '%zipfile' => $this->parameters['zipfile'],
                           '%errorcode' => (int)$opened,
                         )
                       ),
@@ -231,9 +231,11 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
        
       // Autogeneration of PID is enabled and a PID column is provided
       // both modes complement/limit each other
-      if (($this->parameters['object_maping']['pidmap_row']['pidtype']) != 1) {
+      // in case of update or any other action that is npt ingest, always check for existing PID
+      if (($this->parameters['object_maping']['pidmap_row']['pidtype']) != 1 || $this->parameters['action']!= 'ingest') {
         // User provided PIDs are not required to respect collection policies, namespace, etc.
         $possiblePID = trim($row[$this->parameters['object_maping']['pidmap_row']['pidmap']]);
+        
         if (!empty($possiblePID)) {
           if (islandora_is_valid_pid($possiblePID)) {
             $objectInfo['pid'] = $possiblePID;
@@ -524,6 +526,8 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
     $existing_object = islandora_object_load($this->id);
     if ($existing_object) {
         // Kim said so. No CMODEL transmutation for now.
+        // But somehow i managed to enable this?
+        // For now, don´t enable this, but we can add a switch?
       if (!in_array($this->objectInfo['cmodel'], $existing_object->models)) {
         $this->currentState = ISLANDORA_BATCH_STATE__ERROR;
         return array('message' => 
@@ -537,7 +541,7 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
       $errors = array();
       $files = array();
       $datastreams = array();
-      $datastreams = $this->getDatastreams($errors, $files);
+      $datastreams = $this->getDatastreamsforUpdate($errors, $files, $existing_object);
       if (!empty($errors)) {
         foreach ($errors as $error) {
           watchdog('islandora_multi_importer', t('There were some issues on Batch set id %setid when generating datastreams for PID %PID: @log', 
@@ -554,14 +558,15 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
         file_save($file);
         file_usage_add($file, 'islandora_batch', 'islandora_batch_object', $this->getBatchId());
       }
-  
+      
       foreach ($datastreams as $ds) {
         $ds_uri = isset($ds['file']) ?
           $ds['file']->uri :
           $ds['datastream_file'];
         error_log($ds_uri);
         
-        if (empty($existing_object[$ds['dsid']])) {
+        if (!isset($existing_object[$ds['dsid']])) {
+          error_log("constructing {$ds['dsid']} for existing {$existing_object->id}");
           $datastream = $this->constructDatastream($ds['dsid'], $ds['control_group']);
           $datastream->label = $ds['label'];
           $datastream->mimetype = $ds['mimetype'];
@@ -579,12 +584,19 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
         
         $datastream->setContentFromFile($ds_uri);
         //redundant you would say, but i like to check twice.
-        if (empty($existing_object[$ds['dsid']])) {
+        if (!isset($existing_object[$ds['dsid']])) {
+          error_log("ingesting {$ds['dsid']} for existing {$existing_object->id}");
           $existing_object->ingestDatastream($datastream);
         }
         //Also, keep a copy in our never to be ingested batchobject
-        $this->ingestDatastream($datastream);
+        if (!isset($this[$ds['dsid']])) {
+          // But only "ingest" if not already there. 
+          // adding relationships to an batch Object
+          // also ingests the ds. Obvious!
+          $this->ingestDatastream($datastream);
+        }
       }
+
       $this->currentState = ISLANDORA_BATCH_STATE__DONE;
       return ISLANDORA_BATCH_STATE__DONE;
     
@@ -827,6 +839,84 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
   }
 
   /**
+   * Acquire base datastreams structure for update.
+   */
+  protected function getDatastreamsforUpdate(&$errors = NULL, &$files = NULL, AbstractObject $existing_object) {
+    module_load_include('inc', 'islandora', 'includes/utilities');
+    module_load_include('inc', 'islandora_multi_importer', 'includes/utilities');
+
+    $datastreams = $this->getDatastreams($errors, $files);
+    if (isset($this['RELS-EXT']) && !empty($this['RELS-EXT'])) {
+      // Does out existing object already have a RELS-EXT? 
+      // I mean, maybe it is not there? ha.
+      if (isset($existing_object['RELS-EXT'])) {
+        
+        $control = array(
+          'control_group' => $existing_object['RELS-EXT']->controlGroup,
+          'mimetype' => $existing_object['RELS-EXT']->mimeType,
+          'label' => $existing_object['RELS-EXT']->label,
+        );
+      } 
+      else {
+        $control = array(
+          'control_group' => $this['RELS-EXT']->controlGroup,
+          'mimetype' => $this['RELS-EXT']->mimeType,
+          'label' => $this['RELS-EXT']->label,
+        );
+      }
+      $newfileNameExt = "RELSEXT_update_". urlencode($this->objectInfo['pid']) . '_' . time() . '.xml';
+      // $tmp_directory = islandora_multi_importer_temp_directory();
+      $newfileExt = file_save_data($this['RELS-EXT']->content, "public://" . $newfileNameExt , FILE_EXISTS_RENAME);
+      $file[] = $newfileExt;
+      $datastreams['RELS-EXT'] = array(
+        'dsid' => 'RELS-EXT',
+        'label' =>  $control['label'],
+        'mimetype' => $control['mimetype'],
+        'datastream_file' => drupal_realpath($newfileExt->uri),
+        'filename' => $newfileNameExt ,
+        'control_group' => $control['control_group'],
+      );
+    }
+    
+    if (isset($this['RELS-INT']) && !empty($this['RELS-INT'])) {
+      // Does out existing object already have a RELS-INT? 
+      // I mean, maybe it is not there? ha x2.
+      if (isset($existing_object['RELS-INT'])) {
+        $control = array(
+          'control_group' => $existing_object['RELS-INT']->controlGroup,
+          'mimetype' => $existing_object['RELS-INT']->mimeType,
+          'label' => $existing_object['RELS-INT']->label,
+        );
+      } 
+      else {
+        $control = array(
+          'control_group' => $this['RELS-INT']->controlGroup,
+          'mimetype' => $this['RELS-INT']->mimeType,
+          'label' => $this['RELS-INT']->label,
+        ); 
+      }
+      dpm($control);
+      $newfileNameInt = "RELSINT_update_". urlencode($this->objectInfo['pid']) . '_' . time() . '.xml';
+      $newfileInt = file_save_data($this['RELS-INT']->content, "public://" . $newfileNameInt, FILE_EXISTS_RENAME);
+      
+      $file[] = $newfileInt;
+      
+      $datastreams['RELS-INT'] = array(
+        'dsid' => 'RELS-INT',
+        'label' =>  $control['label'],
+        'mimetype' => $control['mimetype'],
+        'datastream_file' => drupal_realpath($newfileInt->uri),
+        'filename' => $newfileNameInt,
+        'control_group' => $control['control_group'],
+      );
+    }
+       
+    
+    return $datastreams;
+    }
+
+
+  /**
    * Determine the Mimetype for the given file name.
    *
    * @param string $name
@@ -956,6 +1046,17 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
   }
 
   /**
+   * Fetch a valid parent RELS-EXT relationship for cmodel pair.
+   */
+  protected function setValidRelationshipsforUpdate(AbstractObject $existingobject) {
+    // we need to figure out what diffs
+    // so i will for now just call the same one, but
+    // keep the specific method/wrapper for updates.
+    $this->setValidRelationships();
+  }
+
+
+  /**
    * Add collection and content model relationships.
    */
   public function addRelationships() {
@@ -965,8 +1066,6 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
     else {
       $this->addRelationshipsforIngest(); 
     }
-
-   
   }
   /**
    * Add collection and content model relationships.
@@ -985,10 +1084,16 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
    */
   protected function addRelationshipsforUpdate() {
     // For now will plainly and shamelessly add
-    // new relationships and don´t care about the ones that exist.
+    // new relationships to the DB IngestObject and 
+    // deal with passing those on the preprocessor
     // @TODO check every existing predicate.. so much.
-    $this->setValidRelationships();
-    $this->inheritXacmlPoliciesForUpdate(); 
+    $existing_object = islandora_object_load($this->id);
+    if ($existing_object) {
+      $this->addContentModelRelationships(); // restoring this
+      // just in case i really want to allow Object transmutation?
+      $this->setValidRelationshipsforUpdate($existing_object);
+      $this->inheritXacmlPoliciesForUpdate($existing_object); 
+    }
   }
 
   /**
@@ -1007,13 +1112,12 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
   /**
    * Add inheritXacmlFrom relationship.
    */
-  protected function inheritXacmlPoliciesForUpdate() {
+  protected function inheritXacmlPoliciesForUpdate(AbstractObject $existing_object) {
     if (module_exists('islandora_xacml_editor')) {
       $collection = $this->objectInfo['parent'];
       $parent = islandora_object_load($collection);
       $existing_object = islandora_object_load($this->id);
       if (($parent) && ($existing_object)) {
-        islandora_xacml_editor_apply_parent_policy($existing_object, $parent);
         islandora_xacml_editor_apply_parent_policy($this, $parent);
       }
     }

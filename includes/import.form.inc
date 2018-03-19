@@ -1051,11 +1051,6 @@ function islandora_multi_importer_objectmapping_form($form, &$form_state, $file_
         '#attributes' => '',
         '#description' => t('Select the source field to use as Sequence order index in multi child objects'),
         '#options' => $file_data['headers'],
-        '#states' => array(
-        	'enabled' => array(
-        		':input[name=action]' => array('value' => 'ingest'),
-        	),
-        ),
       ),
       'stub1' => array(
         '#markup' => '&nbsp;',
@@ -1312,6 +1307,11 @@ function islandora_multi_importer_form_submit($form, &$form_state) {
     // Actually in IslandoraMultiBatch all defaults to ingest
     // except for "update" which means updating existing objects.
     $parameters['action'] = isset($form_state['values']['action']) ? $form_state['values']['action'] : 'ingest';
+    // LAST CHECK. IF ACTION is not ingest, we need to make sure that 
+    // NO automatic PID is generated.
+    $parameters['object_maping']['pidmap_row']['pidtype'] = $parameters['action'] != 'ingest' ? 0 : $parameters['object_maping']['pidmap_row']['pidtype'];
+   
+    
     
     $connection = islandora_get_tuque_connection();
     // kpr($parameters);
