@@ -1142,7 +1142,7 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
       // other collection previously (or compound!), that is preserved
       // but the new membership is maintained.
       }
-      if ($relsext_mode == 'MERGE') {
+      if ($relsext_mode != 'NEW') {
         $this->copyRels($existing_object);
       }
     }
