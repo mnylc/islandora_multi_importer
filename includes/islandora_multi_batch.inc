@@ -847,10 +847,9 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
 
     $datastreams = $this->getDatastreams($errors, $files);
     if (isset($this['RELS-EXT']) && !empty($this['RELS-EXT'])) {
-      // Does out existing object already have a RELS-EXT? 
+      // Does our existing object already have a RELS-EXT? 
       // I mean, maybe it is not there? ha.
       if (isset($existing_object['RELS-EXT'])) {
-        
         $control = array(
           'control_group' => $existing_object['RELS-EXT']->controlGroup,
           'mimetype' => $existing_object['RELS-EXT']->mimeType,
@@ -914,7 +913,6 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
     
     return $datastreams;
     }
-
 
   /**
    * Determine the Mimetype for the given file name.
@@ -983,6 +981,48 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
 
     // XXX: Suppressing warnings regarding unregistered prefixes.
     return $processor->transformToXML($input);
+  }
+
+  /**
+   * Copies relevant RELS-EXT from to be updated object.
+   *
+   * @param AbstractObject $sourceObject
+   *   An Object with properties we want to copy over.
+   */
+  protected function copyRels(AbstractObject $sourceObject) {
+    $rels = $sourceObject->relationships->get();
+    foreach ($rels as $relationship) {
+      if (($relationship['predicate']['namespace'] != "info:fedora/fedora-system:def/model#") && 
+      ($relationship['predicate']['namespace']!="info:fedora/fedora-system:def/relations-external#")) {
+        $reltocheck = array();
+        // FEDORA_RELS_EXT_URI.
+        $reltocheck = $this->relationships->get($relationship['predicate']['namespace'],$relationship['predicate']['value']);
+        if (empty($reltocheck)) {
+          $this->relationships->add($relationship['predicate']['namespace'],$relationship['predicate']['value'], $relationship['object']['value'], $relationship['object']['literal']);
+        }
+      }
+    }
+  }
+
+  /**
+   * Copies fedora RELS-EXT from to be updated object.
+   *
+   * @param AbstractObject $sourceObject
+   *   An Object with properties we want to copy over.
+  */
+  protected function copyFedoraRels(AbstractObject $sourceObject) {
+    // All this stuff will be put before the new ones
+    // We can add a switch!
+    $rels = $sourceObject->relationships->get("info:fedora/fedora-system:def/relations-external#");
+    foreach ($rels as $relationship) {
+      $reltocheck = array();
+      // FEDORA_RELS_EXT_URI.
+      $reltocheck = $this->relationships->get($relationship['predicate']['namespace'], $relationship['predicate']['value'], $relationship['object']['value']);
+      // Only copy if not present in batchObject and value of existing is different from new parent
+      if ((empty($reltocheck)) && ($relationship['object']['value']!= $this->objectInfo['parent'] || $relsext_mode == 'OLD')) {
+        $this->relationships->add($relationship['predicate']['namespace'],$relationship['predicate']['value'], $relationship['object']['value'], $relationship['object']['literal']);
+      }
+    }
   }
 
   /**
@@ -1083,16 +1123,28 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
    *  Only valid when ingesting new ones.
    */
   protected function addRelationshipsforUpdate() {
-    // For now will plainly and shamelessly add
-    // new relationships to the DB IngestObject and 
-    // deal with passing those on the preprocessor
-    // @TODO check every existing predicate.. so much.
     $existing_object = islandora_object_load($this->id);
+    $relsext_mode == isset($this->preprocessorParameters['object_maping']['relsext_row']['relsext_mode']) ? $this->preprocessorParameters['object_maping']['relsext_row']['relsext_mode'] : 'NEW';
     if ($existing_object) {
-      $this->addContentModelRelationships(); // restoring this
       // just in case i really want to allow Object transmutation?
-      $this->setValidRelationshipsforUpdate($existing_object);
-      $this->inheritXacmlPoliciesForUpdate($existing_object); 
+      $this->addContentModelRelationships(); 
+      // Copy existing member relationships over;
+      if ($relsext_mode != 'NEW') {
+        $this->copyFedoraRels();
+      }
+      if ($relsext_mode != 'OLD') {
+      // Sets new member relatiionships over
+        $this->setValidRelationshipsforUpdate($existing_object);
+      // sets scratch inheritance (new ones only)
+        $this->inheritXacmlPoliciesForUpdate($existing_object); 
+      // Copies existing relationships to batchObject. Pushing them at the end.
+      // ::copyFedoraRels run first to make sure that if it belongs to any 
+      // other collection previously (or compound!), that is preserved
+      // but the new membership is maintained.
+      }
+      if ($relsext_mode == 'MERGE') {
+        $this->copyRels($existing_object);
+      }
     }
   }
 
