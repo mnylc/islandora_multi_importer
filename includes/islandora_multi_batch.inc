@@ -1142,7 +1142,7 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
         $this->copyFedoraRels($existing_object);
       }
       if ($relsext_mode != 'OLD') {
-      // Sets new member relatiionships over
+      // Sets new member relationships over
         $this->setValidRelationshipsforUpdate($existing_object);
       // sets scratch inheritance (new ones only)
         $this->inheritXacmlPoliciesForUpdate($existing_object); 
