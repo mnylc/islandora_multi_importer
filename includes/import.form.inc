@@ -1077,6 +1077,10 @@ function islandora_multi_importer_objectmapping_form($form, &$form_state, $file_
     ),
     'relsext_row' => array(
       '#id' => drupal_html_id('islandora-multi-relsext'),
+      '#states' => array(
+      	'visible' => array(
+      		':input[name=action]' => array('value' => 'update'),
+      	)
       'label' => array(
         '#markup' => t('RELS-EXT behaviour'),
       ),

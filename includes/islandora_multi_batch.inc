@@ -1013,6 +1013,7 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
   protected function copyFedoraRels(AbstractObject $sourceObject) {
     // All this stuff will be put before the new ones
     // We can add a switch!
+    $relsext_mode = isset($this->preprocessorParameters['object_maping']['relsext_row']['relsext_mode']) ? $this->preprocessorParameters['object_maping']['relsext_row']['relsext_mode'] : 'NEW';
     $rels = $sourceObject->relationships->get("info:fedora/fedora-system:def/relations-external#");
     foreach ($rels as $relationship) {
       $reltocheck = array();
@@ -1124,7 +1125,7 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
    */
   protected function addRelationshipsforUpdate() {
     $existing_object = islandora_object_load($this->id);
-    $relsext_mode == isset($this->preprocessorParameters['object_maping']['relsext_row']['relsext_mode']) ? $this->preprocessorParameters['object_maping']['relsext_row']['relsext_mode'] : 'NEW';
+    $relsext_mode = isset($this->preprocessorParameters['object_maping']['relsext_row']['relsext_mode']) ? $this->preprocessorParameters['object_maping']['relsext_row']['relsext_mode'] : 'NEW';
     if ($existing_object) {
       // just in case i really want to allow Object transmutation?
       $this->addContentModelRelationships(); 
