@@ -239,6 +239,14 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
         if (!empty($possiblePID)) {
           if (islandora_is_valid_pid($possiblePID)) {
             $objectInfo['pid'] = $possiblePID;
+            // Now be more strict for action = update
+            if ($this->parameters['action'] == 'update') {
+              $existing_object = islandora_object_load($possiblePID);
+              if (!$existing_object) {
+                unset($objectInfo);
+                $invalid = $invalid + array($index => $index);
+              }
+            }  
           }
         }
         if (!isset($objectInfo['pid'])) {
@@ -1131,7 +1139,7 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
       $this->addContentModelRelationships(); 
       // Copy existing member relationships over;
       if ($relsext_mode != 'NEW') {
-        $this->copyFedoraRels();
+        $this->copyFedoraRels($existing_object);
       }
       if ($relsext_mode != 'OLD') {
       // Sets new member relatiionships over
