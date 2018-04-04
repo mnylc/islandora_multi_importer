@@ -1075,6 +1075,39 @@ function islandora_multi_importer_objectmapping_form($form, &$form_state, $file_
         ),
       ),
     ),
+    'relsext_row' => array(
+      '#id' => drupal_html_id('islandora-multi-relsext'),
+      '#states' => array(
+      	'visible' => array(
+      		':input[name=action]' => array('value' => 'update'),
+      	),
+      ),    
+      'label' => array(
+        '#markup' => t('RELS-EXT behaviour'),
+      ),
+      'relsext_mode' => array(
+        '#type' => 'select',
+        '#attributes' => '',
+        '#description' => t('Select the way you would like to handle predicates for your existing objects'),
+        '#options' => array(
+          'NEW' => 'Only use new Predicates, nothing gets copied over',
+          'MERGE' => 'Only use new Membership Predicates, discard old membership ones but keep anything else',
+          'OLD' => 'Never touch my existing predicates, new cmodel and new parent objects will be ignored',
+        ),
+        '#default_value' => 'NEW',
+        '#states' => array(
+        	'visible' => array(
+        		':input[name=action]' => array('value' => 'update'),
+        	),
+        ),
+      ),
+      'stub' => array(
+        '#markup' => '&nbsp;',
+      ),
+      'stub2' => array(
+        '#markup' => '&nbsp;',
+      ),
+    ),
   );
   $form['objectmapping'] = array(
     '#prefix' => '<div id="islandora-multi-basemapping">',
@@ -1302,7 +1335,7 @@ function islandora_multi_importer_form_submit($form, &$form_state) {
       $parameters = $form_state['storage']['values']['step4'];
       $parameters['source_binaries'] = $form_state['values']['last']['file2'];
     }
-    
+
     // Default action will be ingest.
     // Actually in IslandoraMultiBatch all defaults to ingest
     // except for "update" which means updating existing objects.
@@ -1310,9 +1343,10 @@ function islandora_multi_importer_form_submit($form, &$form_state) {
     // LAST CHECK. IF ACTION is not ingest, we need to make sure that 
     // NO automatic PID is generated.
     $parameters['object_maping']['pidmap_row']['pidtype'] = $parameters['action'] != 'ingest' ? 0 : $parameters['object_maping']['pidmap_row']['pidtype'];
-   
-    
-    
+
+    // Predicates a la carte. 
+    $parameters['object_maping']['relsext_row']['relsext_mode'] = $parameters['action'] == 'ingest' ? 'NEW' : $parameters['object_maping']['relsext_row']['relsext_mode'];
+
     $connection = islandora_get_tuque_connection();
     // kpr($parameters);
     $preprocessor = new IslandoraMultiBatch($connection, $parameters);
@@ -1324,11 +1358,11 @@ function islandora_multi_importer_form_submit($form, &$form_state) {
     //@TODO: switch needed here in case we are dealing with FULL CRUD and not only new objects
     // Since those will basically run differently.
     $file = file_load($form_state['storage']['values']['step1']['file']);
+    $file->status = ~FILE_STATUS_PERMANENT; // Keep the uploaded spreadsheet temporary
+    file_save($file);
     file_usage_add($file, 'islandora_batch', 'islandora_batch_set', $setID);
-
-    $batchsetid = $preprocessor->getSetId();
-        
-    drupal_set_message(t('You are all set( <a href="@setreport">id = @set</a>)!', array('@set' => $batchsetid, '@setreport'=>url('admin/reports/islandora_batch_queue/'.$batchsetid))), 'status');
+ 
+    drupal_set_message(t('You are all set( <a href="@setreport">id = @set</a>)!', array('@set' => $setID, '@setreport'=>url('admin/reports/islandora_batch_queue/'.$setID))), 'status');
     
     $theProcessedInfo = $preprocessor->getProcessedObjectsInfo();
     $good_objects = format_plural(count($theProcessedInfo['success']), '%num Objects added successfully to set', '%num Object added successfully to set', array('%num' => count($theProcessedInfo['success'])));

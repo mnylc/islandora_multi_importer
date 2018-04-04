@@ -206,7 +206,9 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
       }
       else {
         // Add this ZIP to the file usage table. That way it will stay even if drupal crons it out.
-        file_usage_add($zipfile, 'islandora_batch', 'islandora_batch_object', $this->setId);
+        $zipfile->status = ~FILE_STATUS_PERMANENT;
+        file_save($zipfile);
+        file_usage_add($zipfile, 'islandora_batch', 'islandora_batch_set', $this->getSetId());
       }
     }
 
@@ -239,6 +241,14 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
         if (!empty($possiblePID)) {
           if (islandora_is_valid_pid($possiblePID)) {
             $objectInfo['pid'] = $possiblePID;
+            // Now be more strict for action = update
+            if ($this->parameters['action'] == 'update') {
+              $existing_object = islandora_object_load($possiblePID);
+              if (!$existing_object) {
+                unset($objectInfo);
+                $invalid = $invalid + array($index => $index);
+              }
+            }  
           }
         }
         if (!isset($objectInfo['pid'])) {
@@ -493,7 +503,7 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
     }
     
     foreach ($files as $file) {
-      $file->status &= ~FILE_STATUS_PERMANENT;
+      $file->status &= ~FILE_STATUS_PERMANENT; // Lets make all files temporary but trust file_usage to keep them around
       file_save($file);
       file_usage_add($file, 'islandora_batch', 'islandora_batch_object', $this->getBatchId());
     }
@@ -544,17 +554,17 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
       $datastreams = $this->getDatastreamsforUpdate($errors, $files, $existing_object);
       if (!empty($errors)) {
         foreach ($errors as $error) {
-          watchdog('islandora_multi_importer', t('There were some issues on Batch set id %setid when generating datastreams for PID %PID: @log', 
+          watchdog('islandora_multi_importer', t('There were some issues on Batch set id @setid when generating datastreams for PID @PID: @log', 
             array(
-              '%setid' => $this->getBatchId(),
-              '%pid' => $this->id,
+              '@setid' => $this->getBatchId(),
+              '@pid' => $this->id,
               '@log' => $error,
             )), WATCHDOG_NOTICE
           );
         }
       }
       foreach ($files as $file) {
-        $file->status &= ~FILE_STATUS_PERMANENT;
+        $file->status &= ~FILE_STATUS_PERMANENT; // Lets make this temporary but trust file_usage to keep them around
         file_save($file);
         file_usage_add($file, 'islandora_batch', 'islandora_batch_object', $this->getBatchId());
       }
@@ -847,10 +857,9 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
 
     $datastreams = $this->getDatastreams($errors, $files);
     if (isset($this['RELS-EXT']) && !empty($this['RELS-EXT'])) {
-      // Does out existing object already have a RELS-EXT? 
+      // Does our existing object already have a RELS-EXT? 
       // I mean, maybe it is not there? ha.
       if (isset($existing_object['RELS-EXT'])) {
-        
         $control = array(
           'control_group' => $existing_object['RELS-EXT']->controlGroup,
           'mimetype' => $existing_object['RELS-EXT']->mimeType,
@@ -895,7 +904,7 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
           'label' => $this['RELS-INT']->label,
         ); 
       }
-      dpm($control);
+   
       $newfileNameInt = "RELSINT_update_". urlencode($this->objectInfo['pid']) . '_' . time() . '.xml';
       $newfileInt = file_save_data($this['RELS-INT']->content, "public://" . $newfileNameInt, FILE_EXISTS_RENAME);
       
@@ -914,7 +923,6 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
     
     return $datastreams;
     }
-
 
   /**
    * Determine the Mimetype for the given file name.
@@ -983,6 +991,49 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
 
     // XXX: Suppressing warnings regarding unregistered prefixes.
     return $processor->transformToXML($input);
+  }
+
+  /**
+   * Copies relevant RELS-EXT from to be updated object.
+   *
+   * @param AbstractObject $sourceObject
+   *   An Object with properties we want to copy over.
+   */
+  protected function copyRels(AbstractObject $sourceObject) {
+    $rels = $sourceObject->relationships->get();
+    foreach ($rels as $relationship) {
+      if (($relationship['predicate']['namespace'] != "info:fedora/fedora-system:def/model#") && 
+      ($relationship['predicate']['namespace']!="info:fedora/fedora-system:def/relations-external#")) {
+        $reltocheck = array();
+        // FEDORA_RELS_EXT_URI.
+        $reltocheck = $this->relationships->get($relationship['predicate']['namespace'],$relationship['predicate']['value']);
+        if (empty($reltocheck)) {
+          $this->relationships->add($relationship['predicate']['namespace'],$relationship['predicate']['value'], $relationship['object']['value'], $relationship['object']['literal']);
+        }
+      }
+    }
+  }
+
+  /**
+   * Copies fedora RELS-EXT from to be updated object.
+   *
+   * @param AbstractObject $sourceObject
+   *   An Object with properties we want to copy over.
+  */
+  protected function copyFedoraRels(AbstractObject $sourceObject) {
+    // All this stuff will be put before the new ones
+    // We can add a switch!
+    $relsext_mode = isset($this->preprocessorParameters['object_maping']['relsext_row']['relsext_mode']) ? $this->preprocessorParameters['object_maping']['relsext_row']['relsext_mode'] : 'NEW';
+    $rels = $sourceObject->relationships->get("info:fedora/fedora-system:def/relations-external#");
+    foreach ($rels as $relationship) {
+      $reltocheck = array();
+      // FEDORA_RELS_EXT_URI.
+      $reltocheck = $this->relationships->get($relationship['predicate']['namespace'], $relationship['predicate']['value'], $relationship['object']['value']);
+      // Only copy if not present in batchObject and value of existing is different from new parent
+      if ((empty($reltocheck)) && ($relationship['object']['value']!= $this->objectInfo['parent'] || $relsext_mode == 'OLD')) {
+        $this->relationships->add($relationship['predicate']['namespace'],$relationship['predicate']['value'], $relationship['object']['value'], $relationship['object']['literal']);
+      }
+    }
   }
 
   /**
@@ -1083,16 +1134,28 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
    *  Only valid when ingesting new ones.
    */
   protected function addRelationshipsforUpdate() {
-    // For now will plainly and shamelessly add
-    // new relationships to the DB IngestObject and 
-    // deal with passing those on the preprocessor
-    // @TODO check every existing predicate.. so much.
     $existing_object = islandora_object_load($this->id);
+    $relsext_mode = isset($this->preprocessorParameters['object_maping']['relsext_row']['relsext_mode']) ? $this->preprocessorParameters['object_maping']['relsext_row']['relsext_mode'] : 'NEW';
     if ($existing_object) {
-      $this->addContentModelRelationships(); // restoring this
       // just in case i really want to allow Object transmutation?
-      $this->setValidRelationshipsforUpdate($existing_object);
-      $this->inheritXacmlPoliciesForUpdate($existing_object); 
+      $this->addContentModelRelationships(); 
+      // Copy existing member relationships over;
+      if ($relsext_mode != 'NEW') {
+        $this->copyFedoraRels($existing_object);
+      }
+      if ($relsext_mode != 'OLD') {
+      // Sets new member relationships over
+        $this->setValidRelationshipsforUpdate($existing_object);
+      // sets scratch inheritance (new ones only)
+        $this->inheritXacmlPoliciesForUpdate($existing_object); 
+      // Copies existing relationships to batchObject. Pushing them at the end.
+      // ::copyFedoraRels run first to make sure that if it belongs to any 
+      // other collection previously (or compound!), that is preserved
+      // but the new membership is maintained.
+      }
+      if ($relsext_mode != 'NEW') {
+        $this->copyRels($existing_object);
+      }
     }
   }
 

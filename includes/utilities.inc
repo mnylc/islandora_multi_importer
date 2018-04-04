@@ -380,7 +380,7 @@ function islandora_multi_importer_csv_save(array $data) {
     fclose($fh);
     // Notify the filesystem of the size change
     $file->filesize = filesize($file->uri);
-    $file->status = FILE_STATUS_PERMANENT;
+    $file->status = ~FILE_STATUS_PERMANENT;
     file_save($file);
       
     // Tell the user where we stuck it
