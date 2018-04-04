@@ -1358,11 +1358,11 @@ function islandora_multi_importer_form_submit($form, &$form_state) {
     //@TODO: switch needed here in case we are dealing with FULL CRUD and not only new objects
     // Since those will basically run differently.
     $file = file_load($form_state['storage']['values']['step1']['file']);
+    $file->status = ~FILE_STATUS_PERMANENT; // Keep the uploaded spreadsheet temporary
+    file_save($file);
     file_usage_add($file, 'islandora_batch', 'islandora_batch_set', $setID);
-
-    $batchsetid = $preprocessor->getSetId();
-        
-    drupal_set_message(t('You are all set( <a href="@setreport">id = @set</a>)!', array('@set' => $batchsetid, '@setreport'=>url('admin/reports/islandora_batch_queue/'.$batchsetid))), 'status');
+ 
+    drupal_set_message(t('You are all set( <a href="@setreport">id = @set</a>)!', array('@set' => $setID, '@setreport'=>url('admin/reports/islandora_batch_queue/'.$setID))), 'status');
     
     $theProcessedInfo = $preprocessor->getProcessedObjectsInfo();
     $good_objects = format_plural(count($theProcessedInfo['success']), '%num Objects added successfully to set', '%num Object added successfully to set', array('%num' => count($theProcessedInfo['success'])));

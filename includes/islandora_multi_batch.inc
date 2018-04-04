@@ -206,7 +206,9 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
       }
       else {
         // Add this ZIP to the file usage table. That way it will stay even if drupal crons it out.
-        file_usage_add($zipfile, 'islandora_batch', 'islandora_batch_object', $this->setId);
+        $zipfile->status = ~FILE_STATUS_PERMANENT;
+        file_save($zipfile);
+        file_usage_add($zipfile, 'islandora_batch', 'islandora_batch_set', $this->getSetId());
       }
     }
 
@@ -501,7 +503,7 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
     }
     
     foreach ($files as $file) {
-      $file->status &= ~FILE_STATUS_PERMANENT;
+      $file->status &= ~FILE_STATUS_PERMANENT; // Lets make all files temporary but trust file_usage to keep them around
       file_save($file);
       file_usage_add($file, 'islandora_batch', 'islandora_batch_object', $this->getBatchId());
     }
@@ -552,17 +554,17 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
       $datastreams = $this->getDatastreamsforUpdate($errors, $files, $existing_object);
       if (!empty($errors)) {
         foreach ($errors as $error) {
-          watchdog('islandora_multi_importer', t('There were some issues on Batch set id %setid when generating datastreams for PID %PID: @log', 
+          watchdog('islandora_multi_importer', t('There were some issues on Batch set id @setid when generating datastreams for PID @PID: @log', 
             array(
-              '%setid' => $this->getBatchId(),
-              '%pid' => $this->id,
+              '@setid' => $this->getBatchId(),
+              '@pid' => $this->id,
               '@log' => $error,
             )), WATCHDOG_NOTICE
           );
         }
       }
       foreach ($files as $file) {
-        $file->status &= ~FILE_STATUS_PERMANENT;
+        $file->status &= ~FILE_STATUS_PERMANENT; // Lets make this temporary but trust file_usage to keep them around
         file_save($file);
         file_usage_add($file, 'islandora_batch', 'islandora_batch_object', $this->getBatchId());
       }
@@ -902,7 +904,7 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
           'label' => $this['RELS-INT']->label,
         ); 
       }
-      dpm($control);
+   
       $newfileNameInt = "RELSINT_update_". urlencode($this->objectInfo['pid']) . '_' . time() . '.xml';
       $newfileInt = file_save_data($this['RELS-INT']->content, "public://" . $newfileNameInt, FILE_EXISTS_RENAME);
       
