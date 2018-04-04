@@ -1084,6 +1084,11 @@ function islandora_multi_importer_objectmapping_form($form, &$form_state, $file_
       ),    
       'label' => array(
         '#markup' => t('RELS-EXT behaviour'),
+        '#states' => array(
+          'visible' => array(
+            ':input[name=action]' => array('value' => 'update'),
+          ),
+        ),
       ),
       'relsext_mode' => array(
         '#type' => 'select',
