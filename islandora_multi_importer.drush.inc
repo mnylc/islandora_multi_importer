@@ -29,14 +29,14 @@ function islandora_multi_importer_drush_command() {
     'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_LOGIN,
   );
   
-  $items['islandora-multi-importer-acejs'] = array(
-    'callback' => 'drush_islandora_multi_importer_acejs',
+  $items['islandora-multi-importer-acejs-plugin'] = array(
+    'callback' => 'drush_islandora_multi_importer_acejs_plugin',
     'description' => dt('Download and install the Ace Code Hightligher JS Library.'),
     'bootstrap' => DRUSH_BOOTSTRAP_DRUSH,
     'arguments' => array(
       'path' => dt('Optional. A path where to install the Ace Code Hightligher JS. If omitted Drush will use the default location.'),
     ),
-    'aliases' => array('imiacejs'),
+    'aliases' => array('imi-aceplugin'),
   );
   
   return $items;
@@ -71,10 +71,21 @@ function drush_islandora_multi_importer_zeromqboot() {
   $boot = islandora_multi_importer_zeroMQ_boot($connection);
 }
 
+
+/**
+ * Implements drush_MODULE_pre_pm_enable().
+ */
+function drush_islandora_multi_importer_pre_pm_enable() {
+   $modules = drush_get_context('PM_ENABLE_MODULES');
+   if (in_array('islandora_multi_importer', $modules) && !drush_get_option('skip')) {
+     drush_islandora_multi_importer_acejs_plugin();
+   }
+}
+
 /**
  * Command to download the The Ace JS library.
  */
-function drush_islandora_multi_importer_acejs() {
+function drush_islandora_multi_importer_acejs_plugin() {
   $args = func_get_args();
   if (!empty($args[0])) {
     $path = $args[0];
@@ -82,31 +93,52 @@ function drush_islandora_multi_importer_acejs() {
   else {
     $path = _drush_core_directory("@site:sites/all/libraries");
   }
-  drush_log($path);
-  drush_log(ACEJS_DOWNLOAD_URI);
-  drush_log(is_writable($path));
-  // Error if destination does not exist.
-  // Lets avoid playing sysadmins with drush.
-  clearstatcache();
+
+  // Create the path if it does not exist.
   if (!is_dir($path)) {
-    drush_log(dt('Drush was unable to install the Ace JS Library to @path', array('@path' => $path)), 'error');
-    return;
-  }
-  else {
-  // Download the library.
-    $filepath = drush_download_file(ACEJS_DOWNLOAD_URI, $path);
-    drush_log($filepath);
-    if ($filepath = drush_download_file(ACEJS_DOWNLOAD_URI, $path)) {
-      // Decompress the zip archive.
-      $targetdir = $filepath ."/ace";
-      drush_tarball_extract($filepath, $targetdir);
-    }
+    drush_op('mkdir', $path);
+    drush_log(dt('Directory @path was created', array('@path' => $path)), 'notice');
   }
 
-  if (is_dir($targetdir)) {
-    drush_log(dt('Ace JS Library has been installed in @path', array('@path' => $path)), 'success');
+  // Download ace plugin only if path is writable.
+  if (is_writable($path)) {
+    // Set the directory to the download location.
+    $olddir = getcwd();
+    chdir($path);
+
+    // Download the zip archive
+    if ($filepath = drush_download_file(ACEJS_DOWNLOAD_URI)) {
+      $filename = basename($filepath);
+      $dirname = "ace-".basename($filepath, '.zip');
+
+      // Remove any existing Colorbox plugin directory.
+      if (is_dir($dirname) || is_dir('acejs')) {
+        drush_delete_dir($dirname, TRUE);
+        drush_delete_dir('acejs', TRUE);
+        drush_log(dt('A existing ACE JS plugin was deleted from @path', array('@path' => $path)), 'notice');
+      }
+
+      // Decompress the zip archive
+      drush_tarball_extract($filename);
+
+      // Change the directory name to "colorbox" if needed.
+      if ($dirname != 'acejs') {
+        drush_move_dir($dirname, 'acejs', TRUE);
+        $dirname = 'acejs';
+      }
+    }
+
+    if (is_dir($dirname)) {
+      drush_log(dt('Ace JS plugin has been installed in @path', array('@path' => $path)), 'success');
+    }
+    else {
+      drush_log(dt('Drush was unable to install the Ace JS plugin to @path', array('@path' => $path)), 'error');
+    }
+
+    // Set working directory back to the previous working directory.
+    chdir($olddir);
   }
   else {
-    drush_log(dt('Drush was unable to install the Ace JS Library to @path', array('@path' => $path)), 'error');
+    drush_log(dt('Drush was unable to install the Ace JS plugin because @path is not writable.', array('@path' => $path)), 'warning');
   }
 }
