@@ -124,14 +124,14 @@ function drush_islandora_multi_importer_acejs_plugin() {
           drush_move_dir($dirname, 'acejs', TRUE);
           $dirname = 'acejs';
         if (is_dir($dirname)) {
-          drush_log(dt('Ace JS plugin has been installed in @path', array('@path' => $dirname)), 'success');
+          drush_log(dt('Ace JS plugin has been installed in @path', array('@path' => $filepath."/".$dirname)), 'success');
         }
         else {
-          drush_log(dt('Drush was unable to install the Ace JS plugin to @path', array('@path' => $dirname)), 'error');
+          drush_log(dt('Drush was unable to install the Ace JS plugin to @path', array('@path' =>  $filepath."/".$dirname)), 'error');
         }
       }
       else {
-        drush_log(dt('Drush was unable to extract the download Ace JS plugin to @path', array('@path' => $dirname)), 'error');
+        drush_log(dt('Drush was unable to extract the download Ace JS plugin to @path', array('@path' => $filepath)), 'error');
         //Extraction failed
       }  
 
