@@ -84,10 +84,11 @@ function drush_islandora_multi_importer_acejs() {
   }
   drush_log($path);
   drush_log(ACEJS_DOWNLOAD_URI);
+  drush_log(is_writable($path));
   // Error if destination does not exist.
   // Lets avoid playing sysadmins with drush.
   clearstatcache();
-  if (!is_dir($path) || !is_writable($path) ) {
+  if (!is_dir($path)) {
     drush_log(dt('Drush was unable to install the Ace JS Library to @path', array('@path' => $path)), 'error');
     return;
   }
