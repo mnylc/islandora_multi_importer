@@ -82,7 +82,7 @@ function drush_islandora_multi_importer_acejs() {
   else {
     $path = _drush_core_directory("@site:sites/all/libraries");
   }
-
+  drush_log($path);
   // Error if destination does not exist.
   // Lets avoid playing sysadmins with drush.
   if (!is_dir($path) || !is_writable($path) ) {
