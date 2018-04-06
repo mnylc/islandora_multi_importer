@@ -83,8 +83,8 @@ function drush_islandora_multi_importer_pre_pm_enable() {
 }
 
 /**
- * Command to download the The Ace JS library.
- */
+* Command to download the The Ace JS library.
+*/
 function drush_islandora_multi_importer_acejs_plugin() {
   $args = func_get_args();
   if (!empty($args[0])) {
@@ -109,34 +109,30 @@ function drush_islandora_multi_importer_acejs_plugin() {
     // Download the zip archive
     if ($filepath = drush_download_file(ACEJS_DOWNLOAD_URI)) {
       $filename = basename($filepath);
-      $dirname = "ace-".basename($filepath, '.zip');
-
-      // Remove any existing Colorbox plugin directory.
-      if (is_dir($dirname) || is_dir('acejs')) {
-        drush_delete_dir($dirname, TRUE);
+      $dirname = $path."/acejs";
+      // Remove any existing ace js plugin directory.
+      if (is_dir('acejs')) {
         drush_delete_dir('acejs', TRUE);
         drush_log(dt('A existing ACE JS plugin was deleted from @path', array('@path' => $path)), 'notice');
       }
-
+      
       // Decompress the zip archive
-      drush_tarball_extract($filename);
-
-      // Change the directory name to "colorbox" if needed.
-      if ($dirname != 'acejs') {
-        drush_move_dir($dirname, 'acejs', TRUE);
-        $dirname = 'acejs';
+      if (drush_tarball_extract($filename, $path."/acejs")) {
+        if (is_dir($dirname)) {
+          drush_log(dt('Ace JS plugin has been installed in @path', array('@path' => $dirname)), 'success');
+        }
+        else {
+          drush_log(dt('Drush was unable to install the Ace JS plugin to @path', array('@path' => $dirname)), 'error');
+        }
       }
-    }
+      else {
+        drush_log(dt('Drush was unable to extract the download Ace JS plugin to @path', array('@path' => $dirname)), 'error');
+        //Extraction failed
+      }  
 
-    if (is_dir($dirname)) {
-      drush_log(dt('Ace JS plugin has been installed in @path', array('@path' => $path)), 'success');
+      // Set working directory back to the previous working directory.
+      chdir($olddir);
     }
-    else {
-      drush_log(dt('Drush was unable to install the Ace JS plugin to @path', array('@path' => $path)), 'error');
-    }
-
-    // Set working directory back to the previous working directory.
-    chdir($olddir);
   }
   else {
     drush_log(dt('Drush was unable to install the Ace JS plugin because @path is not writable.', array('@path' => $path)), 'warning');
