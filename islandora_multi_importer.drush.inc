@@ -83,6 +83,7 @@ function drush_islandora_multi_importer_acejs() {
     $path = _drush_core_directory("@site:sites/all/libraries");
   }
   drush_log($path);
+  drush_log(ACEJS_DOWNLOAD_URI);
   // Error if destination does not exist.
   // Lets avoid playing sysadmins with drush.
   if (!is_dir($path) || !is_writable($path) ) {
@@ -91,10 +92,12 @@ function drush_islandora_multi_importer_acejs() {
   }
   else {
   // Download the library.
+    $filepath = drush_download_file(ACEJS_DOWNLOAD_URI, $path);
+    drush_log($filepath);
     if ($filepath = drush_download_file(ACEJS_DOWNLOAD_URI, $path)) {
       // Decompress the zip archive.
       $targetdir = $filepath ."/ace";
-      drush_tarball_extract($filepath, $targetdir); 
+      drush_tarball_extract($filepath, $targetdir);
     }
   }
 
