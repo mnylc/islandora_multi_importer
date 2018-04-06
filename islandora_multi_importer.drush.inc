@@ -9,7 +9,8 @@
 /**
  * The Ace Code Highlight JS library.
  */
-define('ACEJS_DOWNLOAD_URI', 'https://github.com/ajaxorg/ace-builds/archive/v1.3.3.zip');
+define('ACEJS_DOWNLOAD_URI', 'https://github.com/ajaxorg/ace-builds/archive/');
+define('ACEJS_RELEASE_VERSION', '1.3.3');
 
 
 /**
@@ -107,17 +108,21 @@ function drush_islandora_multi_importer_acejs_plugin() {
     chdir($path);
 
     // Download the zip archive
-    if ($filepath = drush_download_file(ACEJS_DOWNLOAD_URI)) {
+    if ($filepath = drush_download_file(ACEJS_DOWNLOAD_URI."v".ACEJS_RELEASE_VERSION.".zip")) {
       $filename = basename($filepath);
-      $dirname = $path."/acejs";
+      $dirname = "ace-builds-".ACEJS_RELEASE_VERSION;
       // Remove any existing ace js plugin directory.
-      if (is_dir('acejs')) {
+      if (is_dir('acejs') || is_dir($dirname)) {
         drush_delete_dir('acejs', TRUE);
-        drush_log(dt('A existing ACE JS plugin was deleted from @path', array('@path' => $path)), 'notice');
+        drush_delete_dir($dirname, TRUE);
+        drush_log(dt('An existing ACE JS plugin was deleted from @path', array('@path' => $path)), 'notice');
       }
       
       // Decompress the zip archive
-      if (drush_tarball_extract($filename, $path."/acejs")) {
+      if (drush_tarball_extract($filename, $path)) {
+        // Change the directory name to "openseadragon" if needed
+          drush_move_dir($dirname, 'acejs', TRUE);
+          $dirname = 'acejs';
         if (is_dir($dirname)) {
           drush_log(dt('Ace JS plugin has been installed in @path', array('@path' => $dirname)), 'success');
         }
