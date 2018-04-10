@@ -976,6 +976,9 @@ function islandora_multi_importer_cmodeldsmapping_form(array &$form_state, array
  * Object properties and behaviour mapping form.
  */
 function islandora_multi_importer_objectmapping_form($form, &$form_state, $file_data) {
+
+  $whataction = isset($form_state['values']['action']) ? $form_state['values']['action'] : "ingest";
+
   $rows = array(
     'pidmap_row' => array(
       '#id' => drupal_html_id('islandora-multi-parentmap'),
@@ -1083,7 +1086,7 @@ function islandora_multi_importer_objectmapping_form($form, &$form_state, $file_
       	),
       ),    
       'label' => array(
-        '#markup' => t('RELS-EXT behaviour'),
+        '#markup' => $whataction == "update"? t('RELS-EXT behaviour') : "",
         '#states' => array(
           'visible' => array(
             ':input[name=action]' => array('value' => 'update'),
