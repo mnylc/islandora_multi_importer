@@ -806,17 +806,20 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
                   error_log('can not open ' . $this->preprocessorParameters['zipfile'] . ' with code:'. (int)$opened);
                 }
               }
+
+              // This will handle all cases, except ZIP.
+
               else {
-                // This will handle all cases, except ZIP.
                 $fileurl = islandora_multi_importer_remote_file_get(trim($this->objectInfo['data'][$method[1]]));
                 if ($fileurl) {
                   $themime = $this->getMimetype(drupal_basename($fileurl));
-                      if ($dsid == "HOCR" && $themime == "application/octet-stream") {
-                          $themime = "text/html";
-                      }
-                      if ($dsid == "OCR" && $themime == "application/octet-stream") {
-                          $themime = "text/plain";
-                      }
+                  if ($dsid == "HOCR" && $themime == "application/octet-stream") {
+                    $themime = "text/html";
+                  }
+                  if ($dsid == "OCR" && $themime == "application/octet-stream") {
+                    $themime = "text/plain";
+                  }
+
                   $datastreams[$dsid] = array(
                     'dsid' => $dsid,
                     'label' => "$dsid datastream",
@@ -824,11 +827,14 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
                     'datastream_file' => $fileurl,
                     'filename' => drupal_basename($fileurl),
                     'control_group' => 'M',
-                  // 'file' => $file,.
+                    // 'file' => $file,
                   );
-                } 
+                }
+
+                // Not found...report the error.
+
                 else { 
-                  $errors[] = t('We tried!, but For Object %id, %dsid datastream: %filename was no where to found',
+                  $errors[] = t('We tried, but For Object %id, %dsid datastream: %filename was nowhere to be found!',
                     array(
                       '%filename' => trim($this->objectInfo['data'][$method[1]]),
                       '%dsid' => $dsid,
