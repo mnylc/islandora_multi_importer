@@ -820,15 +820,6 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
                     $themime = "text/plain";
                   }
 
-                  // $file = system_retrieve_file($fileurl, $tmpName, FALSE, FILE_EXISTS_RENAME);
-
-                  $file = (object) array(
-                    'uid' => 1,
-                    'uri' => $fileurl,
-                    'filemime' => $themime,
-                    'status' => 1,
-                  );
-
                   $datastreams[$dsid] = array(
                     'dsid' => $dsid,
                     'label' => "$dsid datastream",
@@ -836,7 +827,7 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
                     'datastream_file' => $fileurl,
                     'filename' => drupal_basename($fileurl),
                     'control_group' => 'M',
-                    'file' => $file,
+                    // 'file' => $file,
                   );
                 }
 
