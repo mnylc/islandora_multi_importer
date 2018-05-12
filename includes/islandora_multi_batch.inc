@@ -448,11 +448,14 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
    */
   public function __construct(IslandoraTuque $connection, $base_name, $object_info, $preprocessor_parameters) {
     parent::__construct(NULL, $connection->repository);
-    // Checks if DC is set as derivative, if so,
-    // we can safely let the derivative process deal with this.
+
+    // Checks if DC is set as derivative, if so, we can safely let the derivative process deal with this.
+
     $this->deriveDC = !variable_get('xml_form_builder_use_default_dc_xslts', FALSE);
-    $this->modsToDcTransform = drupal_get_path('module', 'islandora_multi_importer') . '/xslt/mods_to_dc.xsl';
-    $this->modsCleanUpTransform = drupal_get_path('module', 'islandora_multi_importer') . '/xslt/islandora_cleanup_mods_extended_strict.xsl';
+    $mtdt = drupal_get_path('module', 'islandora_multi_importer') . '/xslt/mods_to_dc.xsl';
+    $this->modsToDcTransform = variable_get( 'islandora_multi_importer_mods_to_dc', $mtdt);
+    $mcut = drupal_get_path('module', 'islandora_multi_importer') . '/xslt/islandora_cleanup_mods_extended_strict.xsl';
+    $this->modsCleanUpTransform = variable_get('islandora_multi_importer_mods_cleanup', $mcut);
     $this->baseName = $base_name;
     $this->cleanMODS = variable_get('islandora_multi_importer_modsself', FALSE);
     $this->objectInfo = $object_info;
@@ -485,14 +488,11 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
     $datastreams = array();
     $datastreams = $this->getDatastreams($errors, $files);
     if (!empty($errors)) {
+      $setid = $this->getBatchId();
       foreach ($errors as $error) {
-        watchdog('islandora_multi_importer', t('There were some issues on Batch set id @setid when generating datastreams for PID @PID: @log', 
-          array(
-            '@setid' => $this->getBatchId(),
-            '@pid' => $this->id,
-            '@log' => $error,
-          )), WATCHDOG_NOTICE
-        );
+        $parms = array('@setid' => $setid,'@pid' => $this->id,'@log' => $error );
+        $msg = t('There were some issues on Batch set id @setid when generating datastreams for PID @pid: @log', $parms);
+        watchdog('islandora_multi_importer', $msg, array( ),WATCHDOG_NOTICE);
       }
     }
     if (empty($datastreams)) {
@@ -553,14 +553,11 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
       $datastreams = array();
       $datastreams = $this->getDatastreamsforUpdate($errors, $files, $existing_object);
       if (!empty($errors)) {
+        $setid = $this->getBatchId( );
         foreach ($errors as $error) {
-          watchdog('islandora_multi_importer', t('There were some issues on Batch set id @setid when generating datastreams for PID @PID: @log', 
-            array(
-              '@setid' => $this->getBatchId(),
-              '@pid' => $this->id,
-              '@log' => $error,
-            )), WATCHDOG_NOTICE
-          );
+          $parms = array('@setid' => $setid,'@pid' => $this->id,'@log' => $error );
+          $msg = t('There were some issues on Batch set id @setid when generating datastreams for PID @pid: @log', $parms);
+          watchdog('islandora_multi_importer', $msg, array( ), WATCHDOG_NOTICE);
         }
       }
       foreach ($files as $file) {
@@ -696,7 +693,7 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
               $docmimetype = $this->preprocessorParameters['computed_cmodels'][$this->objectInfo['cmodel']][$dsid]['mime'][0];
               
               if (($this->cleanMODS) && ($dsid == 'MODS')) { 
-                module_load_include('xml_form_builder','inc','includes/associations');
+                module_load_include('inc', 'xml_form_builder','includes/associations');
                 $twig_output = xml_form_builder_transform_document($this->modsCleanUpTransform, $twig_output);
               }
               // FAIL!
