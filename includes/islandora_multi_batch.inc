@@ -193,7 +193,7 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
         $this->processedObjectsInfo = array(
           'success' => array(),
           'error' => array_keys($file_data_all),
-          'fatal' => t('Provided ZIP file %zipfile can not be opened or is invalid. Dropping all preprocessing.Sorry, can not continued. Code %errorcode.',
+          'fatal' => t('Provided ZIP file %zipfile can not be opened or is invalid. Dropping all preprocessing. Sorry, can not continued. Code %errorcode.',
                         array(
                           '%zipfile' => $this->parameters['zipfile'],
                           '%errorcode' => (int)$opened,
@@ -449,7 +449,8 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
   public function __construct(IslandoraTuque $connection, $base_name, $object_info, $preprocessor_parameters) {
     parent::__construct(NULL, $connection->repository);
 
-    // Checks if DC is set as derivative, if so, we can safely let the derivative process deal with this.
+    // Checks if DC is set as derivative, if so, we can safely 
+    // let the derivative process deal with this. @TODO check per CMODEL too.
 
     $this->deriveDC = !variable_get('xml_form_builder_use_default_dc_xslts', FALSE);
     $mtdt = drupal_get_path('module', 'islandora_multi_importer') . '/xslt/mods_to_dc.xsl';
@@ -490,9 +491,9 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
     if (!empty($errors)) {
       $setid = $this->getBatchId();
       foreach ($errors as $error) {
-        $parms = array('@setid' => $setid,'@pid' => $this->id,'@log' => $error );
-        $msg = t('There were some issues on Batch set id @setid when generating datastreams for PID @pid: @log', $parms);
-        watchdog('islandora_multi_importer', $msg, array( ),WATCHDOG_NOTICE);
+        $parms = array('@setid' => $setid, '@pid' => $this->id, '@log' => $error );
+        $msg = 'There were some issues on Batch set id @setid when generating datastreams for PID @pid: @log';
+        watchdog('islandora_multi_importer', $msg, $parms, WATCHDOG_NOTICE);
       }
     }
     if (empty($datastreams)) {
@@ -518,9 +519,7 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
       $datastream = $this->constructDatastream($ds['dsid'], $ds['control_group']);
       $datastream->label = $ds['label'];
       $datastream->mimetype = $ds['mimetype'];
-      error_log($ds_uri);
-     
-     
+    
       $datastream->setContentFromFile($ds_uri);
       $this->ingestDatastream($datastream);
       $dowehaveMODS = $ds['dsid'] == "MODS" ? true : false; 
@@ -553,11 +552,11 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
       $datastreams = array();
       $datastreams = $this->getDatastreamsforUpdate($errors, $files, $existing_object);
       if (!empty($errors)) {
-        $setid = $this->getBatchId( );
+        $setid = $this->getBatchId();
         foreach ($errors as $error) {
-          $parms = array('@setid' => $setid,'@pid' => $this->id,'@log' => $error );
-          $msg = t('There were some issues on Batch set id @setid when generating datastreams for PID @pid: @log', $parms);
-          watchdog('islandora_multi_importer', $msg, array( ), WATCHDOG_NOTICE);
+          $parms = array('@setid' => $setid, '@pid' => $this->id, '@log' => $error );
+          $msg = 'There were some issues on Batch set id @setid when generating datastreams for PID @pid: @log';
+          watchdog('islandora_multi_importer', $msg, $params, WATCHDOG_NOTICE);
         }
       }
       foreach ($files as $file) {
@@ -673,115 +672,124 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
           $method = explode("|", $howtogenerate['method']['data']);
           switch ($method[0]) {
             case 'derivative':
-              // Nothing to do really, derivative processing will do the job.
-              break;
+            // Nothing to do really, derivative processing will do the job.
+            break;
 
             case 'xslt':
-              // Deal with xslt transforms, we will leave this to after
-              // processing, since we need the source datastreams to transform.
-              break;
+            // Deal with xslt transforms, we will leave this to after
+            // processing, since we need the source datastreams to transform.
+            break;
 
             case 'template':
-              $twig_input = array();
-              $template = islandora_multi_importer_twig_fetch($method[1]);
-              $twig_input['name'] = $method[1];
-              $twig_input['template'] = $template;
-              $twig_input['data'] = array('data' => array_combine($this->preprocessorParameters['data']['headers'], $this->objectInfo['data']));
-              // @TODO should we validate the template again heincludesre?
-              $twig_output = islandora_multi_importer_twig_process($twig_input);
-              // Check if this is can be a DomDocument of some sort.
-              $docmimetype = $this->preprocessorParameters['computed_cmodels'][$this->objectInfo['cmodel']][$dsid]['mime'][0];
+            $twig_input = array();
+            $template = islandora_multi_importer_twig_fetch($method[1]);
+            $twig_input['name'] = $method[1];
+            $twig_input['template'] = $template;
+            $twig_input['data'] = array('data' => array_combine($this->preprocessorParameters['data']['headers'], $this->objectInfo['data']));
+            // @TODO should we validate the template again heincludesre?
+            $twig_output = islandora_multi_importer_twig_process($twig_input);
+            // Check if this is can be a DomDocument of some sort.
+            $docmimetype = $this->preprocessorParameters['computed_cmodels'][$this->objectInfo['cmodel']][$dsid]['mime'][0];
               
-              if (($this->cleanMODS) && ($dsid == 'MODS')) { 
-                module_load_include('inc', 'xml_form_builder','includes/associations');
-                $twig_output = xml_form_builder_transform_document($this->modsCleanUpTransform, $twig_output);
+            if (($this->cleanMODS) && ($dsid == 'MODS') && ($twig_output != NULL)) { 
+              module_load_include('inc', 'xml_form_builder','includes/associations');
+              $twig_output = xml_form_builder_transform_document($this->modsCleanUpTransform, $twig_output);
+            }
+            // FAIL!
+            if ($twig_output == NULL) {
+              $errors[] = t('For Object %id, %dsid datastream: twig %template processing had some serious problems. Skipping this object entirely',
+              array(
+                '%template' => $twig_input['name'],
+                '%dsid' => $dsid,
+                '%id' => $this->id,
+              ));
+              $datastreams = array(); // Yeah, we need to roll back all our hard work
+              // Aborting, so need to make any files back to temporary 
+              foreach ($files as $file) {
+                $file->status &= ~FILE_STATUS_PERMANENT; 
+                file_save($file);
               }
-              // FAIL!
-              if ($twig_output == NULL) {
-                $errors[] = t('For Object %id, %dsid datastream: twig %template processing had some serious problems. Skipping this object entirely',
-                  array(
-                    '%template' => $twig_input['name'],
-                    '%dsid' => $dsid,
-                    '%id' => $this->id,
-                  ));
-                $datastreams = array(); // Yeah, we need to roll back all our hard work
+              unset($files);
               break 2;
-              }  
-              // We need to make sure that $output is in fact a valid XML file.
-              $newfileName = "{$dsid}" . "_" . $method[0] . '_' . urlencode($this->objectInfo['pid']) . '_' . time() . '.xml';
-              // $tmp_directory = islandora_multi_importer_temp_directory();
-              $newfile = file_save_data($twig_output, "public://" . $newfileName, FILE_EXISTS_RENAME);
-              // We are assumming the twig template complies with
-              // mimetype. TODO enforce this somehow.
-              $file[] = $newfile;
-              $datastreams[$dsid] = array(
-                'dsid' => $dsid,
-                'label' => "$dsid datastream ",
-                'mimetype' => $docmimetype,
-                'datastream_file' => drupal_realpath($newfile->uri),
-                'filename' => $newfileName,
-                'control_group' => 'M',
-              // 'file' => $file,.
-              );
-              break;
+            }
+            // We need to make sure that $output is in fact a valid XML file.
+            $newfileName = "{$dsid}" . "_" . $method[0] . '_' . urlencode($this->objectInfo['pid']) . '_' . time() . '.xml';
+            // $tmp_directory = islandora_multi_importer_temp_directory();
+            $newfile = file_save_data($twig_output, "public://" . $newfileName, FILE_EXISTS_RENAME);
+            // We are assumming the twig template complies with
+            // mimetype. TODO enforce this somehow.
+            $files[] = $newfile;
+            $datastreams[$dsid] = array(
+              'dsid' => $dsid,
+              'label' => "$dsid datastream ",
+              'mimetype' => $docmimetype,
+              'datastream_file' => drupal_realpath($newfile->uri),
+              'filename' => $newfileName,
+              'control_group' => 'M',
+            );
+            break;
 
             case 'column':
-              // This means our source field contains a file path or and url
-              // if file path, we need to know if local of ZIP
-              // if URL just fetch the damn thing.
-              if ($this->preprocessorParameters['type'] == 'ZIP') {
-                // Fetch one file from provided ZIP file.
-                $path_info = pathinfo(str_replace(" ", "\x20", trim($this->objectInfo['data'][$method[1]])));
-                $z = new ZipArchive();
-                $opened = FALSE;
-                $opened = $z->open($this->preprocessorParameters['zipfile']);
-                if ($opened === TRUE) {
-                  $fp = $z->getStream($this->objectInfo['data'][$method[1]]);
-                  if (!$fp) {
-                    $errors[] = t('For Object %id, %dsid datastream: %filename was not found inside the provided ZIP file %zipfile',
-                      array(
-                        '%filename' => trim($this->objectInfo['data'][$method[1]]),
-                        '%zipfile' => $this->preprocessorParameters['zipfile'],
-                        '%dsid' => $dsid,
-                        '%id' => $this->id,
-                      ));
-                    error_log('will try to get '.$this->objectInfo['data'][$method[1]]. 'remotely');
-                    error_log($this->objectInfo['data'][$method[1]] .' not found for .' . $this->id);
-                    // The file does not exist.
-                    // @TODO add this to errors
-                    // try to get it now from remote
+            // This means our source field contains a file path or and url
+            // if file path, we need to know if local of ZIP
+            // if URL just fetch the damn thing.
+            if ($this->preprocessorParameters['type'] == 'ZIP') {
+              // Fetch one file from provided ZIP file.
+              $path_info = pathinfo(str_replace(" ", "\x20", trim($this->objectInfo['data'][$method[1]])));
+              $z = new ZipArchive();
+              $opened = FALSE;
+              $opened = $z->open($this->preprocessorParameters['zipfile']);
+              if ($opened === TRUE) {
+                $fp = $z->getStream($this->objectInfo['data'][$method[1]]);
+                if (!$fp) {
+                 
+                  error_log('will try to get '.$this->objectInfo['data'][$method[1]]. 'remotely');
+                  error_log($this->objectInfo['data'][$method[1]] .' not found for .' . $this->id);
+                  // The file does not exist.
+                  // @TODO add this to errors
+                  // try to get it now from remote
 
-                    $fileurl = islandora_multi_importer_remote_file_get(trim($this->objectInfo['data'][$method[1]]));
-                    if ($fileurl) {
-                      $themime = $this->getMimetype(drupal_basename($fileurl));
-                        if ($dsid == "HOCR" && $themime == "application/octet-stream") {
-                            $themime = "text/html";
-                        }
-                        if ($dsid == "OCR" && $themime == "application/octet-stream") {
-                          $themime = "text/plain";
-                        }
-                      $datastreams[$dsid] = array(
-                        'dsid' => $dsid,
-                        'label' => "$dsid datastream",
-                        'mimetype' => $themime,
-                        'datastream_file' => $fileurl,
-                        'filename' => drupal_basename($fileurl),
-                        'control_group' => 'M',
-                      // 'file' => $file,.
-                      );
-                    break;
-                    }
-                  } 
-                  else {
-                    // Deal with non extensions when inside a ZIP
-                    $themime = $this->getMimetype($path_info['basename']);
+                  $fileurl = islandora_multi_importer_remote_file_get(trim($this->objectInfo['data'][$method[1]]));
+                    
+                  $themime = "application/octet-stream";
+                  if ($fileurl) {
+                    $themime = $this->getMimetype(drupal_basename($fileurl));
                     if ($dsid == "HOCR" && $themime == "application/octet-stream") {
-                        $themime = "text/html";
+                      $themime = "text/html";
                     }
                     if ($dsid == "OCR" && $themime == "application/octet-stream") {
                       $themime = "text/plain";
                     }
-                    
+                    $datastreams[$dsid] = array(
+                      'dsid' => $dsid,
+                      'label' => "$dsid datastream",
+                      'mimetype' => $themime,
+                      'datastream_file' => $fileurl,
+                      'filename' => drupal_basename($fileurl),
+                      'control_group' => 'M',
+                    );
+                    break;
+                  }
+                  else {
+                    $errors[] = t('For Object %id, %dsid datastream: %filename was not found inside the provided ZIP file %zipfile nor in other places',
+                    array(
+                      '%filename' => trim($this->objectInfo['data'][$method[1]]),
+                      '%zipfile' => $this->preprocessorParameters['zipfile'],
+                      '%dsid' => $dsid,
+                      '%id' => $this->id,
+                    ));
+                  }
+                } 
+                else {
+                  // This means we have the file insize the ZIP.
+                  // Deal with non extensions when inside a ZIP
+                 
+                  $themime = $this->getMimetype($path_info['basename']);
+                  if ($dsid == "HOCR" && $themime == "application/octet-stream") {
+                    $themime = "text/html";
+                  }
+                  if ($dsid == "OCR" && $themime == "application/octet-stream") {
+                    $themime = "text/plain";
                   }
                   
                   $datastreams[$dsid] = array(
@@ -792,57 +800,60 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
                     'filename' => $path_info['basename'],
                     'control_group' => 'M',
                   );
-                  $z->close();
                 }
-                else {
-                  $errors[] = t('Provided ZIP file %zipfile can not be opened or is invalid. Code %errorcode.',
-                      array(
-                        '%zipfile' => $this->preprocessorParameters['zipfile'],
-                        '%errorcode' => (int)$opened,
-                  ));
-                  error_log('can not open ' . $this->preprocessorParameters['zipfile'] . ' with code:'. (int)$opened);
+                $z->close();
+              }
+              else {
+                $errors[] = t('Provided ZIP file %zipfile can not be opened or is invalid. Code %errorcode.',
+                array(
+                  '%zipfile' => $this->preprocessorParameters['zipfile'],
+                  '%errorcode' => (int)$opened,
+                ));
+                error_log('can not open ' . $this->preprocessorParameters['zipfile'] . ' with code:'. (int)$opened);
+              }
+            }
+
+            // This will handle all cases, except ZIP.
+
+            else {
+              $fileurl = islandora_multi_importer_remote_file_get(trim($this->objectInfo['data'][$method[1]]));
+              $themime = "application/octet-stream";
+              if ($fileurl) {
+                $themime = $this->getMimetype(drupal_basename($fileurl));
+                if ($dsid == "HOCR" && $themime == "application/octet-stream") {
+                  $themime = "text/html";
                 }
+                if ($dsid == "OCR" && $themime == "application/octet-stream") {
+                  $themime = "text/plain";
+                }
+
+                $datastreams[$dsid] = array(
+                  'dsid' => $dsid,
+                  'label' => "$dsid datastream",
+                  'mimetype' => $themime,
+                  'datastream_file' => $fileurl,
+                  'filename' => drupal_basename($fileurl),
+                  'control_group' => 'M',
+                  // 'file' => $file,
+                );
               }
 
-              // This will handle all cases, except ZIP.
-
-              else {
-                $fileurl = islandora_multi_importer_remote_file_get(trim($this->objectInfo['data'][$method[1]]));
-                if ($fileurl) {
-                  $themime = $this->getMimetype(drupal_basename($fileurl));
-                  if ($dsid == "HOCR" && $themime == "application/octet-stream") {
-                    $themime = "text/html";
-                  }
-                  if ($dsid == "OCR" && $themime == "application/octet-stream") {
-                    $themime = "text/plain";
-                  }
-
-                  $datastreams[$dsid] = array(
-                    'dsid' => $dsid,
-                    'label' => "$dsid datastream",
-                    'mimetype' => $themime,
-                    'datastream_file' => $fileurl,
-                    'filename' => drupal_basename($fileurl),
-                    'control_group' => 'M',
-                    // 'file' => $file,
-                  );
-                }
+              else { 
 
                 // Not found...report the error.
-
-                else { 
-                  $errors[] = t('We tried, but For Object %id, %dsid datastream: %filename was nowhere to be found!',
-                    array(
-                      '%filename' => trim($this->objectInfo['data'][$method[1]]),
-                      '%dsid' => $dsid,
-                      '%id' => $this->id,
-                    ));
-                }
+                
+                $errors[] = t('We tried, but For Object %id, %dsid datastream: %filename was nowhere to be found!',
+                array(
+                  '%filename' => trim($this->objectInfo['data'][$method[1]]),
+                  '%dsid' => $dsid,
+                  '%id' => $this->id,
+                ));
               }
-              break;
+            }
+            break;
 
             default:
-              break;
+            break;
 
           }; // End Switch
         }
@@ -857,7 +868,7 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
   protected function getDatastreamsforUpdate(&$errors = NULL, &$files = NULL, AbstractObject $existing_object) {
     module_load_include('inc', 'islandora', 'includes/utilities');
     module_load_include('inc', 'islandora_multi_importer', 'includes/utilities');
-
+    // Calling ::getDatastreams because we are tired of coding twice.
     $datastreams = $this->getDatastreams($errors, $files);
     if (isset($this['RELS-EXT']) && !empty($this['RELS-EXT'])) {
       // Does our existing object already have a RELS-EXT? 
@@ -879,7 +890,7 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
       $newfileNameExt = "RELSEXT_update_". urlencode($this->objectInfo['pid']) . '_' . time() . '.xml';
       // $tmp_directory = islandora_multi_importer_temp_directory();
       $newfileExt = file_save_data($this['RELS-EXT']->content, "public://" . $newfileNameExt , FILE_EXISTS_RENAME);
-      $file[] = $newfileExt;
+      $files[] = $newfileExt;
       $datastreams['RELS-EXT'] = array(
         'dsid' => 'RELS-EXT',
         'label' =>  $control['label'],
@@ -911,7 +922,7 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
       $newfileNameInt = "RELSINT_update_". urlencode($this->objectInfo['pid']) . '_' . time() . '.xml';
       $newfileInt = file_save_data($this['RELS-INT']->content, "public://" . $newfileNameInt, FILE_EXISTS_RENAME);
       
-      $file[] = $newfileInt;
+      $files[] = $newfileInt;
       
       $datastreams['RELS-INT'] = array(
         'dsid' => 'RELS-INT',
