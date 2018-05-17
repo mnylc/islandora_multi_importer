@@ -206,35 +206,132 @@ function islandora_multi_importer_xml_highlight($s){
           "&lt;\\1<font color=\"#800080\">\\2\\3\\4</font>&gt;",$s);
       return nl2br($s);
   }
-
+  /**
+   * Checks if an URI from spreadsheet is remote or local and returns a file
+   *
+   * @param string $url
+   *   The URL of the file to grab.
+   * @return mixed
+   *   One of these possibilities:
+   *   - If remote and exists a Drupal file object
+   *   - If not remote and exists a stripped file object 
+   *   - If does not exist boolean FALSE
+   */
 function islandora_multi_importer_remote_file_get($url) {
     $parsed_url = parse_url($url);
     $remote_schemes = array('http', 'https', 'feed');
     if (!isset($parsed_url['scheme']) || (isset($parsed_url['scheme']) && !in_array($parsed_url['scheme'], $remote_schemes))) {
-
       // If local file, engage any hook_islandora_multi_importer_remote_file_get and return the real path.
-      $path = array( );
+      $path = array();
       $path = module_invoke_all('islandora_multi_importer_remote_file_get', $url);
+      // get only the first path.
       if (!empty($path)) {
-        if ($path[0]) { return $path[0]; }
+        if ($path[0]) { 
+          return $path[0]; 
+        }
       }
 
-      // if local file, return the path.
-      return drupal_realpath($url);
+      // if local file, try the path.
+      $localfile = drupal_realpath($url);
+      if (!file_exists($localfile)) {
+        return FALSE;
+        }
+      return $localfile;
     }
-
-    // Check if the temp directory exists if there is no other file named equally 
-    // Create if needed.
-    //$tmp_directory = islandora_multi_importer_temp_directory();
-    $local =  "public://" . drupal_basename($parsed_url['path']);
-
-    if (!file_exists($local)) {
-      return system_retrieve_file($url, $local, FALSE, FILE_EXISTS_REPLACE);
+      
+    // Simulate what could be the final path of a remote download.
+    // to avoid redownloading.
+    $localfile = file_build_uri(drupal_basename($parsed_url['path']));
+    if (!file_exists($localfile)) {
+      // Actual remote heavy lifting only if not present.
+      $localfile = islandora_multi_importer_retrieve_remote_file($url, $local, FILE_EXISTS_REPLACE);
+      return $localfile;
     }
     else {
-      return $local;
+      return $localfile;
     }
+    return FALSE;
   }
+
+/**
+ * Attempts to get a file using drupal_http_request and to store it locally.
+ *
+ * @param string $url
+ *   The URL of the file to grab.
+ * @param string $destination
+ *   Stream wrapper URI specifying where the file should be placed. If a
+ *   directory path is provided, the file is saved into that directory under
+ *   its original name. If the path contains a filename as well, that one will
+ *   be used instead.
+ *   If this value is omitted, the site's default files scheme will be used,
+ *   usually "public://".
+ * @param int $replace
+ *   Replace behavior when the destination file already exists:
+ *   - FILE_EXISTS_REPLACE: Replace the existing file.
+ *   - FILE_EXISTS_RENAME: Append _{incrementing number} until the filename is
+ *     unique.
+ *   - FILE_EXISTS_ERROR: Do nothing and return FALSE.
+ *
+ * @return mixed
+ *   One of these possibilities:
+ *   - If it succeeds an managed file object
+ *   - If it fails, FALSE.
+ */
+function islandora_multi_importer_retrieve_remote_file($url, $destination = NULL, $replace = FILE_EXISTS_RENAME) {
+    module_load_include('inc', 'islandora', 'includes/mimemtype.utils');
+    // pre set a failure
+    $localfile = FALSE; 
+    $parsed_url = parse_url($url);
+    $mime = 'application/octet-stream';
+    if (!isset($destination)) {
+      $path = file_build_uri(drupal_basename($parsed_url['path']));
+    }
+    else {
+      if (is_dir(drupal_realpath($destination))) {
+
+        // Prevent URIs with triple slashes when glueing parts together.
+        $path = str_replace('///', '//', "{$destination}/") . drupal_basename($parsed_url['path']);
+      }
+      else {
+        $path = $destination;
+      }
+    }
+    $result = drupal_http_request($url);
+    if ($result->code != 200) {
+      drupal_set_message(t('HTTP error @errorcode occurred when trying to fetch @remote.', array(
+        '@errorcode' => $result->code,
+        '@remote' => $url,
+      )), 'error');
+      return FALSE;
+    }
+    
+    // It would be more optimal to run this after saving
+    // but i really need the mime in case no extension is present
+    $mimefromextension = file_get_mimetype($path, NULL);
+    
+    if (($mimefromextension == "application/octet-stream") &&
+      isset($result->headers['content-type'])) {
+      $mimetype = $result->headers['content-type'];
+      $extension = islandora_get_extension_for_mimetype($mimetype);
+      $info = pathinfo($path);
+      if (($extension != "bin") && ($info['extension']!= $extension)) {
+        $path = $path.".".$extension;
+      }
+    }
+    // File is being made managed and permanent here, will be marked as
+    // temporary once it is processed AND/OR associated with a SET 
+    $localfile = file_save_data($result->data, $path, $replace);
+    if (!$localfile) {
+      drupal_set_message(t('@remote could not be saved to @path.', array(
+        '@remote' => $url,
+        '@path' => $path,
+      )), 'error');
+    } 
+
+    return $localfile;
+  }
+
+
 
 function islandora_multi_importer_temp_directory($create = TRUE) {
     $directory = &drupal_static(__FUNCTION__, '');

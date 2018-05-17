@@ -25,11 +25,15 @@
 
 ### Why Use Multi-importer
 * UI driven integrated workflow for ingest and update
-* Metadata Cleanup: Export your MODS metadata as CSV via solr, clean up, then update the MODS datastream of the objects by recreating the MODS datastream using Twing
-* To ingest different content types at the same time
+* Metadata Cleanup: Export your MODS metadata as CSV via Solr, clean up, then update the MODS datastream of the objects by recreating the MODS datastream using Twig
+* To ingest different content types at the same time including hierarchies, like collections inside collections with compounds and books, etc
 * To avoid having to follow strict naming conventions and folder structure dictated by many Islandora batch ingest processes
 * Selectively choose which derivatives you want to create and upload
 * To avoid the OpenRefine/XSLT approach to creating MODS from CSVs
 * To take advantage of the Twig Templating system for creating MODS from CSVs
 * To preview the MODS output easily
-* Supports integration with Google Spreadsheets, Zip/Local/Amazon storage
+* Supports integration with Google Spreadsheets, Zip/Local/Amazon storage and Complex storage needs via hooks.
+
+### Updating existing Objects
+* To enable this functionality without any warnings you need to use https://github.com/mnylc/islandora_batch/tree/7.x-ISLANDORA-2046 instead of main Islandora Batch release. We are working on making those changes into the main release.
+* Objects (PIDs) present in other Batch Sets won't be able to be updated because Islandora Batch only allows a single PID to exist in its DB. We are working on fixing that inside 7.x-ISLANDORA-2046. For now, please delete old batch sets if you plan on updating existing Objects that were ingested using Islandora Batch.

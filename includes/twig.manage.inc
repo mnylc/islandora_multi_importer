@@ -160,6 +160,7 @@ function islandora_multi_importer_twigcreateinternals_form($form, &$form_state, 
   $twig->addExtension(new Twig_Extension_Debug());
 
   $validated = TRUE;
+  $output = '';
   try {
     // The $template is valid.
     $twig->parse($twig->tokenize($twig_template));
@@ -168,11 +169,12 @@ function islandora_multi_importer_twigcreateinternals_form($form, &$form_state, 
    $validated = FALSE;
     // @TODO: We should encourage this to be as explicit
     // to final user as possible.
-    error_log(get_class($e));
+    drupal_set_message($e->getMessage(), 'error');
   }
   catch (Twig_Error_Runtime $e) {
     $validated = FALSE;
     error_log("was twig_Error_Runtime");
+    $output.= $e->getMessage();
     // In case there is a previous exception, re-throw the previous exception,
     // so that the original exception is shown, rather than
     // \Twig_Template::displayWithErrorHandling()'s exception.
@@ -181,14 +183,13 @@ function islandora_multi_importer_twigcreateinternals_form($form, &$form_state, 
       drupal_set_message(t('Your template has Runtime errors, please review and fix: @error', array('@error' => $previous_exception->getMessage())), 'error');
     }
     drupal_set_message(t('Your template has Runtime errors, please review and fix: @error', array('@error' => $e->getRawMessage())), 'error');
-    $output = '';
   }
   catch (Twig_Error_Syntax $e) {
     // $template contains one or more syntax errors.
     $validated = FALSE;
+    $output.= $e->getMessage();
     error_log("was twig_Error_Syntax");
-    drupal_set_message(t('Your template has Runtime errors, please review and fix: @error', array('@error' => $e->getRawMessage())), 'error');
-    $output = '';
+    drupal_set_message(t('Your template has Syntax errors, please review and fix: @error', array('@error' => $e->getRawMessage())), 'error');
   }
 
   if ($validated) {
@@ -212,6 +213,10 @@ function islandora_multi_importer_twigcreateinternals_form($form, &$form_state, 
       drupal_set_message(t('Your template has Runtime errors, please review and fix: @error', array('@error' => $e->getRawMessage())), 'error');
       $output = '';
     }
+  } else {
+    
+   $output.= "Please check your template";
+    
   }
 
   $form['#attached']['css'] = array(
