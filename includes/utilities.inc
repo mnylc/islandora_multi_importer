@@ -310,8 +310,8 @@ function islandora_multi_importer_retrieve_remote_file($url, $destination = NULL
     $mimefromextension = file_get_mimetype($path, NULL);
     
     if (($mimefromextension == "application/octet-stream") &&
-      isset($result->headers['content-type'])) {
-      $mimetype = $result->headers['content-type'];
+      isset($result->headers['Content-Type'])) {
+      $mimetype = $result->headers['Content-Type'];
       $extension = islandora_get_extension_for_mimetype($mimetype);
       $info = pathinfo($path);
       if (($extension != "bin") && ($info['extension']!= $extension)) {
