@@ -945,7 +945,13 @@ function islandora_multi_importer_cmodeldsmapping_form(array &$form_state, array
             // If destination DSID of this derivative matches
             // current DSID add as default option.
             if ($derivative['destination_dsid'] == $dsid) {
-              $options['Derivatives'] = array('derivative|0' => 'Build using derivative from ' . $derivative['source_dsid']);
+              if (!empty($derivative['source_dsid'])) {
+                $options['Derivatives'] = array('derivative|0' => 'Build using derivative from ' . $derivative['source_dsid']);
+              } 
+              else {
+                $options['Derivatives'] = array('derivative|0' => 'Build using islandora generated derivative');
+                
+              }
             }
           }
         }
