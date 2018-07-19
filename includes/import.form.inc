@@ -820,7 +820,7 @@ function islandora_multi_importer_cmodelmapping_form(array $form, array &$form_s
       '#id' => drupal_html_id('islandora-multi-cmodelmap'),
       'cmodelmap' => array(
         '#type' => 'select',
-        '#attributes' => '',
+        '#attributes' => array(),
         '#description' => t('Select the source data field to use for CMODEL mapping'),
         '#options' => $file_data['headers'],
       ),
@@ -957,7 +957,7 @@ function islandora_multi_importer_cmodeldsmapping_form(array &$form_state, array
           'method' => array(
             'data' => array(
               '#type' => 'select',
-              '#attributes' => '',
+              '#attributes' => array(),
               '#description' => t('Select the way you want to build this DS'),
               '#options' => $options,
             ),
@@ -984,7 +984,7 @@ function islandora_multi_importer_objectmapping_form($form, &$form_state, $file_
       ),
       'pidmap' => array(
         '#type' => 'select',
-        '#attributes' => '',
+        '#attributes' => array(),
         '#description' => t('Select the source field to use as Object PID'),
         '#options' => $file_data['headers'],
       ),
@@ -1010,7 +1010,7 @@ function islandora_multi_importer_objectmapping_form($form, &$form_state, $file_
     
       'parentmap' => array(
         '#type' => 'select',
-        '#attributes' => '',
+        '#attributes' => array(),
         '#description' => t('Select the source field to use as parent Object'),
         '#options' => $file_data['headers'],
       ),
@@ -1030,7 +1030,7 @@ function islandora_multi_importer_objectmapping_form($form, &$form_state, $file_
       ),
       'labelmap' => array(
         '#type' => 'select',
-        '#attributes' => '',
+        '#attributes' => array(),
         '#description' => t('Select the source field to use as label for Object'),
         '#options' => $file_data['headers'],
       ),
@@ -1048,7 +1048,7 @@ function islandora_multi_importer_objectmapping_form($form, &$form_state, $file_
       ),
       'sequencemap' => array(
         '#type' => 'select',
-        '#attributes' => '',
+        '#attributes' => array(),
         '#description' => t('Select the source field to use as Sequence order index in multi child objects'),
         '#options' => $file_data['headers'],
       ),
@@ -1066,7 +1066,7 @@ function islandora_multi_importer_objectmapping_form($form, &$form_state, $file_
       ),
       'dsremote' => array(
         '#type' => 'select',
-        '#attributes' => '',
+        '#attributes' => array(),
         '#description' => t('Select public accesible resource location'),
         '#options' => array(
           'REMOTE' => 'AWS S3/Dropbox via http(s)',
@@ -1092,7 +1092,7 @@ function islandora_multi_importer_objectmapping_form($form, &$form_state, $file_
       ),
       'relsext_mode' => array(
         '#type' => 'select',
-        '#attributes' => '',
+        '#attributes' => array(),
         '#description' => t('Select the way you would like to handle predicates for your existing objects'),
         '#options' => array(
           'NEW' => 'Only use new Predicates, nothing gets copied over',
@@ -1243,20 +1243,20 @@ function islandora_multi_importer_form_submit(array $form, array &$form_state) {
   if ($form_state['triggering_element']['#name'] == 'back') {
     $form_state['storage']['step'] = 0 ;
     $form_state['rebuild'] = TRUE;
-   
-    
+
+
   }
   if ($form_state['triggering_element']['#name'] == 'preprocess') {
     $form_state['storage']['step'] = 3;
     $form_state['rebuild'] = TRUE;
-   
+
   }
   if ($form_state['triggering_element']['#name'] == 'reread') {
     $form_state['storage']['step'] = 3;
     //clears google data and forces a remote re-read
     unset($form_state['storage']['values']['general']['file_data']);
     $form_state['rebuild'] = TRUE;
-   
+
   }
 
 
@@ -1264,7 +1264,7 @@ function islandora_multi_importer_form_submit(array $form, array &$form_state) {
   if (!empty($form_state['storage']['values'][$step_name])) {
     $form_state['values'][$step_name] = $form_state['storage']['values'][$step_name];
   }
-  //dpm($form_state);
+
   if ($form_state['triggering_element']['#value'] == t('Save Template')) {
     $twig_template = trim($form_state['values']['step4']['group_tabs']['group_twig_tab']['twig']);
     $twig_template_name = trim($form_state['values']['step4']['group_tabs']['group_twig_tab']['savemenu']['save']['template_name']);
