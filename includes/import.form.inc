@@ -100,11 +100,11 @@ function islandora_multi_importer_form(array $form, array &$form_state) {
 
       $step_forms['#tree'] = TRUE;
 
-      $step_forms['step3'] = islandora_multi_importer_previs_form($form, $form_state, $file_data);
+      $step_forms['step3'] = (array) islandora_multi_importer_previs_form($form, $form_state, $file_data);
 
-      $step_forms['step4'] = islandora_multi_importer_twig_form($form, $form_state, $file_data);
-      $step_forms['cmodelmap'] = islandora_multi_importer_cmodelmapping_form($form, $form_state, $file_data);
-      $step_forms['objectmap'] = islandora_multi_importer_objectmapping_form($form, $form_state, $file_data);
+      $step_forms['step4'] = (array) islandora_multi_importer_twig_form($form, $form_state, $file_data);
+      $step_forms['cmodelmap'] = (array) islandora_multi_importer_cmodelmapping_form($form, $form_state, $file_data);
+      $step_forms['objectmap'] = (array) islandora_multi_importer_objectmapping_form($form, $form_state, $file_data);
       $step_forms['step3']['#id'] = drupal_html_id('main-data2');
       $step_forms['step3']['#group'] = 'maintab';
       $step_forms['step3']['#collapsible'] = FALSE;
@@ -423,7 +423,7 @@ function islandora_multi_importer_choosesource_form($form, &$form_state) {
 /**
  * Spreadsheet previsualization form.
  */
-function islandora_multi_importer_previs_form($form, &$form_state, &$file_data) {
+function islandora_multi_importer_previs_form(array $form, array &$form_state, array &$file_data) {
 
   $per_page = 20;
   $previous_page = isset($form_state['storage']['values']['general']['previous_page']) ? $form_state['storage']['values']['general']['previous_page'] : 0;
@@ -1206,7 +1206,7 @@ function islandora_multi_importer_mapper_ajax($form, &$form_state) {
 /**
  * Main submit handler for Multi Importer form.
  */
-function islandora_multi_importer_form_submit($form, &$form_state) {
+function islandora_multi_importer_form_submit(array $form, array &$form_state) {
   module_load_include('inc', 'islandora_multi_importer', 'includes/islandora_multi_batch');
   module_load_include('inc', 'islandora', 'includes/utilities');
   // Store step data.
