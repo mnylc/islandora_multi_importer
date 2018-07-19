@@ -950,7 +950,6 @@ function islandora_multi_importer_cmodeldsmapping_form(array &$form_state, array
               } 
               else {
                 $options['Derivatives'] = array('derivative|0' => 'Build using islandora generated derivative');
-                
               }
             }
           }
