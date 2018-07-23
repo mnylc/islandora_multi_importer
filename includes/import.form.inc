@@ -100,11 +100,11 @@ function islandora_multi_importer_form(array $form, array &$form_state) {
 
       $step_forms['#tree'] = TRUE;
 
-      $step_forms['step3'] = islandora_multi_importer_previs_form($form, $form_state, $file_data);
+      $step_forms['step3'] = (array) islandora_multi_importer_previs_form($form, $form_state, $file_data);
 
-      $step_forms['step4'] = islandora_multi_importer_twig_form($form, $form_state, $file_data);
-      $step_forms['cmodelmap'] = islandora_multi_importer_cmodelmapping_form($form, $form_state, $file_data);
-      $step_forms['objectmap'] = islandora_multi_importer_objectmapping_form($form, $form_state, $file_data);
+      $step_forms['step4'] = (array) islandora_multi_importer_twig_form($form, $form_state, $file_data);
+      $step_forms['cmodelmap'] = (array) islandora_multi_importer_cmodelmapping_form($form, $form_state, $file_data);
+      $step_forms['objectmap'] = (array) islandora_multi_importer_objectmapping_form($form, $form_state, $file_data);
       $step_forms['step3']['#id'] = drupal_html_id('main-data2');
       $step_forms['step3']['#group'] = 'maintab';
       $step_forms['step3']['#collapsible'] = FALSE;
@@ -423,7 +423,7 @@ function islandora_multi_importer_choosesource_form($form, &$form_state) {
 /**
  * Spreadsheet previsualization form.
  */
-function islandora_multi_importer_previs_form($form, &$form_state, &$file_data) {
+function islandora_multi_importer_previs_form(array $form, array &$form_state, array &$file_data) {
 
   $per_page = 20;
   $previous_page = isset($form_state['storage']['values']['general']['previous_page']) ? $form_state['storage']['values']['general']['previous_page'] : 0;
@@ -820,7 +820,7 @@ function islandora_multi_importer_cmodelmapping_form(array $form, array &$form_s
       '#id' => drupal_html_id('islandora-multi-cmodelmap'),
       'cmodelmap' => array(
         '#type' => 'select',
-        '#attributes' => '',
+        '#attributes' => array(),
         '#description' => t('Select the source data field to use for CMODEL mapping'),
         '#options' => $file_data['headers'],
       ),
@@ -945,7 +945,12 @@ function islandora_multi_importer_cmodeldsmapping_form(array &$form_state, array
             // If destination DSID of this derivative matches
             // current DSID add as default option.
             if ($derivative['destination_dsid'] == $dsid) {
-              $options['Derivatives'] = array('derivative|0' => 'Build using derivative from ' . $derivative['source_dsid']);
+              if (!empty($derivative['source_dsid'])) {
+                $options['Derivatives'] = array('derivative|0' => 'Build using derivative from ' . $derivative['source_dsid']);
+              } 
+              else {
+                $options['Derivatives'] = array('derivative|0' => 'Build using islandora generated derivative');
+              }
             }
           }
         }
@@ -957,7 +962,7 @@ function islandora_multi_importer_cmodeldsmapping_form(array &$form_state, array
           'method' => array(
             'data' => array(
               '#type' => 'select',
-              '#attributes' => '',
+              '#attributes' => array(),
               '#description' => t('Select the way you want to build this DS'),
               '#options' => $options,
             ),
@@ -984,7 +989,7 @@ function islandora_multi_importer_objectmapping_form($form, &$form_state, $file_
       ),
       'pidmap' => array(
         '#type' => 'select',
-        '#attributes' => '',
+        '#attributes' => array(),
         '#description' => t('Select the source field to use as Object PID'),
         '#options' => $file_data['headers'],
       ),
@@ -1010,7 +1015,7 @@ function islandora_multi_importer_objectmapping_form($form, &$form_state, $file_
     
       'parentmap' => array(
         '#type' => 'select',
-        '#attributes' => '',
+        '#attributes' => array(),
         '#description' => t('Select the source field to use as parent Object'),
         '#options' => $file_data['headers'],
       ),
@@ -1030,7 +1035,7 @@ function islandora_multi_importer_objectmapping_form($form, &$form_state, $file_
       ),
       'labelmap' => array(
         '#type' => 'select',
-        '#attributes' => '',
+        '#attributes' => array(),
         '#description' => t('Select the source field to use as label for Object'),
         '#options' => $file_data['headers'],
       ),
@@ -1048,7 +1053,7 @@ function islandora_multi_importer_objectmapping_form($form, &$form_state, $file_
       ),
       'sequencemap' => array(
         '#type' => 'select',
-        '#attributes' => '',
+        '#attributes' => array(),
         '#description' => t('Select the source field to use as Sequence order index in multi child objects'),
         '#options' => $file_data['headers'],
       ),
@@ -1066,7 +1071,7 @@ function islandora_multi_importer_objectmapping_form($form, &$form_state, $file_
       ),
       'dsremote' => array(
         '#type' => 'select',
-        '#attributes' => '',
+        '#attributes' => array(),
         '#description' => t('Select public accesible resource location'),
         '#options' => array(
           'REMOTE' => 'AWS S3/Dropbox via http(s)',
@@ -1092,7 +1097,7 @@ function islandora_multi_importer_objectmapping_form($form, &$form_state, $file_
       ),
       'relsext_mode' => array(
         '#type' => 'select',
-        '#attributes' => '',
+        '#attributes' => array(),
         '#description' => t('Select the way you would like to handle predicates for your existing objects'),
         '#options' => array(
           'NEW' => 'Only use new Predicates, nothing gets copied over',
@@ -1206,7 +1211,7 @@ function islandora_multi_importer_mapper_ajax($form, &$form_state) {
 /**
  * Main submit handler for Multi Importer form.
  */
-function islandora_multi_importer_form_submit($form, &$form_state) {
+function islandora_multi_importer_form_submit(array $form, array &$form_state) {
   module_load_include('inc', 'islandora_multi_importer', 'includes/islandora_multi_batch');
   module_load_include('inc', 'islandora', 'includes/utilities');
   // Store step data.
@@ -1243,20 +1248,20 @@ function islandora_multi_importer_form_submit($form, &$form_state) {
   if ($form_state['triggering_element']['#name'] == 'back') {
     $form_state['storage']['step'] = 0 ;
     $form_state['rebuild'] = TRUE;
-   
-    
+
+
   }
   if ($form_state['triggering_element']['#name'] == 'preprocess') {
     $form_state['storage']['step'] = 3;
     $form_state['rebuild'] = TRUE;
-   
+
   }
   if ($form_state['triggering_element']['#name'] == 'reread') {
     $form_state['storage']['step'] = 3;
     //clears google data and forces a remote re-read
     unset($form_state['storage']['values']['general']['file_data']);
     $form_state['rebuild'] = TRUE;
-   
+
   }
 
 
@@ -1264,7 +1269,7 @@ function islandora_multi_importer_form_submit($form, &$form_state) {
   if (!empty($form_state['storage']['values'][$step_name])) {
     $form_state['values'][$step_name] = $form_state['storage']['values'][$step_name];
   }
-  //dpm($form_state);
+
   if ($form_state['triggering_element']['#value'] == t('Save Template')) {
     $twig_template = trim($form_state['values']['step4']['group_tabs']['group_twig_tab']['twig']);
     $twig_template_name = trim($form_state['values']['step4']['group_tabs']['group_twig_tab']['savemenu']['save']['template_name']);
