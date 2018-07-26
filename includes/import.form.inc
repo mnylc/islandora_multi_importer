@@ -933,17 +933,13 @@ function islandora_multi_importer_cmodeldsmapping_form(array &$form_state, array
              '#default_value' => 'DWC',
              '#element_validate' => array('islandora_multi_importer_validate_dsid'),
            ),
-           
-           
-           
-           
            'realsave' => array(
              '#tree' => TRUE,
              '#type' => 'submit',
              '#value' => t('Add this DWC to every CMODEL'),
              '#ajax' => array(
                'callback' => 'islandora_multi_importer_saveextradsid_ajax',
-               'wrapper' => 'islandora-multi-twigsave',
+               'wrapper' => 'islandora-multi-newdsidsave',
              ),
            ),
            'cancel' => array(
@@ -1308,7 +1304,7 @@ function islandora_multi_importer_adddsid_ajax($form, &$form_state) {
  * Add DSID callback for ajax driven form.
  */
 function islandora_multi_importer_saveextradsid_ajax($form, &$form_state) {
-  return $form['cmodelmap']['cmodels']['extrads'];
+  return $form['cmodelmap']['cmodels']['extrads']['addmenu']['save'];
 }
 
 function islandora_multi_importer_validate_dsid($element, $form_state) {
