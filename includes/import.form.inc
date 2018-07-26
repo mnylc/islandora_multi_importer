@@ -1026,7 +1026,7 @@ function islandora_multi_importer_cmodeldsmapping_form(array &$form_state, array
           'application/rdf+xml',
           'text/plain',
           'text/html',
-        ))) {
+        )) || empty($dsidinfo['mime'])){
           // In case no template is there yet (first install)?
           if (!empty($template_options)) {
             $options['Use Twig Template'] = array_combine(array_map($prefix_options, $template_options, array_fill(0, count($template_options), "template|")), $template_options);
