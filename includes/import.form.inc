@@ -1309,7 +1309,7 @@ function islandora_multi_importer_saveextradsid_ajax($form, &$form_state) {
 
 function islandora_multi_importer_validate_dsid($element, &$form_state, $form) {
   module_load_include('inc', 'islandora', 'includes/utilities');
-  dpm($element['#value');
+  dpm($element['#value']);
   if (!islandora_multi_importer_isValidXmlName($element['#value'])) {
     form_set_error('cmodelmap][cmodels][extrads][newdsid][addmenu][save][dsid_name','');
   }
