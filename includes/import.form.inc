@@ -1307,10 +1307,9 @@ function islandora_multi_importer_saveextradsid_ajax($form, &$form_state) {
   return $form['cmodelmap']['cmodels']['extrads']['addmenu']['save'];
 }
 
-function islandora_multi_importer_validate_dsid($element, &$form_state) {
+function islandora_multi_importer_validate_dsid($element, &$form_state, $form) {
   module_load_include('inc', 'islandora', 'includes/utilities');
-  form_set_error('values][extrads][newdsid][addmenu][save][dsid_name','Wrong DSID name format');
-  form_error($element, t('Your DSID is not valid'));
+  form_set_error('values][extrads][newdsid][addmenu][save][dsid_name','');
 }
 
 
