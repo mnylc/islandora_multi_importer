@@ -558,3 +558,27 @@ function islandora_multi_importer_array_equallyseize($headercount, $row) {
         
     return $row;
 }
+
+/**
+ * Checks if a given value can be used as Fedora object DSID
+ *
+ * @param string $dsid
+ *   the dsid candidate
+ * @return bool
+ *  True if it can be used as DSID 
+ */
+function islandora_multi_importer_isValidXmlName($dsid) {
+  $dsid = trim($dsid);
+  // see https://wiki.duraspace.org/display/FEDORA38/Fedora+Identifiers
+  if ((strlen($dsid)>64) || (strlen($dsid)==0)) {
+    return FALSE;
+  }
+
+  try {
+    new DOMElement($dsid);
+      return TRUE;
+  } catch(DOMException $e) {
+      return FALSE;
+  }
+}
+
