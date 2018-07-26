@@ -9,8 +9,8 @@
 // Permissions.
 define('ISLANDORA_MULTI_IMPORTER_CREATE', 'Import Objects using Islandora Multi Importer');
 define('ISLANDORA_MULTI_IMPORTER_UPDATE', 'Update Objects using Islandora Multi Importer');
-define('ISLANDORA_MULTI_IMPORTER_TWIGMANAGE', "Manage Islandora Multi Importer Twig templates");
-
+define('ISLANDORA_MULTI_IMPORTER_TWIGMANAGE', 'Manage Islandora Multi Importer Twig templates');
+define('ISLANDORA_MULTI_IMPORTER_EXTRADS', 'Add new DSIDS to Islandora Multi Importer imports');
 
 /**
  * Implements hook_init().
