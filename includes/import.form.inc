@@ -1309,9 +1309,8 @@ function islandora_multi_importer_saveextradsid_ajax($form, &$form_state) {
 
 function islandora_multi_importer_validate_dsid($element, &$form_state) {
   module_load_include('inc', 'islandora', 'includes/utilities');
-  dpm($form_state['values']);
-  dpm($form_state['values']['extrads']['newdsid']['addmenu']['save']['dsid_name']);
-  form_set_error('values']['extrads']['newdsid']['addmenu']['save']['dsid_name','Wrong DSID name format');
+ 
+  //orm_set_error('values']['extrads']['newdsid']['addmenu']['save']['dsid_name','Wrong DSID name format');
   form_error($element, t('Your DSID is not valid'));
 }
 
