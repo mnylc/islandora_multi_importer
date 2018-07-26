@@ -956,9 +956,9 @@ function islandora_multi_importer_cmodeldsmapping_form(array &$form_state, array
   }
    dpm($computed_cmodels);
    if (empty(form_get_errors()) && isset($form_state['clicked_button']) && ($form_state['clicked_button']['#value'] == 'Add this DSID to every CMODEL')) {
-        foreach ($computed_cmodels as &$cmodel) {
+        foreach ($computed_cmodels as &$dsids) {
           $new_dsdi = trim($form_state['values']['cmodelmap']['cmodels']['extrads']['newdsid']['addmenu']['save']['dsid_name']);
-          $cmodel[$new_dsdi] = array(
+          $dsids[$new_dsdi] = array(
             'id' => $new_dsdi,
             'mime'=> array(),
             'optional' => 1
