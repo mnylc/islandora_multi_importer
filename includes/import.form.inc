@@ -936,10 +936,10 @@ function islandora_multi_importer_cmodeldsmapping_form(array &$form_state, array
            'realsave' => array(
              '#tree' => TRUE,
              '#type' => 'submit',
-             '#value' => t('Add this DWC to every CMODEL'),
+             '#value' => t('Add this DSID to every CMODEL'),
              '#ajax' => array(
                'callback' => 'islandora_multi_importer_saveextradsid_ajax',
-               'wrapper' => 'islandora-multi-newdsidsave',
+               'wrapper' => 'islandora-multi-cmodelmapping',
              ),
            ),
            'cancel' => array(
@@ -954,6 +954,19 @@ function islandora_multi_importer_cmodeldsmapping_form(array &$form_state, array
          );
      }
   }
+   if (empty(form_get_errors()) && isset($form_state['clicked_button']) && ($form_state['clicked_button']['#value'] == 'Add this DSID to every CMODEL')) {
+        foreach ($computed_cmodels as $cmodel => $dsid) {
+          $new_dsdi = trim($form_state['values']['cmodelmap']['cmodels']['extrads']['newdsid']['addmenu']['save']['dsid_name']);
+          $computed_cmodels[$cmodel] += array(
+            "$new_dsdi" => array(
+              'id' => $new_dsdi,
+              'mime'=> array(),
+              'optional' => 1
+            )
+          );
+        } 
+   }
+
     foreach ($computed_cmodels as $cmodel => $dsids) {
       $form[$cmodel] = array(
         '#type' => 'fieldset',
@@ -1014,7 +1027,7 @@ function islandora_multi_importer_cmodeldsmapping_form(array &$form_state, array
           'application/rdf+xml',
           'text/plain',
           'text/html',
-        ))) {
+        )) || empty($dsidinfo['mime'])){
           // In case no template is there yet (first install)?
           if (!empty($template_options)) {
             $options['Use Twig Template'] = array_combine(array_map($prefix_options, $template_options, array_fill(0, count($template_options), "template|")), $template_options);
@@ -1304,14 +1317,14 @@ function islandora_multi_importer_adddsid_ajax($form, &$form_state) {
  * Add DSID callback for ajax driven form.
  */
 function islandora_multi_importer_saveextradsid_ajax($form, &$form_state) {
-  return $form['cmodelmap']['cmodels']['extrads']['addmenu']['save'];
+  return $form['cmodelmap']['cmodels'];
 }
 
-function islandora_multi_importer_validate_dsid($element, &$form_state) {
+function islandora_multi_importer_validate_dsid($element, &$form_state, $form) {
   module_load_include('inc', 'islandora', 'includes/utilities');
- 
-  //orm_set_error('values']['extrads']['newdsid']['addmenu']['save']['dsid_name','Wrong DSID name format');
-  form_error($element, t('Your DSID is not valid'));
+  if (!islandora_multi_importer_isValidXmlName($element['#value'])) {
+    form_set_error('cmodelmap][cmodels][extrads][newdsid][addmenu][save][dsid_name','');
+  }
 }
 
 
