@@ -31,12 +31,18 @@ function islandora_multi_importer_admin_form($form, $form_state) {
   );
   $form['islandora_multi_importer_generalsettings_fieldset']['islandora_multi_importer_plupload'] = array(
     '#type' => 'checkbox',
-    '#title' => t('Use Plupload for ZIP file'),
+    '#title' => t('Use Plupload for uploading spreadsheets and ZIP files'),
     '#description' => t('Use Plupload, requires the Drupal plupload module and Library enabled.'),
     '#default_value' => variable_get('islandora_multi_importer_plupload', FALSE),
   );
-    
-    
+  $form['islandora_multi_importer_generalsettings_fieldset']['islandora_multi_importer_extrads'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Allow authorized users to create Datastream not defined in each CMODELS during ingest and update'),
+    '#description' => t('This option also requires corresponding Drupal permissions to be correctly set.'),
+    '#default_value' => variable_get('islandora_multi_importer_extrads', FALSE),
+  );
+
+
   $form['islandora_multi_importer_googleapi_fieldset'] = array(
     '#type' => 'fieldset',
     '#title' => t('Google API OAuth2 Credentials'),
@@ -49,35 +55,34 @@ function islandora_multi_importer_admin_form($form, $form_state) {
    '#required' => FALSE,
  );
  
-$passexist = variable_get('islandora_multi_importer_googleClientSecret', 0);
+  $passexist = variable_get('islandora_multi_importer_googleClientSecret', 0);
 
 
- $form['islandora_multi_importer_googleapi_fieldset']['islandora_multi_importer_googleClientSecret'] = array(
+  $form['islandora_multi_importer_googleapi_fieldset']['islandora_multi_importer_googleClientSecret'] = array(
   '#type' => 'password',
   '#title' => t('Google API App Secret Key'),
   '#description' => t("Leave as is if you want to keep the existing value"),
   '#required' => !isset($passexist),
-);
+  );
 
-if ($passexist) {
+  if ($passexist) {
   // This will display only if authentication worked out (after, saving)
- $client = islandora_multi_importer_googleclient();
- $authUrl = $client->createAuthUrl(); 
+    $client = islandora_multi_importer_googleclient();
+    $authUrl = $client->createAuthUrl(); 
    
- $form['islandora_multi_importer_googleapi_fieldset']['islandora_multi_importer_googleClientAuthCode'] = array(
-  '#type' => 'password',
-  '#title' => t('Google API Auth Code'),
-  '#description' => t('Leave as is if you want to keep the existing value or Enter from <a href="@google-token" target="_blank">this URL</a>.', array('@google-token' => $authUrl)),
-  '#required' => !isset($passexist),
-);
-}
+    $form['islandora_multi_importer_googleapi_fieldset']['islandora_multi_importer_googleClientAuthCode'] = array(
+      '#type' => 'password',
+      '#title' => t('Google API Auth Code'),
+      '#description' => t('Leave as is if you want to keep the existing value or Enter from <a href="@google-token" target="_blank">this URL</a>.', array('@google-token' => $authUrl)),
+      '#required' => !isset($passexist),
+    );
+  }
 
 
   $form = system_settings_form($form);
   array_unshift($form['#submit'], 'islandora_multi_importer_google_default_password');
 
   return $form;
-
 }
 
 function islandora_multi_importer_google_default_password($form, &$form_state) {
@@ -107,12 +112,8 @@ function islandora_multi_importer_admin_form_validate($form, &$form_state) {
       if ($authCode) {
        $client = islandora_multi_importer_googleclient();
        try {
-       $accessToken = $client->fetchAccessTokenWithAuthCode($authCode);
+         $accessToken = $client->fetchAccessTokenWithAuthCode($authCode);
        // And we need to activate it
-       // Probably by invoking the Sheets API directly
-      // Google_Service_Exception: { "error": { "code": 403, "message": "Google Sheets API has not been used in project dmcny-1329 before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/sheets.googleapis.com/overview?project=dmcny-1329 then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry.", "errors": [ { "message": "Google Sheets API has not been used in project dmcny-1329 before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/sheets.googleapis.com/overview?project=dmcny-1329 then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry.", "domain": "global", "reason": "forbidden" } ], "status": "PERMISSION_DENIED" } } in Google_Http_REST::decodeHttpResponse() (line 118 of /vagrant/islandora_host/islandora_multi_importer/vendor/google/apiclient/src/Google/Http/REST.php).
-       
-       
        }
        catch (Exception $e) {
          drupal_set_message(t('@message', array('@message' => check_plain($e->getMessage()))), 'error');
@@ -122,8 +123,6 @@ function islandora_multi_importer_admin_form_validate($form, &$form_state) {
        // This stuff is an array.
        $form_state['values']['islandora_multi_importer_googleClientToken'] = $accessToken;
       }
-   
-    
     //$checkGoogleAPI = islandora_multi_importer_googlecredentials_validate($appid, $secret, $token);
     if (!$accessToken && $authCode) {
       form_set_error('islandora_multi_importer_googleClientSecret', 'Please make sure your Google API OAuth credentials are correct.');
@@ -144,7 +143,6 @@ function islandora_multi_importer_admin_submit_form($form, &$form_state) {
     if (is_array($value) && isset($form_state['values']['array_filter'])) {
       $value = array_keys(array_filter($value));
     }
-    
     variable_set($key, $value);
   }
   drupal_set_message(t('The settings have been updated!'));
