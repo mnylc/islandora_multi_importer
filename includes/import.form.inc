@@ -922,7 +922,7 @@ function islandora_multi_importer_cmodeldsmapping_form(array &$form_state, array
            ),
          );
          $form['extrads']['newdsid']['addmenu']['save'] = array(
-           '#prefix' => '<div class="form-group" id="islandora-multi-newdsidsave">',
+           '#prefix' => '<div id="islandora-multi-newdsidsave">',
            '#suffix' => '</div>',
            '#access' => ($form_state['triggering_element']['#value'] == t('Add an extra DSID')),
            '#tree' => TRUE,
@@ -947,8 +947,8 @@ function islandora_multi_importer_cmodeldsmapping_form(array &$form_state, array
              '#type' => 'button',
              '#value' => t('Cancel'),
              '#ajax' => array(
-               'callback' => 'function islandora_multi_importer_saveextradsid_ajax',
-               'wrapper' => 'islandora-multi-newdsid',
+               'callback' => 'islandora_multi_importer_saveextradsid_ajax',
+               'wrapper' => 'islandora-multi-newdsidsave',
              ),
            ),
          );
