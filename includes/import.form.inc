@@ -936,7 +936,7 @@ function islandora_multi_importer_cmodeldsmapping_form(array &$form_state, array
            'realsave' => array(
              '#tree' => TRUE,
              '#type' => 'submit',
-             '#value' => t('Add this DWC to every CMODEL'),
+             '#value' => t('Add this DSID to every CMODEL'),
              '#ajax' => array(
                'callback' => 'islandora_multi_importer_saveextradsid_ajax',
                'wrapper' => 'islandora-multi-newdsidsave',
@@ -954,6 +954,8 @@ function islandora_multi_importer_cmodeldsmapping_form(array &$form_state, array
          );
      }
   }
+  dpm($computed_cmodels);
+  
     foreach ($computed_cmodels as $cmodel => $dsids) {
       $form[$cmodel] = array(
         '#type' => 'fieldset',
