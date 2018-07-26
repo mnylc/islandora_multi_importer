@@ -931,7 +931,7 @@ function islandora_multi_importer_cmodeldsmapping_form(array &$form_state, array
              '#size' => 64,
              '#description' => 'New datastream ID (DSID)',
              '#default_value' => 'DWC',
-             '#element_validate' => array('islandora_multi_importer_validatedsid'),
+             '#element_validate' => array('islandora_multi_importer_validate_dsid'),
            ),
            
            
