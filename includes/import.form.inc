@@ -928,8 +928,10 @@ function islandora_multi_importer_cmodeldsmapping_form(array &$form_state, array
            '#tree' => TRUE,
            'dsid_name' => array(
              '#type' => 'textfield',
+             '#size' => 64,
              '#description' => 'New datastream ID (DSID)',
              '#default_value' => 'DWC',
+             '#element_validate' => array('islandora_multi_importer_validatedsid'),
            ),
            
            
@@ -989,6 +991,10 @@ function islandora_multi_importer_cmodeldsmapping_form(array &$form_state, array
       // Iterate over existing ones
       // Defaults.
       $defaults = array();
+      
+      // NEW DSID goes here...
+      
+      
       foreach ($dsids as $dsid => $dsidinfo) {
 
         // Individual Options for each DSID.
@@ -1303,6 +1309,13 @@ function islandora_multi_importer_adddsid_ajax($form, &$form_state) {
  */
 function islandora_multi_importer_saveextradsid_ajax($form, &$form_state) {
   return $form['cmodelmap']['cmodels']['extrads'];
+}
+
+function islandora_multi_importer_validate_dsid($element, $form_state) {
+  module_load_include('inc', 'islandora', 'includes/utilities');
+  dpm($form_state['values']);
+  dpm($form_state['values']['extrads']['newdsid']['addmenu']['save']['dsid_name']);
+  form_error($element, t('Your DSID is not valid'));
 }
 
 
