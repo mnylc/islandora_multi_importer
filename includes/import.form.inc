@@ -877,6 +877,9 @@ function islandora_multi_importer_cmodeldsmapping_form(array &$form_state, array
     '#type' => 'markup',
   );
   $rows = array();
+  // Check action here.
+  $parameters['action'] = isset($form_state['values']['action']) ? $form_state['values']['action'] : 'ingest';
+  
   // Only if cmodels where computed previously.
   if (isset($form_state['storage']['values']['general']['computed_cmodels'])) {
     $computed_cmodels = $form_state['storage']['values']['general']['computed_cmodels'];
@@ -1014,7 +1017,7 @@ function islandora_multi_importer_cmodeldsmapping_form(array &$form_state, array
           $options['via XSLT from MODS'] = array('xlst|0' => 'default XSLT');
         }
 
-        if ($dsidinfo['optional'] == TRUE) {
+        if (($dsidinfo['optional'] == TRUE) || ($parameters['action']!= 'ingest')){
           $options['NONE'] = array('' => t("-- Don't Create --"));
         }
         $options['Via a source data field (file path)'] = $field_options;
