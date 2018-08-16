@@ -37,7 +37,7 @@ function islandora_multi_importer_admin_form($form, $form_state) {
   );
   $form['islandora_multi_importer_generalsettings_fieldset']['islandora_multi_importer_extrads'] = array(
     '#type' => 'checkbox',
-    '#title' => t('Allow authorized users to create Datastream not defined in each CMODELS during ingest and update'),
+    '#title' => t('Allow authorized users to create a Datastream not defined in the chosen CMODELs during ingest and update.'),
     '#description' => t('This option also requires corresponding Drupal permissions to be correctly set.'),
     '#default_value' => variable_get('islandora_multi_importer_extrads', FALSE),
   );
