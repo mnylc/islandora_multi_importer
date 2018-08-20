@@ -9,8 +9,8 @@
 // Permissions.
 define('ISLANDORA_MULTI_IMPORTER_CREATE', 'Import Objects using Islandora Multi Importer');
 define('ISLANDORA_MULTI_IMPORTER_UPDATE', 'Update Objects using Islandora Multi Importer');
-define('ISLANDORA_MULTI_IMPORTER_TWIGMANAGE', "Manage Islandora Multi Importer Twig templates");
-
+define('ISLANDORA_MULTI_IMPORTER_TWIGMANAGE', 'Manage Islandora Multi Importer Twig templates');
+define('ISLANDORA_MULTI_IMPORTER_EXTRADS', 'Add new DSIDS to Islandora Multi Importer imports');
 
 /**
  * Implements hook_init().
@@ -139,7 +139,11 @@ function islandora_multi_importer_permission() {
     ),
     ISLANDORA_MULTI_IMPORTER_TWIGMANAGE => array(
       'title' => t('Manage Islandora Multi Importer Twig templates'),
-      'description' => t('Manage user-supplied Twig templates'),
+      'description' => t('Manage user-supplied Twig templates in Islandora Multi Importer.'),
+    ),
+    ISLANDORA_MULTI_IMPORTER_EXTRADS => array(
+      'title' => t('Create/update Datastreams not defined in CMODELS.'),
+      'description' => t('Allow user-supplied DSIDS to be used in any CMODELS.'),
     ),
   );
 }

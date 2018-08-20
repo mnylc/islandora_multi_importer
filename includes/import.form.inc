@@ -851,6 +851,11 @@ function islandora_multi_importer_cmodelmapping_form(array $form, array &$form_s
     $form['basemapping']['rows'][$key] = $row;
   }
   $form['cmodels'] = islandora_multi_importer_cmodeldsmapping_form($form_state, $file_data);
+  
+  // Allows users to add extra DSIDS not defined in each CMODEL
+  
+  
+  
   return $form;
 }
 
@@ -872,9 +877,98 @@ function islandora_multi_importer_cmodeldsmapping_form(array &$form_state, array
     '#type' => 'markup',
   );
   $rows = array();
+  // Check action here.
+  $parameters['action'] = isset($form_state['values']['action']) ? $form_state['values']['action'] : 'ingest';
+  
   // Only if cmodels where computed previously.
   if (isset($form_state['storage']['values']['general']['computed_cmodels'])) {
     $computed_cmodels = $form_state['storage']['values']['general']['computed_cmodels'];
+    // Deal with user-supplied DSDIs
+    if (user_access(ISLANDORA_MULTI_IMPORTER_EXTRADS) && variable_get('islandora_multi_importer_extrads', FALSE)) {
+       $form['extrads'] = array(
+         '#tree' => TRUE,
+         '#type' => 'markup',
+       );
+       $form['extrads']['newdsid'] = array(
+         '#prefix' => '<div class="form-group" id="islandora-multi-newdsid">',
+         '#suffix' => '</div>',
+         '#title' => t('Add custom Datastreams not defined in computed datastreams'),
+         '#tree' => TRUE,
+         '#type' => 'fieldset',
+       );
+       
+       $form['extrads']['newdsid']['addmenu']['presave'] = array(
+         '#prefix' => '<div style="height:50px;">',
+         '#suffix' => '</div>',
+         '#tree' => TRUE,
+         '#type' => 'button',
+         '#value' => t('Add an extra DSID'),
+         '#access' => ($form_state['triggering_element']['#value'] != t('Add an extra DSID')),
+         '#ajax' => array(
+           'callback' => 'islandora_multi_importer_adddsid_ajax',
+           'wrapper' => 'islandora-multi-newdsid',
+         ),
+       );
+
+       // This one is only displayed if the Add an extra DSID button was pressed.
+       if (isset($form_state['clicked_button']) && ($form_state['clicked_button']['#value'] == 'Add an extra DSID')) {
+         $form['extrads']['newdsid']['addmenu']['presave'] = array(
+           '#prefix' => '<div style="height:50px;">',
+           '#suffix' => '</div>',
+           '#tree' => TRUE,
+           '#type' => 'button',
+           '#value' => t('Add an extra DSID'),
+           '#access' => ($form_state['triggering_element']['#value'] != t('Add an extra DSID')),
+           '#ajax' => array(
+             'callback' => 'islandora_multi_importer_adddsid_ajax',
+             'wrapper' => 'islandora-multi-newdsid',
+           ),
+         );
+         $form['extrads']['newdsid']['addmenu']['save'] = array(
+           '#prefix' => '<div id="islandora-multi-newdsidsave">',
+           '#suffix' => '</div>',
+           '#access' => ($form_state['triggering_element']['#value'] == t('Add an extra DSID')),
+           '#tree' => TRUE,
+           'dsid_name' => array(
+             '#type' => 'textfield',
+             '#size' => 64,
+             '#description' => 'New datastream ID (DSID)',
+             '#default_value' => 'DWC',
+             '#element_validate' => array('islandora_multi_importer_validate_dsid'),
+           ),
+           'realsave' => array(
+             '#tree' => TRUE,
+             '#type' => 'submit',
+             '#value' => t('Add this DSID to every CMODEL'),
+             '#ajax' => array(
+               'callback' => 'islandora_multi_importer_saveextradsid_ajax',
+               'wrapper' => 'islandora-multi-cmodelmapping',
+             ),
+           ),
+           'cancel' => array(
+             '#tree' => TRUE,
+             '#type' => 'button',
+             '#value' => t('Cancel'),
+             '#ajax' => array(
+               'callback' => 'islandora_multi_importer_saveextradsid_ajax',
+               'wrapper' => 'islandora-multi-newdsidsave',
+             ),
+           ),
+         );
+     }
+  }
+   if (empty(form_get_errors()) && isset($form_state['clicked_button']) && ($form_state['clicked_button']['#value'] == 'Add this DSID to every CMODEL')) {
+        foreach ($computed_cmodels as $cmodel => $dsid) {
+          $new_dsdi = trim($form_state['values']['cmodelmap']['cmodels']['extrads']['newdsid']['addmenu']['save']['dsid_name']);
+          $computed_cmodels[$cmodel] += array(
+            "$new_dsdi" => array(
+              'id' => $new_dsdi,
+              'mime'=> array(),
+              'optional' => 1
+            )
+          );
+        } 
+   }
 
     foreach ($computed_cmodels as $cmodel => $dsids) {
       $form[$cmodel] = array(
@@ -909,6 +1003,10 @@ function islandora_multi_importer_cmodeldsmapping_form(array &$form_state, array
       // Iterate over existing ones
       // Defaults.
       $defaults = array();
+      
+      // NEW DSID goes here...
+      
+      
       foreach ($dsids as $dsid => $dsidinfo) {
 
         // Individual Options for each DSID.
@@ -919,7 +1017,7 @@ function islandora_multi_importer_cmodeldsmapping_form(array &$form_state, array
           $options['via XSLT from MODS'] = array('xlst|0' => 'default XSLT');
         }
 
-        if ($dsidinfo['optional'] == TRUE) {
+        if (($dsidinfo['optional'] == TRUE) || ($parameters['action']!= 'ingest')){
           $options['NONE'] = array('' => t("-- Don't Create --"));
         }
         $options['Via a source data field (file path)'] = $field_options;
@@ -932,7 +1030,7 @@ function islandora_multi_importer_cmodeldsmapping_form(array &$form_state, array
           'application/rdf+xml',
           'text/plain',
           'text/html',
-        ))) {
+        )) || empty($dsidinfo['mime'])){
           // In case no template is there yet (first install)?
           if (!empty($template_options)) {
             $options['Use Twig Template'] = array_combine(array_map($prefix_options, $template_options, array_fill(0, count($template_options), "template|")), $template_options);
@@ -954,6 +1052,9 @@ function islandora_multi_importer_cmodeldsmapping_form(array &$form_state, array
             }
           }
         }
+        
+        
+        
         // Check if DS is optional or not, we enforce not optional ones.
         $defaults[$dsid] = !$dsidinfo['optional'];
         $form[$cmodel]['dsid']['rows'][$dsid] = array(
@@ -1180,7 +1281,7 @@ function islandora_multi_importer_previstwig_ajax($form, &$form_state) {
 }
 
 /**
- * Save template  allback for ajax driven form.
+ * Save template callback for ajax driven form.
  */
 function islandora_multi_importer_savetwig_ajax($form, &$form_state) {
   return $form['step4']['group_tabs']['group_twig_tab']['savemenu'];
@@ -1206,6 +1307,29 @@ function islandora_multi_importer_loadtwig_ajax($form, &$form_state) {
 function islandora_multi_importer_mapper_ajax($form, &$form_state) {
   return $form['cmodelmap']['cmodels'];
 }
+
+
+/**
+ * Add DSID callback for ajax driven form.
+ */
+function islandora_multi_importer_adddsid_ajax($form, &$form_state) {
+  return $form['cmodelmap']['cmodels']['extrads'];
+}
+
+/**
+ * Add DSID callback for ajax driven form.
+ */
+function islandora_multi_importer_saveextradsid_ajax($form, &$form_state) {
+  return $form['cmodelmap']['cmodels'];
+}
+
+function islandora_multi_importer_validate_dsid($element, &$form_state, $form) {
+  module_load_include('inc', 'islandora', 'includes/utilities');
+  if (!islandora_multi_importer_isValidXmlName($element['#value'])) {
+    form_set_error('cmodelmap][cmodels][extrads][newdsid][addmenu][save][dsid_name','');
+  }
+}
+
 
 
 /**
