@@ -111,7 +111,7 @@ class FakeObject extends AbstractObject {
    */
   public function __construct($id = NULL, array $models = array()) {
     parent::__construct();
-    $this->$id = $id;
+    $this->id = $id;
     $this->relationships = new FakeRelsExt($models);
   }
 
@@ -144,8 +144,7 @@ class FakeRelsExt {
     if (!isset($this->models) || empty($this->models)) {
       return array();
     }
-
-    if (($predicate_uri == this::FAKE_MODEL_URI) && ($predicate == 'hasModel')) {
+    if (($predicate_uri == $this::FAKE_MODEL_URI) && ($predicate == 'hasModel')) {
       $results = array();
       if (isset($object) && in_array($object, $this->models)) {
         $themodels = array($object);
@@ -153,7 +152,7 @@ class FakeRelsExt {
       else {
         $themodels = $this->models;
       }
-      foreach ($models as $model) {
+      foreach ($themodels as $model) {
         $result = array();
         $result['predicate'] = array();
         $result['predicate']['value'] = $predicate;
@@ -170,6 +169,16 @@ class FakeRelsExt {
     }
 
     return array();
+  }
+
+  /**
+   * Constructolizzard.
+   *
+   * @param array $models
+   *   An list of real Islandora CMODELS.
+   */
+  public function __construct(array $models = array()) {
+    $this->models = $models;
   }
 
 }
