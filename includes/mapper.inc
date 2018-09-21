@@ -55,9 +55,9 @@ function islandora_multi_importer_mapper_get_derivatives($cmodel) {
    *   - destination_dsid: (Optional) String of the datastream id that is being
    *     created. To be used in the UI.
   );*/
-  $fakeabstractobject = new FakeObject();
+  // FakeObject class constructor now gets a CMODEL array 
+  $fakeabstractobject = new FakeObject('imi:faker', array($cmodel));
   // Ugly workaround for people that forget about function signatures.
-  $fakeabstractobject->models = array($cmodel);
   $options = array(
     'force' => FALSE,
     'source_dsid' => NULL,
