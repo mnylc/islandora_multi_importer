@@ -112,6 +112,7 @@ class FakeObject extends AbstractObject {
   public function __construct($id = NULL, array $models = array()) {
     parent::__construct();
     $this->id = $id;
+    $this->models = $models;
     $this->relationships = new FakeRelsExt($models);
   }
 
