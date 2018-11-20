@@ -134,6 +134,12 @@ function islandora_multi_importer_admin_form_validate($form, &$form_state) {
       form_set_error('islandora_multi_importer_googleClientID', 'Please make sure your Google API OAuth credentials are correct.');
       form_set_error('islandora_multi_importer_googleClientAuthCode', 'Please make sure your Google API OAuth credentials are correct.');
     }
+
+  $imi_temp_dir = $form_state['values']['islandora_multi_importer_temp_dir'];
+  module_load_include('inc', 'islandora_multi_importer', 'includes/utilities');
+  if(!_imi_build_file_storage_directory(NULL, $imi_temp_dir)) {
+    form_set_error('islandora_multi_importer_temp_dir', 'Unable to create or write to the Islandora Multi-Importer temporary files storage directory. Ensure that the <em>private://</em> file directory is defined and is writable at <a href="/admin/config/media/file-system">Configuration > Media > File system</a>');
+  }
 }
 
 
