@@ -749,8 +749,10 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
                   // @TODO add this to errors
                   // try to get it now from remote
 
-                  $fileurl = islandora_multi_importer_remote_file_get(trim($this->objectInfo['data'][$method[1]]));
-                    
+                  $file = islandora_multi_importer_remote_file_get(trim($this->objectInfo['data'][$method[1]]));
+                  // This can be a file object, a file uri, or FALSE/NULL
+                  $fileurl = !empty($file->uri) ? $file->uri : $file;
+
                   $themime = "application/octet-stream";
                   if ($fileurl) {
                     $themime = $this->getMimetype(drupal_basename($fileurl));
@@ -816,7 +818,9 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
             // This will handle all cases, except ZIP.
 
             else {
-              $fileurl = islandora_multi_importer_remote_file_get(trim($this->objectInfo['data'][$method[1]]));
+              $file = islandora_multi_importer_remote_file_get(trim($this->objectInfo['data'][$method[1]]));
+              // This can be a file object, a file uri, or FALSE/NULL
+              $fileurl = !empty($file->uri) ? $file->uri : $file;
               $themime = "application/octet-stream";
               if ($fileurl) {
                 $themime = $this->getMimetype(drupal_basename($fileurl));

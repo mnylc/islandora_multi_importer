@@ -239,12 +239,10 @@ function islandora_multi_importer_remote_file_get($url) {
       return $localfile;
     }
       
-    // Simulate what could be the final path of a remote download.
-    // to avoid redownloading.
-    $localfile = file_build_uri(drupal_basename($parsed_url['path']));
+    $localfile = _imi_build_file_storage_uri(drupal_basename($parsed_url['path']), 'remote-files');
     if (!file_exists($localfile)) {
       // Actual remote heavy lifting only if not present.
-      $localfile = islandora_multi_importer_retrieve_remote_file($url, $local, FILE_EXISTS_REPLACE);
+      $localfile = islandora_multi_importer_retrieve_remote_file($url, $localfile, FILE_EXISTS_REPLACE);
       return $localfile;
     }
     else {
@@ -284,7 +282,7 @@ function islandora_multi_importer_retrieve_remote_file($url, $destination = NULL
     $parsed_url = parse_url($url);
     $mime = 'application/octet-stream';
     if (!isset($destination)) {
-      $path = file_build_uri(drupal_basename($parsed_url['path']));
+      $path = _imi_build_file_storage_uri(drupal_basename($parsed_url['path']), 'remote-files');
     }
     else {
       if (is_dir(drupal_realpath($destination))) {
@@ -295,6 +293,9 @@ function islandora_multi_importer_retrieve_remote_file($url, $destination = NULL
       else {
         $path = $destination;
       }
+    }
+    if(!$path) {
+      return FALSE;
     }
     $result = drupal_http_request($url);
     if ($result->code != 200) {
@@ -457,15 +458,15 @@ function islandora_multi_importer_twig_deletebyid($twig_id) {
  */
 function islandora_multi_importer_csv_save(array $data) {
     global $user;
-    $path = 'public:///islandora-multi-importer/csv/';
     $filename = $user->uid . '-' . uniqid() . '.csv';
+    $path = _imi_build_file_storage_uri($filename, 'csv');
     // Ensure the directory
-    if( !file_prepare_directory($path, FILE_CREATE_DIRECTORY) ){
+    if( !$path){
       drupal_set_message( t('Unable to create directory for CSV file. Verify permissions please'), 'error' );
       return;
     }
     // Ensure the file
-    $file = file_save_data('', $path . $filename);
+    $file = file_save_data('', $path);
     if( !$file ){
       drupal_set_message( t('Unable to create CSV file . Verify permissions please.'), 'error' );
       return;
@@ -582,3 +583,73 @@ function islandora_multi_importer_isValidXmlName($dsid) {
   }
 }
 
+/**
+ * Constructs a URI to IMI's file storage location for a file.
+ * Create the directory if it does not exist.
+ *
+ * @param string $filename
+ *   The name of the file to be stored.
+ *   Required.
+ * @param string $imi_temp_subdir
+ *   A sub-path.
+ *   Optional.
+ * @param string $imi_temp_dir
+ *   The islandora-multi-importer directory location relative to the uri scheme.
+ *   Optional. Defaults to 'islandora-multi-importer'.
+ * @param string $scheme
+ *   The name of the drupal stream wrapper scheme.
+ *   Optional. Defaults to "private".
+ *
+ * @return string
+ *   Returns a normalized stream wrapper uri to the file storage location.
+ *   Returns FALSE if unable to create/verify the file storage directory.
+ */
+function _imi_build_file_storage_uri($filename, $imi_temp_subdir = NULL, $imi_temp_dir = NULL, $scheme = 'private' ) {
+
+  $directory_uri = _imi_build_file_storage_directory($imi_temp_subdir, $imi_temp_dir, $scheme);
+  if(empty($directory_uri)) {
+    drupal_set_message(t('Error occurred while preparing storage for @filename in @directory. Check destination folder permissions', array(
+      '@filename' => $filename,
+      '@directory' => $directory_uri,
+    )), 'error');
+    return FALSE;
+  }
+  // Assemble and return the full file uri.
+  return file_stream_wrapper_uri_normalize($directory_uri . DIRECTORY_SEPARATOR . $filename);
+}
+
+/**
+ * Creates a temporary file storage directory
+ *
+ * @param string   $imi_temp_subdir
+ *   A subdirectory path.
+ *   Optional - None will be used if not provided.
+ * @param string   $imi_temp_dir
+ *   The main imi temporary files directory.
+ *   Optional - Default will be used if none is provided.
+ * @param string $scheme
+ *   The Drupal filestream scheme (public://, private://, temporary://).
+ *   Optional - private:// will be used if none is provided.
+ *
+ * @return bool/string
+ *   The uri to the new directory if successful.
+ *   FALSE if unable to create the directory.
+ */
+function _imi_build_file_storage_directory($imi_temp_subdir = NULL, $imi_temp_dir = NULL, $scheme = 'private') {
+
+  $directory = array(!empty($imi_temp_dir) ? $imi_temp_dir : variable_get('islandora_multi_importer_temp_dir', 'islandora-multi-importer'));
+
+  if(!empty($imi_temp_subdir)) {
+    $directory[] = $imi_temp_subdir;
+  }
+  $directory_uri = file_stream_wrapper_uri_normalize($scheme . '://' . implode(DIRECTORY_SEPARATOR, $directory));
+
+  $writable = file_prepare_directory($directory_uri, FILE_CREATE_DIRECTORY);
+  if(!$writable) {
+    drupal_set_message(t('Error occurred while preparing destination directory @directory. Check permissions', array(
+      '@directory' => $directory_uri,
+    )), 'error');
+    return FALSE;
+  }
+  return $directory_uri;
+}

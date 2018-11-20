@@ -41,7 +41,12 @@ function islandora_multi_importer_admin_form($form, $form_state) {
     '#description' => t('This option also requires corresponding Drupal permissions to be correctly set.'),
     '#default_value' => variable_get('islandora_multi_importer_extrads', FALSE),
   );
-
+  $form['islandora_multi_importer_generalsettings_fieldset']['islandora_multi_importer_temp_dir'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Temporary files storage directory'),
+    '#description' => t('Path to where to store temporary files under Drupal\'s <em>private://</em> directory. This is used for storing batch ingest files, generated metadata files, and other temporary files. Do not include leading or trailing slash. The <em>private://</em> directory location is configured at <a href="/admin/config/media/file-system">Configuration > Media > File system</a>' ),
+    '#default_value' => variable_get('islandora_multi_importer_temp_dir', 'islandora-multi-importer'),
+  );
 
   $form['islandora_multi_importer_googleapi_fieldset'] = array(
     '#type' => 'fieldset',
@@ -55,28 +60,28 @@ function islandora_multi_importer_admin_form($form, $form_state) {
    '#required' => FALSE,
  );
  
-  $passexist = variable_get('islandora_multi_importer_googleClientSecret', 0);
+$passexist = variable_get('islandora_multi_importer_googleClientSecret', 0);
 
 
-  $form['islandora_multi_importer_googleapi_fieldset']['islandora_multi_importer_googleClientSecret'] = array(
+ $form['islandora_multi_importer_googleapi_fieldset']['islandora_multi_importer_googleClientSecret'] = array(
   '#type' => 'password',
   '#title' => t('Google API App Secret Key'),
   '#description' => t("Leave as is if you want to keep the existing value"),
   '#required' => !isset($passexist),
-  );
+);
 
-  if ($passexist) {
+if ($passexist) {
   // This will display only if authentication worked out (after, saving)
-    $client = islandora_multi_importer_googleclient();
-    $authUrl = $client->createAuthUrl(); 
+ $client = islandora_multi_importer_googleclient();
+ $authUrl = $client->createAuthUrl(); 
    
-    $form['islandora_multi_importer_googleapi_fieldset']['islandora_multi_importer_googleClientAuthCode'] = array(
-      '#type' => 'password',
-      '#title' => t('Google API Auth Code'),
-      '#description' => t('Leave as is if you want to keep the existing value or Enter from <a href="@google-token" target="_blank">this URL</a>.', array('@google-token' => $authUrl)),
-      '#required' => !isset($passexist),
-    );
-  }
+ $form['islandora_multi_importer_googleapi_fieldset']['islandora_multi_importer_googleClientAuthCode'] = array(
+  '#type' => 'password',
+  '#title' => t('Google API Auth Code'),
+  '#description' => t('Leave as is if you want to keep the existing value or Enter from <a href="@google-token" target="_blank">this URL</a>.', array('@google-token' => $authUrl)),
+  '#required' => !isset($passexist),
+);
+}
 
 
   $form = system_settings_form($form);
@@ -112,7 +117,7 @@ function islandora_multi_importer_admin_form_validate($form, &$form_state) {
       if ($authCode) {
        $client = islandora_multi_importer_googleclient();
        try {
-         $accessToken = $client->fetchAccessTokenWithAuthCode($authCode);
+       $accessToken = $client->fetchAccessTokenWithAuthCode($authCode);
        // And we need to activate it
        }
        catch (Exception $e) {

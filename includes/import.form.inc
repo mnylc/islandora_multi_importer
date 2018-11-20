@@ -277,6 +277,9 @@ function islandora_multi_importer_form_googlecanread_validate($form, &$form_stat
  */
 function islandora_multi_importer_upload_form($form, &$form_state) {
   $upload_size = min((int) ini_get('post_max_size'), (int) ini_get('upload_max_filesize'));
+  module_load_include('inc', 'islandora_multi_importer', 'includes/utilities');
+  $upload_location = _imi_build_file_storage_directory('csv');
+
   $form_file = array(
     'file' => array(
       '#type' => 'managed_file',
@@ -285,7 +288,7 @@ function islandora_multi_importer_upload_form($form, &$form_state) {
       '#size' => 48,
       '#description' => t('Select a file to upload.<br/>Files must be less than <strong>@size MB.</strong>', array('@size' => $upload_size)),
       '#default_value' => isset($form_state['values']['file']) ? $form_state['values']['file'] : NULL,
-      '#upload_location' => file_default_scheme() . '://',
+      '#upload_location' => $upload_location ? $upload_location : file_default_scheme() . '://',
       '#upload_validators' => array(
         'file_validate_extensions' => array('txt csv tsv xls xlsx'),
         'file_validate_size' => array($upload_size * 1024 * 1024),
@@ -337,6 +340,8 @@ function islandora_multi_importer_google_form($form, &$form_state) {
  */
 function islandora_multi_importer_zip_upload_form($form, &$form_state) {
   $upload_size = min((int) ini_get('post_max_size'), (int) ini_get('upload_max_filesize'));
+  module_load_include('inc', 'islandora_multi_importer', 'includes/utilities');
+  $upload_location = _imi_build_file_storage_directory('csv');
   $form = array(
     'file2' => array(
       '#type' => 'managed_file',
@@ -345,7 +350,7 @@ function islandora_multi_importer_zip_upload_form($form, &$form_state) {
       '#size' => 48,
       '#description' => t('Select a file to upload.<br/>Files must be less than <strong>@size MB.</strong>', array('@size' => $upload_size)),
       '#default_value' => isset($form_state['values']['file3']) ? $form_state['values']['file3'] : NULL,
-      '#upload_location' => file_default_scheme() . '://',
+      '#upload_location' => $upload_location ? $upload_location : file_default_scheme() . '://',
       '#upload_validators' => array(
         'file_validate_extensions' => array('zip'),
         'file_validate_size' => array($upload_size * 1024 * 1024),
@@ -361,6 +366,8 @@ function islandora_multi_importer_zip_upload_form($form, &$form_state) {
  */
 function islandora_multi_importer_zip_plupload_form($form, &$form_state) {
   $upload_size = min((int) ini_get('post_max_size'), (int) ini_get('upload_max_filesize'));
+  module_load_include('inc', 'islandora_multi_importer', 'includes/utilities');
+  $upload_location = _imi_build_file_storage_directory('csv');
   $form = array(
     'file2' => array(
       '#type' => 'plupload',
@@ -374,7 +381,7 @@ function islandora_multi_importer_zip_plupload_form($form, &$form_state) {
       ),
       '#description' => t('Select a file to upload.<br/>Files must be less than <strong>@size MB.</strong>', array('@size' => $upload_size)),
       '#default_value' => isset($form_state['values']['file3']) ? $form_state['values']['file3'] : NULL,
-      '#upload_location' => file_default_scheme() . '://',
+      '#upload_location' => $upload_location ? $upload_location : file_default_scheme() . '://',
       '#upload_validators' => array(
         'file_validate_extensions' => array('zip'),
         'file_validate_size' => array($upload_size * 1024 * 1024),
@@ -390,11 +397,12 @@ function islandora_multi_importer_zip_plupload_form($form, &$form_state) {
  */
 function islandora_multi_importer_plupload_element_validate($element, &$form_state) {
   $saved_file = 0; // means no fid;
-  $scheme = file_default_scheme() . '://';
+  module_load_include('inc', 'islandora_multi_importer', 'includes/utilities');
+  $scheme = _imi_build_file_storage_directory();
   foreach ($form_state['values']['last']['file2'] as $uploaded_file) {
     if ($uploaded_file['status'] == 'done') {
       $source = $uploaded_file['tmppath'];
-      $destination = file_stream_wrapper_uri_normalize($scheme . "imi_".time()."_".$uploaded_file['name']);
+      $destination = file_stream_wrapper_uri_normalize($scheme . "/imi_".time()."_".$uploaded_file['name']);
       $destination = file_unmanaged_move($source, $destination, FILE_EXISTS_RENAME);
       $file = plupload_file_uri_to_object($destination);
       file_save($file);
@@ -1044,12 +1052,12 @@ function islandora_multi_importer_cmodeldsmapping_form(array &$form_state, array
             // current DSID add as default option.
             if ($derivative['destination_dsid'] == $dsid) {
               if (!empty($derivative['source_dsid'])) {
-                $options['Derivatives'] = array('derivative|0' => 'Build using derivative from ' . $derivative['source_dsid']);
-              } 
+              $options['Derivatives'] = array('derivative|0' => 'Build using derivative from ' . $derivative['source_dsid']);
+            }
               else {
                 $options['Derivatives'] = array('derivative|0' => 'Build using islandora generated derivative');
-              }
-            }
+          }
+        }
           }
         }
         
@@ -1372,20 +1380,20 @@ function islandora_multi_importer_form_submit(array $form, array &$form_state) {
   if ($form_state['triggering_element']['#name'] == 'back') {
     $form_state['storage']['step'] = 0 ;
     $form_state['rebuild'] = TRUE;
-
-
+   
+    
   }
   if ($form_state['triggering_element']['#name'] == 'preprocess') {
     $form_state['storage']['step'] = 3;
     $form_state['rebuild'] = TRUE;
-
+   
   }
   if ($form_state['triggering_element']['#name'] == 'reread') {
     $form_state['storage']['step'] = 3;
     //clears google data and forces a remote re-read
     unset($form_state['storage']['values']['general']['file_data']);
     $form_state['rebuild'] = TRUE;
-
+   
   }
 
 
