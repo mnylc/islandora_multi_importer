@@ -239,7 +239,7 @@ function islandora_multi_importer_remote_file_get($url) {
       return $localfile;
     }
 
-    $localfile = _imi_build_file_storage_uri(drupal_basename($parsed_url['path']), 'remote-files');
+    $localfile = _imi_build_file_storage_uri(drupal_basename($parsed_url['path']), 'imi-remote-files');
     if (!file_exists($localfile)) {
       // Actual remote heavy lifting only if not present.
       $localfile = islandora_multi_importer_retrieve_remote_file($url, $localfile, FILE_EXISTS_REPLACE);
@@ -282,7 +282,7 @@ function islandora_multi_importer_retrieve_remote_file($url, $destination = NULL
     $parsed_url = parse_url($url);
     $mime = 'application/octet-stream';
     if (!isset($destination)) {
-      $path = _imi_build_file_storage_uri(drupal_basename($parsed_url['path']), 'remote-files');
+      $path = _imi_build_file_storage_uri(drupal_basename($parsed_url['path']), 'imi-remote-files');
     }
     else {
       if (is_dir(drupal_realpath($destination))) {
@@ -459,7 +459,7 @@ function islandora_multi_importer_twig_deletebyid($twig_id) {
 function islandora_multi_importer_csv_save(array $data) {
     global $user;
     $filename = $user->uid . '-' . uniqid() . '.csv';
-    $path = _imi_build_file_storage_uri($filename, 'csv');
+    $path = _imi_build_file_storage_uri($filename, 'imi-csv');
     // Ensure the directory
     if( !$path){
       drupal_set_message( t('Unable to create directory for CSV file. Verify permissions please'), 'error' );

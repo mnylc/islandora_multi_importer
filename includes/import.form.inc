@@ -278,7 +278,7 @@ function islandora_multi_importer_form_googlecanread_validate($form, &$form_stat
 function islandora_multi_importer_upload_form($form, &$form_state) {
   $upload_size = min((int) ini_get('post_max_size'), (int) ini_get('upload_max_filesize'));
   module_load_include('inc', 'islandora_multi_importer', 'includes/utilities');
-  $upload_location = _imi_build_file_storage_directory('csv');
+  $upload_location = _imi_build_file_storage_directory('imi-csv');
 
   $form_file = array(
     'file' => array(
@@ -341,7 +341,7 @@ function islandora_multi_importer_google_form($form, &$form_state) {
 function islandora_multi_importer_zip_upload_form($form, &$form_state) {
   $upload_size = min((int) ini_get('post_max_size'), (int) ini_get('upload_max_filesize'));
   module_load_include('inc', 'islandora_multi_importer', 'includes/utilities');
-  $upload_location = _imi_build_file_storage_directory('zip');
+  $upload_location = _imi_build_file_storage_directory('imi-zip');
   $form = array(
     'file2' => array(
       '#type' => 'managed_file',
@@ -367,7 +367,7 @@ function islandora_multi_importer_zip_upload_form($form, &$form_state) {
 function islandora_multi_importer_zip_plupload_form($form, &$form_state) {
   $upload_size = min((int) ini_get('post_max_size'), (int) ini_get('upload_max_filesize'));
   module_load_include('inc', 'islandora_multi_importer', 'includes/utilities');
-  $upload_location = _imi_build_file_storage_directory('zip');
+  $upload_location = _imi_build_file_storage_directory('imi-zip');
   $form = array(
     'file2' => array(
       '#type' => 'plupload',
