@@ -402,7 +402,17 @@ function islandora_multi_importer_plupload_element_validate($element, &$form_sta
   foreach ($form_state['values']['last']['file2'] as $uploaded_file) {
     if ($uploaded_file['status'] == 'done') {
       $source = $uploaded_file['tmppath'];
-      $destination = file_stream_wrapper_uri_normalize($scheme . "/imi_".time()."_".$uploaded_file['name']);
+
+      // Ensure our storage directory path includes a trailing slash.
+      // TODO: Is there an easier way to do this?
+      $parse_scheme = parse_url($scheme);
+      if(!empty($parse_scheme['path'])) {
+        $parse_scheme['path'] = rtrim($parse_scheme['path'], '/') . '/';
+        // The function http_build_url is ensured by "composer require jakeasmith/http_build_url ^1"
+        $scheme = http_build_url($parse_scheme);
+      }
+
+      $destination = file_stream_wrapper_uri_normalize($scheme . "imi_".time()."_".$uploaded_file['name']);
       $destination = file_unmanaged_move($source, $destination, FILE_EXISTS_RENAME);
       $file = plupload_file_uri_to_object($destination);
       file_save($file);
