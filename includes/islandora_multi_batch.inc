@@ -1020,6 +1020,7 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
       ($relationship['predicate']['namespace']!="info:fedora/fedora-system:def/relations-external#")) {
         $reltocheck = array();
         // FEDORA_RELS_EXT_URI.
+        dpm($relationship['predicate']['namespace']);
         $reltocheck = $this->relationships->get($relationship['predicate']['namespace'],$relationship['predicate']['value']);
         if (empty($reltocheck)) {
           $this->relationships->add($relationship['predicate']['namespace'],$relationship['predicate']['value'], $relationship['object']['value'], $relationship['object']['literal']);
@@ -1154,10 +1155,7 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
       // just in case i really want to allow Object transmutation?
       $this->addContentModelRelationships(); 
       // Copy existing member relationships over;
-      if ($relsext_mode != 'NEW') {
-        $this->copyFedoraRels($existing_object);
-      }
-      if ($relsext_mode != 'OLD') {
+      if ($relsext_mode == 'NEW') {
       // Sets new member relationships over
         $this->setValidRelationshipsforUpdate($existing_object);
       // sets scratch inheritance (new ones only)
@@ -1167,8 +1165,16 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
       // other collection previously (or compound!), that is preserved
       // but the new membership is maintained.
       }
-      if ($relsext_mode != 'NEW') {
-        $this->copyRels($existing_object);
+      if  ($relsext_mode == 'MERGE') {
+       
+        $this->setValidRelationshipsforUpdate($existing_object);
+      // sets scratch inheritance (new ones only)
+        $this->inheritXacmlPoliciesForUpdate($existing_object); 
+        $this->copyFedoraRels($existing_object);
+      }
+      if ($relsext_mode == 'OLD') {
+        // $this->copyFedoraRels($existing_object);  
+        // $this->copyRels($existing_object);
       }
     }
   }
