@@ -1201,9 +1201,10 @@ function islandora_multi_importer_objectmapping_form($form, &$form_state, $file_
         '#attributes' => array(),
         '#description' => t('Select the way you would like to handle predicates for your existing objects'),
         '#options' => array(
-          'NEW' => 'Only use new Predicates, nothing gets copied over',
-          'MERGE' => 'Only use new Membership Predicates, discard old membership ones but keep anything else',
-          'OLD' => 'Never touch my existing predicates, new cmodel and new parent objects will be ignored',
+          'NEW' => 'NEW: Only use new Predicates, nothing gets copied over',
+          'MERGE' => 'MERGE: Objects are related to a new parent, but relationships to other types are maintained.',
+          'JOIN' => 'JOIN: Objects keep their old relationships, New ones are added too',
+          'OLD' => 'Never touch my existing predicates, new cmodel, properties and new parent objects will be ignored',
         ),
         '#default_value' => 'NEW',
         '#states' => array(
