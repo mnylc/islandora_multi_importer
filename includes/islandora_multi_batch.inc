@@ -1021,7 +1021,7 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
       ($relationship['predicate']['namespace']!="info:fedora/fedora-system:def/relations-external#")) {
         $reltocheck = array();
         // FEDORA_RELS_EXT_URI.
-        error_log(($relationship['predicate']['namespace']);
+        error_log($relationship['predicate']['namespace']);
         $reltocheck = $this->relationships->get($relationship['predicate']['namespace'],$relationship['predicate']['value']);
         if (empty($reltocheck)) {
           $this->relationships->add($relationship['predicate']['namespace'],$relationship['predicate']['value'], $relationship['object']['value'], $relationship['object']['literal']);
