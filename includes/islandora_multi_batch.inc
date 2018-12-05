@@ -1016,7 +1016,7 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
   protected function copyRels(AbstractObject $sourceObject) {
     $rels = $sourceObject->relationships->get();
     foreach ($rels as $relationship) {
-        error_log(($relationship['predicate']['namespace']);
+        error_log($relationship['predicate']['namespace']);
       if (($relationship['predicate']['namespace'] != "info:fedora/fedora-system:def/model#") && 
       ($relationship['predicate']['namespace']!="info:fedora/fedora-system:def/relations-external#")) {
         $reltocheck = array();
