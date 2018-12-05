@@ -1016,11 +1016,12 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
   protected function copyRels(AbstractObject $sourceObject) {
     $rels = $sourceObject->relationships->get();
     foreach ($rels as $relationship) {
+        error_log(($relationship['predicate']['namespace']);
       if (($relationship['predicate']['namespace'] != "info:fedora/fedora-system:def/model#") && 
       ($relationship['predicate']['namespace']!="info:fedora/fedora-system:def/relations-external#")) {
         $reltocheck = array();
         // FEDORA_RELS_EXT_URI.
-        dpm($relationship['predicate']['namespace']);
+        error_log(($relationship['predicate']['namespace']);
         $reltocheck = $this->relationships->get($relationship['predicate']['namespace'],$relationship['predicate']['value']);
         if (empty($reltocheck)) {
           $this->relationships->add($relationship['predicate']['namespace'],$relationship['predicate']['value'], $relationship['object']['value'], $relationship['object']['literal']);
@@ -1044,6 +1045,7 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
       $reltocheck = array();
       // FEDORA_RELS_EXT_URI.
       $reltocheck = $this->relationships->get($relationship['predicate']['namespace'], $relationship['predicate']['value'], $relationship['object']['value']);
+      
       // Only copy if not present in batchObject and value of existing is different from new parent
       if ((empty($reltocheck)) && ($relationship['object']['value']!= $this->objectInfo['parent'] || $relsext_mode == 'OLD')) {
         $this->relationships->add($relationship['predicate']['namespace'],$relationship['predicate']['value'], $relationship['object']['value'], $relationship['object']['literal']);
@@ -1174,7 +1176,7 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
       }
       if ($relsext_mode == 'OLD') {
         // $this->copyFedoraRels($existing_object);  
-        // $this->copyRels($existing_object);
+        //$this->copyRels($existing_object);
       }
     }
   }
