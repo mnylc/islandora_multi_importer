@@ -1040,9 +1040,9 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
       if (($relationship['predicate']['namespace'] != "info:fedora/fedora-system:def/model#") && 
       ($relationship['predicate']['namespace']!=FEDORA_RELS_EXT_URI)) {
         $reltocheck = array();
-         // Only ones witht the same predicates
+         // Only ones with the same predicates
          $reltocheck = $this->relationships->get($relationship['predicate']['namespace'],$relationship['predicate']['value']);
-        if (empty($reltocheck)) {
+        if (empty($reltocheck) || ($relationship['predicate']['value'] == 'ManageableByRole') || ($relationship['predicate']['value'] == 'ManageableByUser')) {
           $this->relationships->add($relationship['predicate']['namespace'],$relationship['predicate']['value'], $relationship['object']['value'], $relationship['object']['literal']);
         }
       }
