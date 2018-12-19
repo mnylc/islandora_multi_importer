@@ -558,7 +558,7 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
               $datastream = $this->constructDatastream('DC', 'M');
               $datastream->label = 'DC Record';
               $datastream->mimetype = 'application/xml';
-              $datastream->setContentFromString($ds_uri);
+              $datastream->setContentFromString($dcxml);
               $this->ingestDatastream($datastream);
           }
       }
