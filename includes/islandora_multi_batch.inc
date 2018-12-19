@@ -483,7 +483,6 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
   protected function batchProcessforIngest() {
       if ($this->deriveDC) {
           // Do this only once.
-          module_load_include('inc', 'xml_form_builder','includes/associations');
           $xsl = new DOMDocument;
           $xsl->load($this->modsToDcTransform);
           if (!$xsl) {
