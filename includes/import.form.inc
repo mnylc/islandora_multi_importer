@@ -408,7 +408,9 @@ function islandora_multi_importer_plupload_element_validate($element, &$form_sta
       $parse_scheme = parse_url($scheme);
       if(!empty($parse_scheme['path'])) {
         $parse_scheme['path'] = rtrim($parse_scheme['path'], '/') . '/';
-        // The function http_build_url is ensured by "composer require jakeasmith/http_build_url ^1"
+        if (!function_exists('http_build_url')) {
+          module_load_include('inc', 'islandora_multi_importer', 'includes/http_build_url');
+        }
         $scheme = http_build_url($parse_scheme);
       }
 
