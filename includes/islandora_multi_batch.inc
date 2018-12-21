@@ -534,8 +534,8 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
     
           $datastream->setContentFromFile($ds_uri);
           $this->ingestDatastream($datastream);
-          $dowehaveMODS = $ds['dsid'] == "MODS" ? true : false; 
-          $dowehaveDC = $ds['dsid'] == "DC" ? true : false; 
+          $dowehaveMODS = $ds['dsid'] == "MODS" ? true : $dowehaveMODS; 
+          $dowehaveDC = $ds['dsid'] == "DC" ? true : $dowehaveDC; 
       }
     
       // Now check if DC to MODS is derivative based or not
