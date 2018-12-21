@@ -568,7 +568,7 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
           $cp->label = 'Collection Policy';
           $cp->mimetype = 'application/xml';
           $emptypolicy = CollectionPolicy::emptyPolicy();
-          $cp_ds->setContentFromString($emptypolicy->getXML());
+          $cp->setContentFromString($emptypolicy->getXML());
           $this->ingestDatastream($cp);
       }
 
