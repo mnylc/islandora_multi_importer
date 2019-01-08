@@ -41,10 +41,24 @@ function islandora_multi_importer_admin_form($form, $form_state) {
     '#description' => t('This option also requires corresponding Drupal permissions to be correctly set.'),
     '#default_value' => variable_get('islandora_multi_importer_extrads', FALSE),
   );
+
+  $stream_wrappers = file_get_stream_wrappers();
+  $stream_wrapper_options = array();
+  foreach($stream_wrappers as $id => $data) {
+    $stream_wrapper_options[$id] = $data['name'];
+  }
+  $form['islandora_multi_importer_generalsettings_fieldset']['islandora_multi_importer_temp_streamwrapper'] = array(
+    '#type' => 'select',
+    '#title' => t('Temporary files base location'),
+    '#description' => t('Base file location for temporary IMI files. If the <em>Private files</em> location is configured (at <a href="/admin/config/media/file-system">Configuration > Media > File system</a>), that is the recommended option to ensure that the world can only view your files as permitted by drupal and islandora access policies.' ),
+    '#options' => $stream_wrapper_options,
+    '#default_value' => variable_get('islandora_multi_importer_temp_streamwrapper', 'private'),
+  );
+
   $form['islandora_multi_importer_generalsettings_fieldset']['islandora_multi_importer_temp_dir'] = array(
     '#type' => 'textfield',
-    '#title' => t('Temporary files storage directory'),
-    '#description' => t('Path to where to store temporary files under Drupal\'s <em>private://</em> directory. This is used for storing batch ingest files, generated metadata files, and other temporary files. Do not include leading or trailing slash. The <em>private://</em> directory location is configured at <a href="/admin/config/media/file-system">Configuration > Media > File system</a>' ),
+    '#title' => t('Temporary files directory'),
+    '#description' => t('Path within the temporary files base location to store temporary files.' ),
     '#default_value' => variable_get('islandora_multi_importer_temp_dir', 'islandora-multi-importer'),
   );
 

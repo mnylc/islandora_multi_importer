@@ -598,13 +598,13 @@ function islandora_multi_importer_isValidXmlName($dsid) {
  *   Optional. Defaults to 'islandora-multi-importer'.
  * @param string $scheme
  *   The name of the drupal stream wrapper scheme.
- *   Optional. Defaults to "private".
+ *   Optional.
  *
  * @return string
  *   Returns a normalized stream wrapper uri to the file storage location.
  *   Returns FALSE if unable to create/verify the file storage directory.
  */
-function _imi_build_file_storage_uri($filename, $imi_temp_subdir = NULL, $imi_temp_dir = NULL, $scheme = 'private' ) {
+function _imi_build_file_storage_uri($filename, $imi_temp_subdir = NULL, $imi_temp_dir = NULL, $scheme = NULL ) {
 
   $directory_uri = _imi_build_file_storage_directory($imi_temp_subdir, $imi_temp_dir, $scheme);
   if(empty($directory_uri)) {
@@ -629,15 +629,16 @@ function _imi_build_file_storage_uri($filename, $imi_temp_subdir = NULL, $imi_te
  *   Optional - Default will be used if none is provided.
  * @param string $scheme
  *   The Drupal filestream scheme (public://, private://, temporary://).
- *   Optional - private:// will be used if none is provided.
+ *   Optional.
  *
  * @return bool/string
  *   The uri to the new directory if successful.
  *   FALSE if unable to create the directory.
  */
-function _imi_build_file_storage_directory($imi_temp_subdir = NULL, $imi_temp_dir = NULL, $scheme = 'private') {
+function _imi_build_file_storage_directory($imi_temp_subdir = NULL, $imi_temp_dir = NULL, $scheme = NULL) {
 
   $directory = array(!empty($imi_temp_dir) ? $imi_temp_dir : variable_get('islandora_multi_importer_temp_dir', 'islandora-multi-importer'));
+  $scheme = $scheme ? $scheme : variable_get('islandora_multi_importer_temp_streamwrapper', 'public');
 
   if(!in_array($scheme, stream_get_wrappers())) {
     drupal_set_message(t('Could not create IMI temporary directory in <em>@scheme://</em>, as that stream wrapper is not defined. Ensure that the <em>@scheme://</em> file directory is defined and is writable at <a href="/admin/config/media/file-system">Configuration > Media > File system</a>', array(
