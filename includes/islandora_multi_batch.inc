@@ -454,7 +454,7 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
 
     $this->deriveDC = !variable_get('xml_form_builder_use_default_dc_xslts', FALSE);
     $mtdt = drupal_get_path('module', 'islandora_multi_importer') . '/xslt/mods_to_dc.xsl';
-    $this->modsToDcTransform = variable_get( 'islandora_multi_importer_mods_to_dc', $mtdt);
+    $this->modsToDcTransform = variable_get('islandora_multi_importer_mods_to_dc', $mtdt);
     $mcut = drupal_get_path('module', 'islandora_multi_importer') . '/xslt/islandora_cleanup_mods_extended_strict.xsl';
     $this->modsCleanUpTransform = variable_get('islandora_multi_importer_mods_cleanup', $mcut);
     $this->baseName = $base_name;
@@ -481,52 +481,102 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
    * Function batchProcessforIngest.
    */
   protected function batchProcessforIngest() {
-    
-    // Use object_info to create some datastreams.
-    $this->label = !empty($this->getTitle()) ? $this->getTitle() : "New Object";
-    $errors = array();
-    $files = array();
-    $datastreams = array();
-    $datastreams = $this->getDatastreams($errors, $files);
-    if (!empty($errors)) {
-      $setid = $this->getBatchId();
-      foreach ($errors as $error) {
-        $parms = array('@setid' => $setid, '@pid' => $this->id, '@log' => $error );
-        $msg = 'There were some issues on Batch set id @setid when generating datastreams for PID @pid: @log';
-        watchdog('islandora_multi_importer', $msg, $parms, WATCHDOG_NOTICE);
+      if ($this->deriveDC) {
+          // Do this only once.
+          $xsl = new DOMDocument;
+          $xsl->load($this->modsToDcTransform);
+          if (!$xsl) {
+              // Disable transform if this is the case
+              $this->deriveDC = FALSE; 
+              $parms = array('@setid' => $setid, '@pid' => $this->id, '@log' => 'Could not load global XSLT for MODS2DC transformation. MODS to DC disabled!');
+              $msg = 'There were some issues on Batch set id @setid when loading DC to MODS via XSLT: @log';
+              watchdog('islandora_multi_importer', $msg, $parms, WATCHDOG_NOTICE);
+          }
       }
-    }
-    if (empty($datastreams)) {
-      $this->currentState = ISLANDORA_BATCH_STATE__ERROR;
-      return array('message' => 
-        t('Serious datastream issues on @pid have forced us to not ingest it.',
-        array('@pid' => $this->id)), 'state' => ISLANDORA_BATCH_STATE__ERROR);
-    }
+      // Use object_info to create some datastreams.
+      $this->label = !empty($this->getTitle()) ? $this->getTitle() : "New Object";
+      $errors = array();
+      $files = array();
+      $datastreams = array();
+      $datastreams = $this->getDatastreams($errors, $files);
+      if (!empty($errors)) {
+          $setid = $this->getBatchId();
+          foreach ($errors as $error) {
+              $parms = array('@setid' => $setid, '@pid' => $this->id, '@log' => $error );
+              $msg = 'There were some issues on Batch set id @setid when generating datastreams for PID @pid: @log';
+              watchdog('islandora_multi_importer', $msg, $parms, WATCHDOG_NOTICE);
+          }
+      }
+      if (empty($datastreams)) {
+          $this->currentState = ISLANDORA_BATCH_STATE__ERROR;
+          return array('message' => 
+              t('Serious datastream issues on @pid have forced us to not ingest it.',
+          array('@pid' => $this->id)), 'state' => ISLANDORA_BATCH_STATE__ERROR);
+      }
     
-    foreach ($files as $file) {
-      $file->status &= ~FILE_STATUS_PERMANENT; // Lets make all files temporary but trust file_usage to keep them around
-      file_save($file);
-      file_usage_add($file, 'islandora_batch', 'islandora_batch_object', $this->getBatchId());
-    }
-    // We need this to check if we have mods
-    $dowehaveMODS = false;
-    
-    foreach ($datastreams as $ds) {
-      $ds_uri = isset($ds['file']) ?
-        $ds['file']->uri :
-        $ds['datastream_file'];
+      foreach ($files as $file) {
+          $file->status &= ~FILE_STATUS_PERMANENT; // Lets make all files temporary but trust file_usage to keep them around
+          file_save($file);
+          file_usage_add($file, 'islandora_batch', 'islandora_batch_object', $this->getBatchId());
+      }
+      // We need this to check if we have mods
+      $dowehaveMODS = false;
+      $dowehaveDC = false;
+      $dcxml = FALSE;
+      foreach ($datastreams as $ds) {
+          $ds_uri = isset($ds['file']) ?
+              $ds['file']->uri :
+          $ds['datastream_file'];
 
-      $datastream = $this->constructDatastream($ds['dsid'], $ds['control_group']);
-      $datastream->label = $ds['label'];
-      $datastream->mimetype = $ds['mimetype'];
+          $datastream = $this->constructDatastream($ds['dsid'], $ds['control_group']);
+          $datastream->label = $ds['label'];
+          $datastream->mimetype = $ds['mimetype'];
     
-      $datastream->setContentFromFile($ds_uri);
-      $this->ingestDatastream($datastream);
-      $dowehaveMODS = $ds['dsid'] == "MODS" ? true : false; 
-    }
-    $this->currentState = ISLANDORA_BATCH_STATE__DONE;
-    return $this->currentState;
+          $datastream->setContentFromFile($ds_uri);
+          $this->ingestDatastream($datastream);
+          $dowehaveMODS = $ds['dsid'] == "MODS" ? true : $dowehaveMODS; 
+          $dowehaveDC = $ds['dsid'] == "DC" ? true : $dowehaveDC; 
+      }
+    
+      // Now check if DC to MODS is derivative based or not
+      // If DC was provided via file or Twig template don't derive.
+      if (($this->deriveDC) && ($dowehaveMODS) && (!$dowehaveDC)) {
+          // Not sure if this is more performant than opening the File directly.
+          $xml = new DOMDocument;
+          $xml->loadXML($this['MODS']->content);
+          $proc = new XSLTProcessor;
+          $proc->importStyleSheet($xsl);
+      
+          $dcxml  = $proc->transformToXML($xml);
+          if (!$dcxml) {
+              $parms = array('@setid' => $setid, '@pid' => $this->id, '@log' => 'Could not derive DC from MODS');
+              $msg = 'There were some issues on Batch set id @setid when generating DC datastreams from MODS via XSLT for PID @pid: @log';
+              watchdog('islandora_multi_importer', $msg, $parms, WATCHDOG_NOTICE);
+          }
+          else {
+              $datastream = $this->constructDatastream('DC', 'M');
+              $datastream->label = 'DC Record';
+              $datastream->mimetype = 'application/xml';
+              $datastream->setContentFromString($dcxml);
+              $this->ingestDatastream($datastream);
+          }
+      }
+      // Collection Policy anyone?
+      if ($this->objectInfo['cmodel']=='islandora:collectionCModel' && !isset($this['COLLECTION_POLICY'])) {
+          // @TODO: should we construct here one based on the CMODELS ingested? Not sure.
+          $cp = $this->constructDatastream('COLLECTION_POLICY', 'M');
+          $cp->label = 'Collection Policy';
+          $cp->mimetype = 'application/xml';
+          $emptypolicy = CollectionPolicy::emptyPolicy();
+          $cp->setContentFromString($emptypolicy->getXML());
+          $this->ingestDatastream($cp);
+      }
+
+
+      $this->currentState = ISLANDORA_BATCH_STATE__DONE;
+      return $this->currentState;
   }
+  
 
   /**
    * Function batchProcessforIngest.
@@ -1013,15 +1063,36 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
    * @param AbstractObject $sourceObject
    *   An Object with properties we want to copy over.
    */
-  protected function copyRels(AbstractObject $sourceObject) {
+  protected function copyOtherRels(AbstractObject $sourceObject) {
     $rels = $sourceObject->relationships->get();
     foreach ($rels as $relationship) {
       if (($relationship['predicate']['namespace'] != "info:fedora/fedora-system:def/model#") && 
-      ($relationship['predicate']['namespace']!="info:fedora/fedora-system:def/relations-external#")) {
+      ($relationship['predicate']['namespace']!=FEDORA_RELS_EXT_URI)) {
         $reltocheck = array();
-        // FEDORA_RELS_EXT_URI.
-        $reltocheck = $this->relationships->get($relationship['predicate']['namespace'],$relationship['predicate']['value']);
+        // Only avoid exactly the same ones
+         $reltocheck = $this->relationships->get($relationship['predicate']['namespace'],$relationship['predicate']['value'],$relationship['object']['value'], $relationship['object']['literal']);
         if (empty($reltocheck)) {
+          $this->relationships->add($relationship['predicate']['namespace'],$relationship['predicate']['value'], $relationship['object']['value'], $relationship['object']['literal']);
+        }
+      }
+    }
+  }
+  
+  /**
+   * Copies relevant RELS-EXT from to be updated object.
+   *
+   * @param AbstractObject $sourceObject
+   *   An Object with properties we want to copy over.
+   */
+  protected function copyOtherRelsUnique(AbstractObject $sourceObject) {
+    $rels = $sourceObject->relationships->get();
+    foreach ($rels as $relationship) {
+      if (($relationship['predicate']['namespace'] != "info:fedora/fedora-system:def/model#") && 
+      ($relationship['predicate']['namespace']!=FEDORA_RELS_EXT_URI)) {
+        $reltocheck = array();
+         // Only ones with the same predicates
+         $reltocheck = $this->relationships->get($relationship['predicate']['namespace'],$relationship['predicate']['value']);
+        if (empty($reltocheck) || ($relationship['predicate']['value'] == 'ManageableByRole') || ($relationship['predicate']['value'] == 'ManageableByUser')) {
           $this->relationships->add($relationship['predicate']['namespace'],$relationship['predicate']['value'], $relationship['object']['value'], $relationship['object']['literal']);
         }
       }
@@ -1035,17 +1106,37 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
    *   An Object with properties we want to copy over.
   */
   protected function copyFedoraRels(AbstractObject $sourceObject) {
-    // All this stuff will be put before the new ones
-    // We can add a switch!
-    $relsext_mode = isset($this->preprocessorParameters['object_maping']['relsext_row']['relsext_mode']) ? $this->preprocessorParameters['object_maping']['relsext_row']['relsext_mode'] : 'NEW';
-    $rels = $sourceObject->relationships->get("info:fedora/fedora-system:def/relations-external#");
+   
+    $rels = $sourceObject->relationships->get(FEDORA_RELS_EXT_URI);
     foreach ($rels as $relationship) {
       $reltocheck = array();
       // FEDORA_RELS_EXT_URI.
       $reltocheck = $this->relationships->get($relationship['predicate']['namespace'], $relationship['predicate']['value'], $relationship['object']['value']);
+      
       // Only copy if not present in batchObject and value of existing is different from new parent
-      if ((empty($reltocheck)) && ($relationship['object']['value']!= $this->objectInfo['parent'] || $relsext_mode == 'OLD')) {
-        $this->relationships->add($relationship['predicate']['namespace'],$relationship['predicate']['value'], $relationship['object']['value'], $relationship['object']['literal']);
+      if (empty($reltocheck) && ($relationship['object']['value']!= $this->objectInfo['parent'])) {
+          $this->relationships->add($relationship['predicate']['namespace'],$relationship['predicate']['value'], $relationship['object']['value'], $relationship['object']['literal']);
+      }
+    }
+  }
+  
+  /**
+   * Copies fedora RELS-EXT from to be updated object.
+   *
+   * @param AbstractObject $sourceObject
+   *   An Object with properties we want to copy over.
+  */
+  protected function copyFedoraRelsUnique(AbstractObject $sourceObject) {
+   
+    $rels = $sourceObject->relationships->get(FEDORA_RELS_EXT_URI);
+    foreach ($rels as $relationship) {
+      $reltocheck = array();
+      // FEDORA_RELS_EXT_URI. Check if the same predicate is already here
+      $reltocheck = $this->relationships->get($relationship['predicate']['namespace'], $relationship['predicate']['value']);
+      
+      // Only copy if not present in batchObject and value of existing is different from new parent
+      if (empty($reltocheck)) {
+          $this->relationships->add($relationship['predicate']['namespace'],$relationship['predicate']['value'], $relationship['object']['value'], $relationship['object']['literal']);
       }
     }
   }
@@ -1154,21 +1245,31 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
       // just in case i really want to allow Object transmutation?
       $this->addContentModelRelationships(); 
       // Copy existing member relationships over;
-      if ($relsext_mode != 'NEW') {
-        $this->copyFedoraRels($existing_object);
-      }
-      if ($relsext_mode != 'OLD') {
+      if ($relsext_mode == 'NEW') {
       // Sets new member relationships over
         $this->setValidRelationshipsforUpdate($existing_object);
       // sets scratch inheritance (new ones only)
         $this->inheritXacmlPoliciesForUpdate($existing_object); 
-      // Copies existing relationships to batchObject. Pushing them at the end.
-      // ::copyFedoraRels run first to make sure that if it belongs to any 
-      // other collection previously (or compound!), that is preserved
-      // but the new membership is maintained.
       }
-      if ($relsext_mode != 'NEW') {
-        $this->copyRels($existing_object);
+      if  ($relsext_mode == 'MERGE') {
+       
+        $this->setValidRelationshipsforUpdate($existing_object);
+      // sets scratch inheritance (new ones only)
+        $this->inheritXacmlPoliciesForUpdate($existing_object); 
+        $this->copyFedoraRelsUnique($existing_object);
+        $this->copyOtherRelsUnique($existing_object);
+      }
+      if  ($relsext_mode == 'JOIN') {
+       
+        $this->setValidRelationshipsforUpdate($existing_object);
+      // sets scratch inheritance (new ones only)
+        $this->inheritXacmlPoliciesForUpdate($existing_object); 
+        $this->copyFedoraRels($existing_object);
+        $this->copyOtherRels($existing_object);
+      }
+      
+      if ($relsext_mode == 'OLD') {
+          // Do nothing.
       }
     }
   }
