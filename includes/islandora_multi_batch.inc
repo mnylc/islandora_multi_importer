@@ -783,36 +783,45 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
             // This means our source field contains a file path or and url
             // if file path, we need to know if local of ZIP
             // if URL just fetch the damn thing.
+            $path_info = pathinfo(str_replace(" ", "\x20", trim($this->objectInfo['data'][$method[1]])));
+            $filename = $path_info['filename'];
+     
             if ($this->preprocessorParameters['type'] == 'ZIP') {
               // Fetch one file from provided ZIP file.
-              $path_info = pathinfo(str_replace(" ", "\x20", trim($this->objectInfo['data'][$method[1]])));
               $z = new ZipArchive();
               $opened = FALSE;
               $opened = $z->open($this->preprocessorParameters['zipfile']);
               if ($opened === TRUE) {
                 $fp = $z->getStream($this->objectInfo['data'][$method[1]]);
                 if (!$fp) {
-                 
-                  error_log('will try to get '.$this->objectInfo['data'][$method[1]]. 'remotely');
-                  error_log($this->objectInfo['data'][$method[1]] .' not found for .' . $this->id);
+                    $errors[] = t('For Object %id, %dsid datastream: We could not find the source %file file in the expected location, will try to get it remotely',
+                    array(
+                      '%file' => $$this->objectInfo['data'][$method[1]],
+                      '%dsid' => $dsid,
+                      '%id' => $this->id,
+                    ));
                   // The file does not exist.
-                  // @TODO add this to errors
                   // try to get it now from remote
-
                   $fileurl = islandora_multi_importer_remote_file_get(trim($this->objectInfo['data'][$method[1]]));
-                    
                   $themime = "application/octet-stream";
-                  if ($fileurl) {
-                    $themime = $this->getMimetype(drupal_basename($fileurl));
+                  if ($fileurl) { 
+                    $themime = property_exists($fileurl, 'filemime') ? $fileurl->filemime : $this->getMimetype($path_info['basename']);
+                
                     if ($dsid == "HOCR" && $themime == "application/octet-stream") {
                       $themime = "text/html";
                     }
                     if ($dsid == "OCR" && $themime == "application/octet-stream") {
                       $themime = "text/plain";
                     }
+                    // Fedora labels are max 255 chars 
+                    $dslabel = substr($filename,0,255);
+                    //remove any trailing spaces
+                    $dslabel = trim($dslabel);
+                    $dslabel = !empty($dslabel) ? $dslabel : "$dsid datastream";
+                    
                     $datastreams[$dsid] = array(
                       'dsid' => $dsid,
-                      'label' => "$dsid datastream",
+                      'label' => $dslabel,
                       'mimetype' => $themime,
                       'datastream_file' => $fileurl,
                       'filename' => drupal_basename($fileurl),
@@ -841,10 +850,15 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
                   if ($dsid == "OCR" && $themime == "application/octet-stream") {
                     $themime = "text/plain";
                   }
+                  // Fedora labels are max 255 chars 
+                  $dslabel = substr($filename,0,255);
+                  //remove any trailing spaces
+                  $dslabel = trim($dslabel);
+                  $dslabel = !empty($dslabel) ? $dslabel : "$dsid datastream";
                   
                   $datastreams[$dsid] = array(
                     'dsid' => $dsid,
-                    'label' => "$dsid datastream",
+                    'label' => $dslabel,
                     'mimetype' => $themime,
                     'datastream_file' => "zip://" . str_replace(" ", "\x20", $this->preprocessorParameters['zipfile']) . "#" . trim($this->objectInfo['data'][$method[1]]),
                     'filename' => $path_info['basename'],
@@ -867,19 +881,27 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
 
             else {
               $fileurl = islandora_multi_importer_remote_file_get(trim($this->objectInfo['data'][$method[1]]));
+
               $themime = "application/octet-stream";
               if ($fileurl) {
-                $themime = $this->getMimetype(drupal_basename($fileurl));
+
+                $themime = property_exists($fileurl, 'filemime') ? $fileurl->filemime : $this->getMimetype(drupal_basename($fileurl));
+                //@TODO Check if anyone is dealing with a different filename (via a hook impl) 
+                // than what ingesting user intended to set via the spreadsheet?
                 if ($dsid == "HOCR" && $themime == "application/octet-stream") {
                   $themime = "text/html";
                 }
                 if ($dsid == "OCR" && $themime == "application/octet-stream") {
                   $themime = "text/plain";
                 }
+                $dslabel = substr($filename,0,255);
+                //remove any trailing spaces
+                $dslabel = trim($dslabel);
+                $dslabel = !empty($dslabel) ? $dslabel : "$dsid datastream";
 
                 $datastreams[$dsid] = array(
                   'dsid' => $dsid,
-                  'label' => "$dsid datastream",
+                  'label' => $dslabel,
                   'mimetype' => $themime,
                   'datastream_file' => $fileurl,
                   'filename' => drupal_basename($fileurl),
