@@ -520,7 +520,9 @@ function islandora_multi_importer_twig_form($form, &$form_state, $file_data) {
 
   if (isset($form_state['values']['step3']['sheet_content'])) {
     $current_row = isset($form_state['values']['step3']['sheet_content']['rows']) && 
-      !empty($form_state['values']['step3']['sheet_content']['rows']) ?  $form_state['values']['step3']['sheet_content']['rows'] : key($file_data['data']);
+      !empty($form_state['values']['step3']['sheet_content']['rows']) &&
+      isset($file_data['data'][$form_state['values']['step3']['sheet_content']['rows']])
+      ? $form_state['values']['step3']['sheet_content']['rows'] : key($file_data['data']);
     $current_record_record_data = array('data' => islandora_multi_importer_array_combine_special($file_data['headers'], $file_data['data'][$current_row]));
 
     
