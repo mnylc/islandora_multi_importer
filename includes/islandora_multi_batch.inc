@@ -301,6 +301,7 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
           $parent_hash[$parent][$index] = $index;
           $parentchilds = array();
           // Lets check if the index actually exists before going crazy.
+          
           if (!isset($file_data_all['data'][$parent])) {
             $invalid[$parent] = $parent;
             $invalid[$index] = $index;
@@ -381,6 +382,17 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
     }
     // Ok, maybe this is expensive, so let's try it first so.
     // TODO: optimize maybe?
+    
+    // New first pass: ensure parents have always a PID first
+    // since rows/parent/child order could be arbitrary
+    foreach ($parent_hash as $parent => $children) {
+      if (isset($info[$parent])) {
+        $namespace = $info[$parent]['namespace'];
+        $info[$parent]['pid'] = isset($info[$parent]['pid']) ? $info[$parent]['pid'] : $this->getInternalIdentifier($namespace, $namespace_count[$namespace]);
+      }
+    }
+    
+    // Now the real pass, iterate over every row.
     foreach ($info as $index => &$objectInfo) {
       $namespace = $objectInfo['namespace'];
       $objectInfo['pid'] = isset($objectInfo['pid']) ? $objectInfo['pid'] : $this->getInternalIdentifier($namespace, $namespace_count[$namespace]);
@@ -796,7 +808,7 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
                 if (!$fp) {
                     $errors[] = t('For Object %id, %dsid datastream: We could not find the source %file file in the expected location, will try to get it remotely',
                     array(
-                      '%file' => $$this->objectInfo['data'][$method[1]],
+                      '%filename' => trim($this->objectInfo['data'][$method[1]]),
                       '%dsid' => $dsid,
                       '%id' => $this->id,
                     ));
