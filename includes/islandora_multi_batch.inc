@@ -796,7 +796,7 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
                 if (!$fp) {
                     $errors[] = t('For Object %id, %dsid datastream: We could not find the source %file file in the expected location, will try to get it remotely',
                     array(
-                      '%file' => $$this->objectInfo['data'][$method[1]],
+                      '%filename' => trim($this->objectInfo['data'][$method[1]]),
                       '%dsid' => $dsid,
                       '%id' => $this->id,
                     ));
