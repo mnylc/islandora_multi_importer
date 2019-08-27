@@ -63,28 +63,28 @@ class FakeObject extends AbstractObject {
    * {@inheritdoc}
    */
   public function offsetExists($offset) {
-
+    return FALSE;
   }
 
   /**
    * {@inheritdoc}
    */
   public function offsetSet($offset, $value) {
-
+    return FALSE;
   }
 
   /**
    * {@inheritdoc}
    */
   public function offsetGet($offset) {
-
+    return FALSE;
   }
 
   /**
    * {@inheritdoc}
    */
   public function offsetUnset($offset) {
-
+    return FALSE;
   }
 
   /**
@@ -98,7 +98,7 @@ class FakeObject extends AbstractObject {
    * {@inheritdoc}
    */
   public function getIterator() {
-
+    return new ArrayIterator(array());
   }
 
   /**
