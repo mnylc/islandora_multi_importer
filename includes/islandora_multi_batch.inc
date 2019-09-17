@@ -1276,17 +1276,17 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
     $existing_object = islandora_object_load($this->id);
     $relsext_mode = isset($this->preprocessorParameters['object_maping']['relsext_row']['relsext_mode']) ? $this->preprocessorParameters['object_maping']['relsext_row']['relsext_mode'] : 'NEW';
     if ($existing_object) {
-      // just in case i really want to allow Object transmutation?
-      $this->addContentModelRelationships(); 
+     
       // Copy existing member relationships over;
       if ($relsext_mode == 'NEW') {
+          $this->addContentModelRelationships();
       // Sets new member relationships over
         $this->setValidRelationshipsforUpdate($existing_object);
       // sets scratch inheritance (new ones only)
         $this->inheritXacmlPoliciesForUpdate($existing_object); 
       }
       if  ($relsext_mode == 'MERGE') {
-       
+        $this->addContentModelRelationships();
         $this->setValidRelationshipsforUpdate($existing_object);
       // sets scratch inheritance (new ones only)
         $this->inheritXacmlPoliciesForUpdate($existing_object); 
@@ -1294,7 +1294,7 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
         $this->copyOtherRelsUnique($existing_object);
       }
       if  ($relsext_mode == 'JOIN') {
-       
+        $this->addContentModelRelationships();
         $this->setValidRelationshipsforUpdate($existing_object);
       // sets scratch inheritance (new ones only)
         $this->inheritXacmlPoliciesForUpdate($existing_object); 
@@ -1303,7 +1303,9 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
       }
       
       if ($relsext_mode == 'OLD') {
-          // Do nothing.
+        // We don´t want any RELS DS to be processed.
+          unset($this['RELS-EXT']);
+          unset($this['RELS-INT']);
       }
     }
   }
