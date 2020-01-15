@@ -22,7 +22,6 @@
 
 [Twig Documentation] (http://twig.sensiolabs.org/documentation)
 
-
 ### Why Use Multi-importer
 * UI driven integrated workflow for ingest and update
 * Metadata Cleanup: Export your MODS metadata as CSV via Solr, clean up, then update the MODS datastream of the objects by recreating the MODS datastream using Twig
@@ -33,6 +32,7 @@
 * To take advantage of the Twig Templating system for creating MODS from CSVs
 * To preview the MODS output easily
 * Supports integration with Google Spreadsheets, Zip/Local/Amazon storage and Complex storage needs via hooks.
+* Added Jasny Pcre Extension. Twig templates can now support regular expressions. Be mindful of needing doubly escaped backslashes in situations that require regex with backslashes.
 
 ### Updating existing Objects
 * To enable this functionality without any warnings you need to use https://github.com/mnylc/islandora_batch/tree/7.x-ISLANDORA-2046 instead of main Islandora Batch release. We are working on making those changes into the main release.

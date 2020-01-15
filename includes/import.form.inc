@@ -572,6 +572,7 @@ function islandora_multi_importer_twig_form($form, &$form_state, $file_data) {
     'debug' => TRUE,
   ));
   $twig->addExtension(new Twig_Extension_Debug());
+  $twig->addExtension(new Jasny\Twig\PcreExtension());  
 
   $validated = TRUE;
   try {
