@@ -1014,10 +1014,13 @@ function islandora_multi_importer_cmodeldsmapping_form(array &$form_state, array
 
         // Individual Options for each DSID.
         $options = array();
+        $default_option = NULL;
         // Exception for DC, allow XSLT.
         if ($dsid == 'DC') {
           // @TODO add XLST options and other sources diff than mods
           $options['via XSLT from MODS'] = array('xlst|0' => 'default XSLT');
+          // Make this the default for DC
+          $default_option = 'xlst|0';
         }
 
         if (($dsidinfo['optional'] == TRUE) || ($parameters['action']!= 'ingest') || variable_get('islandora_multi_importer_dontenforceds', FALSE)){
@@ -1037,6 +1040,9 @@ function islandora_multi_importer_cmodeldsmapping_form(array &$form_state, array
           // In case no template is there yet (first install)?
           if (!empty($template_options)) {
             $options['Use Twig Template'] = array_combine(array_map($prefix_options, $template_options, array_fill(0, count($template_options), "template|")), $template_options);
+            if (empty($default_option)) {
+              $default_option = reset($options['Use Twig Template']);
+            }
           }
         }
 
@@ -1055,8 +1061,7 @@ function islandora_multi_importer_cmodeldsmapping_form(array &$form_state, array
             }
           }
         }
-        
-        
+
         
         // Check if DS is optional or not, we enforce not optional ones.
         $defaults[$dsid] = !$dsidinfo['optional'];
@@ -1070,6 +1075,7 @@ function islandora_multi_importer_cmodeldsmapping_form(array &$form_state, array
               '#attributes' => array(),
               '#description' => t('Select the way you want to build this DS'),
               '#options' => $options,
+              '#default_value' => $default_option,
             ),
           ),
         );
