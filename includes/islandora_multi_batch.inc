@@ -748,7 +748,7 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
             $twig_input['name'] = $method[1];
             $twig_input['template'] = $template;
             $twig_input['data'] = array('data' => array_combine($this->preprocessorParameters['data']['headers'], $this->objectInfo['data']));
-            // @TODO should we validate the template again heincludesre?
+            // @TODO should we validate the template again?
             $twig_output = islandora_multi_importer_twig_process($twig_input);
             // Check if this is can be a DomDocument of some sort.
             $docmimetype = $this->preprocessorParameters['computed_cmodels'][$this->objectInfo['cmodel']][$dsid]['mime'][0];
