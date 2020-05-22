@@ -1020,7 +1020,7 @@ function islandora_multi_importer_cmodeldsmapping_form(array &$form_state, array
           $options['via XSLT from MODS'] = array('xlst|0' => 'default XSLT');
         }
 
-        if (($dsidinfo['optional'] == TRUE) || ($parameters['action']!= 'ingest')){
+        if (($dsidinfo['optional'] == TRUE) || ($parameters['action']!= 'ingest') || variable_get('islandora_multi_importer_dontenforceds', FALSE)){
           $options['NONE'] = array('' => t("-- Don't Create --"));
         }
         $options['Via a source data field (file path)'] = $field_options;
@@ -1060,6 +1060,7 @@ function islandora_multi_importer_cmodeldsmapping_form(array &$form_state, array
         
         // Check if DS is optional or not, we enforce not optional ones.
         $defaults[$dsid] = !$dsidinfo['optional'];
+
         $form[$cmodel]['dsid']['rows'][$dsid] = array(
           '#title' => $dsid,
           'dsid' => array('#markup' => $dsid),
