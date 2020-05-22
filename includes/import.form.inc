@@ -1041,7 +1041,7 @@ function islandora_multi_importer_cmodeldsmapping_form(array &$form_state, array
           if (!empty($template_options)) {
             $options['Use Twig Template'] = array_combine(array_map($prefix_options, $template_options, array_fill(0, count($template_options), "template|")), $template_options);
             if (empty($default_option)) {
-              $default_option = reset($options['Use Twig Template']);
+              $default_option = "template|" . reset($options['Use Twig Template']);
             }
           }
         }
@@ -1057,6 +1057,9 @@ function islandora_multi_importer_cmodeldsmapping_form(array &$form_state, array
               } 
               else {
                 $options['Derivatives'] = array('derivative|0' => 'Build using islandora generated derivative');
+              }
+              if (empty($default_option)) {
+                $default_option = 'derivative|0';
               }
             }
           }
