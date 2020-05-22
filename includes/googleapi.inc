@@ -43,6 +43,10 @@ function islandora_multi_importer_googleclient() {
  */
 function islandora_multi_importer_googleclient_authwithtoken($client, $tokens) {
   //Tokens is the whole array in form of
+  if (isset($tokens['error']) && !empty($tokens['error'])) {
+    drupal_set_message(t('Google OAuth Error, probably your credentials expired. Please set them correctly again in your IMI Config page.'),'warning', 'FALSE');
+    return $client;
+  }
   $client->setAccessToken($tokens);
   
 // Refresh the token if expired.
@@ -53,7 +57,7 @@ function islandora_multi_importer_googleclient_authwithtoken($client, $tokens) {
        variable_set('islandora_multi_importer_googleClientToken', $tokens);
     }
     else {
-      drupal_set_message(t('Google Error, probably your credentials expired'));
+      drupal_set_message(t('Google Error, probably your credentials expired'),'warning','FALSE');
     }
   }
   else {
