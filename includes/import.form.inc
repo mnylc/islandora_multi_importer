@@ -1023,7 +1023,7 @@ function islandora_multi_importer_cmodeldsmapping_form(array &$form_state, array
           $default_option = 'xlst|0';
         }
 
-        if (($dsidinfo['optional'] == TRUE) || ($parameters['action']!= 'ingest') || variable_get('islandora_multi_importer_dontenforceds', FALSE)){
+        if (($dsidinfo['optional'] == TRUE) || ($parameters['action']!= 'ingest') || (variable_get('islandora_multi_importer_dontenforceds', FALSE) && $dsid != 'MODS')){
           $options['NONE'] = array('' => t("-- Don't Create --"));
         }
         $options['Via a source data field (file path)'] = $field_options;
