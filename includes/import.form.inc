@@ -1188,7 +1188,7 @@ function islandora_multi_importer_objectmapping_form($form, &$form_state, $file_
         '#description' => t('Select public accesible resource location'),
         '#options' => array(
           'REMOTE' => 'AWS S3/Dropbox via http(s)',
-          'LOCAL' => 'local*',
+          'LOCAL' => 'local (in your server) or no files needed/provided',
           'ZIP' => 'ZIP',
         ),
       ),
