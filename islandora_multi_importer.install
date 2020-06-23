@@ -72,3 +72,20 @@ function islandora_multi_importer_schema() {
 
 function islandora_multi_importer_enable() {
 }
+
+/**
+ * Implements hook_uninstall().
+ */
+function islandora_multi_importer_uninstall() {
+
+  $variables = array(
+    'islandora_multi_importer_plupload',
+    'islandora_multi_importer_extrads',
+    'islandora_multi_importer_dontenforceds',
+    'islandora_multi_importer_googleClientID',
+    'islandora_multi_importer_googleClientSecret',
+    'islandora_multi_importer_googleClientToken',
+    'islandora_multi_importer_googleClientAuthCode',
+  );
+  array_walk($variables, 'variable_del');
+}

@@ -41,6 +41,12 @@ function islandora_multi_importer_admin_form($form, $form_state) {
     '#description' => t('This option also requires corresponding Drupal permissions to be correctly set.'),
     '#default_value' => variable_get('islandora_multi_importer_extrads', FALSE),
   );
+  $form['islandora_multi_importer_generalsettings_fieldset']['islandora_multi_importer_dontenforceds'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Do not enforce required/not optional Datastreams as defined in each CMODEL.'),
+    '#description' => t('This option overrides the CMODEL Datastream optional=false property completely. Means you can create objects with missing datastreams, with the exception of DC which is a Fedora requirement and MODS(when defined), which normally is the source of DC in Islandora'),
+    '#default_value' => variable_get('islandora_multi_importer_dontenforceds', FALSE),
+  );
 
 
   $form['islandora_multi_importer_googleapi_fieldset'] = array(

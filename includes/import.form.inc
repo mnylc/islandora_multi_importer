@@ -1014,13 +1014,16 @@ function islandora_multi_importer_cmodeldsmapping_form(array &$form_state, array
 
         // Individual Options for each DSID.
         $options = array();
+        $default_option = NULL;
         // Exception for DC, allow XSLT.
         if ($dsid == 'DC') {
           // @TODO add XLST options and other sources diff than mods
           $options['via XSLT from MODS'] = array('xlst|0' => 'default XSLT');
+          // Make this the default for DC
+          $default_option = 'xlst|0';
         }
 
-        if (($dsidinfo['optional'] == TRUE) || ($parameters['action']!= 'ingest')){
+        if (($dsidinfo['optional'] == TRUE) || ($parameters['action']!= 'ingest') || (variable_get('islandora_multi_importer_dontenforceds', FALSE) && $dsid != 'MODS')){
           $options['NONE'] = array('' => t("-- Don't Create --"));
         }
         $options['Via a source data field (file path)'] = $field_options;
@@ -1037,6 +1040,9 @@ function islandora_multi_importer_cmodeldsmapping_form(array &$form_state, array
           // In case no template is there yet (first install)?
           if (!empty($template_options)) {
             $options['Use Twig Template'] = array_combine(array_map($prefix_options, $template_options, array_fill(0, count($template_options), "template|")), $template_options);
+            if (empty($default_option)) {
+              $default_option = 'template|' . reset($options['Use Twig Template']);
+            }
           }
         }
 
@@ -1052,14 +1058,16 @@ function islandora_multi_importer_cmodeldsmapping_form(array &$form_state, array
               else {
                 $options['Derivatives'] = array('derivative|0' => 'Build using islandora generated derivative');
               }
+              // Derivative wins over Template in like a second!
+              $default_option = 'derivative|0';
             }
           }
         }
-        
-        
+
         
         // Check if DS is optional or not, we enforce not optional ones.
         $defaults[$dsid] = !$dsidinfo['optional'];
+
         $form[$cmodel]['dsid']['rows'][$dsid] = array(
           '#title' => $dsid,
           'dsid' => array('#markup' => $dsid),
@@ -1069,6 +1077,7 @@ function islandora_multi_importer_cmodeldsmapping_form(array &$form_state, array
               '#attributes' => array(),
               '#description' => t('Select the way you want to build this DS'),
               '#options' => $options,
+              '#default_value' => $default_option,
             ),
           ),
         );
@@ -1179,7 +1188,7 @@ function islandora_multi_importer_objectmapping_form($form, &$form_state, $file_
         '#description' => t('Select public accesible resource location'),
         '#options' => array(
           'REMOTE' => 'AWS S3/Dropbox via http(s)',
-          'LOCAL' => 'local*',
+          'LOCAL' => 'local (in your server) or no files needed/provided',
           'ZIP' => 'ZIP',
         ),
       ),
