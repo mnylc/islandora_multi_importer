@@ -10,3 +10,6 @@ vendor/*
 .idea/islandora_multi_importer.iml
 
 .idea/copyright/profiles_settings.xml
+.idea/php.xml
+.idea/misc.xml
+.idea/codeStyles/codeStyleConfig.xml
