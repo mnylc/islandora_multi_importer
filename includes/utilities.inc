@@ -375,11 +375,11 @@ return $twig_templates_from_db;
 
 function islandora_multi_importer_twig_fetch($twig_name) {
   $twig_template_from_db = &drupal_static(__FUNCTION__);
-  if (!isset($twig_template_from_db)) {
+  if (!isset($twig_template_from_db[$twig_name])) {
     module_load_include('inc', 'islandora_multi_importer', 'includes/TwigTemplateDatabase');
-    $twig_template_from_db = TwigTemplateDatabase::Get($twig_name);
+    $twig_template_from_db[$twig_name] = TwigTemplateDatabase::Get($twig_name);
   }
-return $twig_template_from_db;
+return $twig_template_from_db[$twig_name];
 }
 /**
  * Fetches a twig template by it's id.
@@ -396,12 +396,12 @@ return $twig_template_from_db;
  */
 function islandora_multi_importer_twig_fetchbyid($twig_id) {
   $twig_template_info_from_db = &drupal_static(__FUNCTION__);
-  if (!isset($twig_template_from_db)) {
+  if (!isset($twig_template_from_db[$twig_id])) {
     module_load_include('inc', 'islandora_multi_importer', 'includes/TwigTemplateDatabase');
-    $twig_template_info_from_db = TwigTemplateDatabase::GetbyId($twig_id);
+    $twig_template_info_from_db[$twig_id] = TwigTemplateDatabase::GetbyId($twig_id);
   }
   
-return $twig_template_info_from_db;
+return $twig_template_info_from_db[$twig_id];
 }
 /**
  * Saves a twig template by it's name.
