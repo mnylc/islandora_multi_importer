@@ -974,6 +974,7 @@ function islandora_multi_importer_cmodeldsmapping_form(array &$form_state, array
    }
 
     foreach ($computed_cmodels as $cmodel => $dsids) {
+      $pdf_to_tiffoptions =[];
       $form[$cmodel] = array(
         '#type' => 'fieldset',
         '#tree' => TRUE,
@@ -1002,6 +1003,11 @@ function islandora_multi_importer_cmodeldsmapping_form(array &$form_state, array
       };
 
       $field_options = array_combine(array_map($prefix_options, array_keys($file_data['headers']), array_fill(0, count($file_data['headers']), "column|")), array_values($file_data['headers']));
+      if (in_array($cmodel, ['islandora:pageCModel', 'islandora:newspaperPageCModel'])) {
+        $pdf_to_tiffoptions = array_combine(array_map($prefix_options, array_keys($file_data['headers']), array_fill(0, count($file_data['headers']), "parent_pdf|")), array_values($file_data['headers']));
+      }
+
+
       $template_options = islandora_multi_importer_twig_list();
       // Iterate over existing ones
       // Defaults.
@@ -1027,6 +1033,9 @@ function islandora_multi_importer_cmodeldsmapping_form(array &$form_state, array
           $options['NONE'] = array('' => t("-- Don't Create --"));
         }
         $options['Via a source data field (file path)'] = $field_options;
+        if (($dsid == 'OBJ') && in_array($cmodel, ['islandora:pageCModel', 'islandora:newspaperPageCModel'])) {
+          $options['Page Image extracted from Parent Object PDF'] = $pdf_to_tiffoptions;
+        }
         // Todo, add other mime types we can create with Twig
         // (RDF, turtle, html, whatever is not binary)
         if (array_intersect($dsidinfo['mime'], array(
