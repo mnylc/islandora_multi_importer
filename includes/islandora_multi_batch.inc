@@ -895,6 +895,9 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
               $offset = trim($this->objectInfo['data'][$this->preprocessorParameters['object_maping']['sequencemap_row']['sequencemap']]);
               $resolution = 300;
               $device = isset($this->preprocessorParameters['pdf_device']) ? $this->preprocessorParameters['pdf_device'] : 'tiff24nc';
+              error_log($this->objectInfo['data'][$method[1]]);
+              error_log($device);
+              error_log($offset);
               $url = islandora_paged_content_extract_tiff_from_pdf(trim($this->objectInfo['data'][$method[1]]), $offset, $device, $resolution);
               if ($url) {
               $path_info = pathinfo(str_replace(" ", "\x20", trim($url)));
