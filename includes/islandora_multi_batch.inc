@@ -342,7 +342,7 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
           // Further down we will also do extra checks!
           if (strlen(trim($objectInfo['data'][$parent_dsid])) == 0) {
             $objectInfo['parent_object_obj'] = $parent_dsid;
-            $special_children_hash[$i] = $i;
+            $special_children_hash[$index] = $index;
           }
        }
       }
