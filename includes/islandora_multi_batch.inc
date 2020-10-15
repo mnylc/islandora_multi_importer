@@ -168,6 +168,7 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
   }
 
   protected function getPdfInfo($fileasstring) {
+    module_load_include('inc', 'islandora_paged_content', 'includes/utilities');
     $pages = FALSE;
     $errors = [];
     $fileurl = $this->getMeAFile($fileasstring, $errors);
@@ -880,6 +881,8 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
   protected function getDatastreams(&$errors = NULL, &$files = NULL) {
     module_load_include('inc', 'islandora', 'includes/utilities');
     module_load_include('inc', 'islandora_multi_importer', 'includes/utilities');
+    module_load_include('inc', 'islandora_paged_content', 'includes/utilities');
+
 
     $datastreams = array();
 
