@@ -167,6 +167,94 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
     return $added;
   }
 
+  protected function getPdfInfo($fileasstring) {
+    $pages = FALSE;
+    $errors = [];
+    $fileurl = $this->getMeAFile($fileasstring, $errors);
+    foreach($errors as $error) {
+      drupal_set_message($error, 'warning');
+    }
+    if ($fileurl) {
+      try {
+        $pages = islandora_paged_content_length_of_pdf($fileurl);
+      }
+      catch (Exception $exception) {
+        drupal_set_message(t('We could not get the number of pages from @file needed to generate the objects', ['@file' => $fileasstring]), 'warning');
+
+      }
+    }
+    return $pages;
+  }
+
+
+  protected function getMeAFile($fileasstring, array &$errors = []){
+
+    $path_info = pathinfo(str_replace(" ", "\x20", trim($fileasstring)));
+    $filename = $path_info['filename'];
+
+    if (isset($this->parameters['zipfile']) && !empty($this->parameters['zipfile'])) {
+      // Fetch one file from provided ZIP file.
+      $z = new ZipArchive();
+      $opened = FALSE;
+      $opened = $z->open($this->parameters['zipfile']);
+      if ($opened === TRUE) {
+        $fp = $z->getStream($fileasstring);
+        if (!$fp) {
+          $errors[] = t('We could not find a needed source %file file in the expected location, will try to get it remotely',
+            array(
+              '%filename' => trim($fileasstring),
+            ));
+          // The file does not exist.
+          // try to get it now from remote
+          $fileurl = islandora_multi_importer_remote_file_get(trim($fileasstring));
+           if ($fileurl) {
+             // We can really not trust mime type in this scenario
+            return $fileurl;
+          }
+          else {
+            $errors[] = t('We could not find a needed source %file file no where, so giving up',
+              array(
+                '%filename' => trim($fileasstring),
+              ));
+            return FALSE;
+          }
+        }
+        else {
+          // This means we have the file inside the ZIP.
+          // Deal with non extensions when inside a ZIP
+          return  "zip://" . str_replace(" ", "\x20", $this->parameters['zipfile']) . "#" . trim($fileasstring);
+        }
+        $z->close();
+      }
+      else {
+        $errors[] = t('Provided ZIP file %zipfile can not be opened or is invalid. Code %errorcode.',
+          array(
+            '%zipfile' => $this->preprocessorParameters['zipfile'],
+            '%errorcode' => (int)$opened,
+          ));
+        return FALSE;
+      }
+    }
+    // This will handle all cases, except ZIP.
+    else {
+      $fileurl = islandora_multi_importer_remote_file_get(trim($fileasstring));
+      if ($fileurl) {
+        return $fileurl;
+      }
+      else {
+
+        $errors[] = t('We tried but we could not find a needed source %filename file was nowhere to be found. giving up',
+          array(
+            '%filename' => trim($fileasstring),
+          ));
+        return FALSE;
+      }
+    }
+  }
+
+
+
+
   /**
    * {@inheritdoc}
    */
@@ -215,6 +303,11 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
     $namespace_hash = array();
     // Keeps track of all parents and child that don't have a PID assigned.
     $parent_hash = array();
+
+    // October 2020: Keeps track of all children that need OBJs from parents
+
+    $special_children_hash = array();
+
     $namespace_count = array();
     $info = array();
     // Keeps track of invalid rows.
@@ -230,14 +323,37 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
       $possiblePID = "";
       
       $objectInfo['data'] = $row;
-       
+
+      // October 2020: Check if any of the rows/future objects needs to use the parent OBJ as source
+      // Right now we only accept PDFs in a Book or Newspaper
+      // Pages (1 or more) will have a special "parent OBJ" mapping
+      // But we do not need to check the CMODEL since the UI limits who can already
+      if (isset($this->parameters['cmodel_mapping'][$objectInfo['cmodel']]['dsid']['OBJ'])) {
+        $howtogenerate = $this->parameters['cmodel_mapping'][$objectInfo['cmodel']]['dsid']['rows']['OBJ'];
+        // We do not have access to the parent yet here. So we just flag it
+        if (strpos($howtogenerate['method']['data'], "parent_object|") === 0 ) {
+        // Means we got os a cross dependant Page to Parent OBJ case
+        // BUT. To allow also books that have their own! images in OBJ present
+         $method = explode("|", $howtogenerate['method']['data']);
+         $parent_dsid = $method[1];
+          // WE will do an extra check. The actual parent mapped column needs to be empty
+          // In the current object. If not treat as a normal page
+          // Further down we will also do extra checks!
+          if (strlen(trim($objectInfo['data'][$parent_dsid])) == 0) {
+            $objectInfo['parent_object_obj'] = $parent_dsid;
+            $special_children_hash[$i] = $i;
+          }
+       }
+      }
+
+
+
       // Autogeneration of PID is enabled and a PID column is provided
       // both modes complement/limit each other
       // in case of update or any other action that is npt ingest, always check for existing PID
       if (($this->parameters['object_maping']['pidmap_row']['pidtype']) != 1 || $this->parameters['action']!= 'ingest') {
         // User provided PIDs are not required to respect collection policies, namespace, etc.
         $possiblePID = trim($row[$this->parameters['object_maping']['pidmap_row']['pidmap']]);
-        
         if (!empty($possiblePID)) {
           if (islandora_is_valid_pid($possiblePID)) {
             $objectInfo['pid'] = $possiblePID;
@@ -279,7 +395,7 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
             }
             else {
               // we have a PID but i still want my objectInfo['namespace']
-              // NO worries about checking if pidparts is in fact lenght of 2
+              // NO worries about checking if pidparts is in fact length of 2
               // PID was checked for sanity a little bit earlier
               $pidparts = explode(":", $objectInfo['pid']);
               $objectInfo['namespace'] = $pidparts[0];
@@ -391,7 +507,46 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
         $info[$parent]['pid'] = isset($info[$parent]['pid']) ? $info[$parent]['pid'] : $this->getInternalIdentifier($namespace, $namespace_count[$namespace]);
       }
     }
-    
+
+    // Now we need to preprocess Children with Special parent needs
+    // In specific ones that are going to Borrow a PDF from the parent's OBJ
+    // Should we also clear the Parent's OBJ afterwards?
+    foreach ($special_children_hash as $child) {
+      if (isset($info[$child])) {
+        $parent = $info[$child]['parent'];
+        $source_datastream = $info[$child]['parent_object_obj'];
+        // This is where we copy!
+        $info[$child]['data'][$source_datastream] = $info[$parent]['data'][$source_datastream];
+        // But that is not enough! Now we need to figure out if we need to generate pages or only use existing ones
+        // Two conditions will apply for generating
+        // 1.- Only one page present (master to be used as template data)
+        // 2.- a Sequence number of eXaCtLY == 0. Easy peasy
+        if (count($parent_hash[$parent]) == 1 &&
+          $info[$child]['data'][$this->parameters['object_maping']['sequencemap_row']['sequencemap']] == 0 &&
+          strlen(trim($info[$child]['data'][$source_datastream]) > 4 )
+        ) {
+          // So 5, is a single character, a dot and the pdf extension or the ps extension
+          // Means we need a lot of extra pages based on the PDF info info.
+          // GOSH I CREATED A MONSTER!
+          $number_of_pages = $this->getPdfInfo($info[$child]['data'][$source_datastream]);
+          if ($number_of_pages) {
+            // First update sequence number of the first one to 1
+            $info[$child]['data'][$this->parameters['object_maping']['sequencemap_row']['sequencemap']] = 1;
+            $labelmap = $this->parameters['object_maping']['labelmap_row']['labelmap'];
+            $number_of_pages = $number_of_pages - 1; // because yea, maybe someone just got one!
+            foreach($number_of_pages as $pagenumber ) {
+              $theclone = $info[$child];
+              $theclone['data'][$labelmap] =  $theclone['data'][$labelmap] . ' ' . $pagenumber;
+              $info[] = $theclone;
+            }
+            $namespace = $info[$child]['namespace'];
+            $namespace_count[$namespace] = $namespace_count[$namespace] + $number_of_pages;
+          }
+        }
+      }
+    }
+
+
     // Now the real pass, iterate over every row.
     foreach ($info as $index => &$objectInfo) {
       $namespace = $objectInfo['namespace'];
@@ -493,6 +648,7 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
    * Function batchProcessforIngest.
    */
   protected function batchProcessforIngest() {
+     $setid = $this->getBatchId();
       if ($this->deriveDC) {
           // Do this only once.
           $xsl = new DOMDocument;
@@ -500,9 +656,9 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
           if (!$xsl) {
               // Disable transform if this is the case
               $this->deriveDC = FALSE; 
-              $parms = array('@setid' => $setid, '@pid' => $this->id, '@log' => 'Could not load global XSLT for MODS2DC transformation. MODS to DC disabled!');
+              $params = array('@setid' => $setid, '@pid' => $this->id, '@log' => 'Could not load global XSLT for MODS2DC transformation. MODS to DC disabled!');
               $msg = 'There were some issues on Batch set id @setid when loading DC to MODS via XSLT: @log';
-              watchdog('islandora_multi_importer', $msg, $parms, WATCHDOG_NOTICE);
+              watchdog('islandora_multi_importer', $msg, $params, WATCHDOG_NOTICE);
           }
       }
       // Use object_info to create some datastreams.
@@ -512,11 +668,10 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
       $datastreams = array();
       $datastreams = $this->getDatastreams($errors, $files);
       if (!empty($errors)) {
-          $setid = $this->getBatchId();
           foreach ($errors as $error) {
-              $parms = array('@setid' => $setid, '@pid' => $this->id, '@log' => $error );
+              $params = array('@setid' => $setid, '@pid' => $this->id, '@log' => $error );
               $msg = 'There were some issues on Batch set id @setid when generating datastreams for PID @pid: @log';
-              watchdog('islandora_multi_importer', $msg, $parms, WATCHDOG_NOTICE);
+              watchdog('islandora_multi_importer', $msg, $params, WATCHDOG_NOTICE);
           }
       }
       if (empty($datastreams)) {
@@ -616,7 +771,7 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
       if (!empty($errors)) {
         $setid = $this->getBatchId();
         foreach ($errors as $error) {
-          $parms = array('@setid' => $setid, '@pid' => $this->id, '@log' => $error );
+          $params = array('@setid' => $setid, '@pid' => $this->id, '@log' => $error );
           $msg = 'There were some issues on Batch set id @setid when generating datastreams for PID @pid: @log';
           watchdog('islandora_multi_importer', $msg, $params, WATCHDOG_NOTICE);
         }
@@ -733,6 +888,38 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
         if (!empty($howtogenerate['method']['data'])) {
           $method = explode("|", $howtogenerate['method']['data']);
           switch ($method[0]) {
+            case 'parent_object':
+              $offset = trim($this->objectInfo['data'][$this->preprocessorParameters['object_maping']['sequencemap_row']['sequencemap']]);
+              $resolution = 300;
+              $device = isset($this->preprocessorParameters['pdf_device']) ? $this->preprocessorParameters['pdf_device'] : 'tiff24nc';
+              $url = islandora_paged_content_extract_tiff_from_pdf(trim($this->objectInfo['data'][$method[1]]), $offset, $device, $resolution);
+              if ($url) {
+              $path_info = pathinfo(str_replace(" ", "\x20", trim($url)));
+              $filename = $path_info['filename'];
+              $dslabel = substr($filename,0,255);
+              //remove any trailing spaces
+              $dslabel = trim($dslabel);
+              $dslabel = !empty($dslabel) ? $dslabel : "$dsid datastream";
+              $datastreams[$dsid] = array(
+                'dsid' => $dsid,
+                'label' => $dslabel,
+                'mimetype' => 'image/tiff',
+                'datastream_file' => $url,
+                'filename' => $path_info['basename'],
+                'control_group' => 'M',
+              );
+              }
+              else {
+                $errors[] = t('For Object %id, %dsid datastream: we could process/extract TIFF from PDF %filename',
+                  array(
+                    '%filename' => trim($this->objectInfo['data'][$method[1]]),
+                    '%dsid' => $dsid,
+                    '%id' => $this->id,
+                  ));
+              }
+             break;
+
+
             case 'derivative':
             // Nothing to do really, derivative processing will do the job.
             break;
@@ -783,7 +970,7 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
             $files[] = $newfile;
             $datastreams[$dsid] = array(
               'dsid' => $dsid,
-              'label' => "$dsid datastream ",
+              'label' => "$dsid datastream",
               'mimetype' => $docmimetype,
               'datastream_file' => drupal_realpath($newfile->uri),
               'filename' => $newfileName,

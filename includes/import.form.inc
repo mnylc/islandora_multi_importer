@@ -1004,7 +1004,7 @@ function islandora_multi_importer_cmodeldsmapping_form(array &$form_state, array
 
       $field_options = array_combine(array_map($prefix_options, array_keys($file_data['headers']), array_fill(0, count($file_data['headers']), "column|")), array_values($file_data['headers']));
       if (in_array($cmodel, ['islandora:pageCModel', 'islandora:newspaperPageCModel'])) {
-        $pdf_to_tiffoptions = array_combine(array_map($prefix_options, array_keys($file_data['headers']), array_fill(0, count($file_data['headers']), "parent_pdf|")), array_values($file_data['headers']));
+        $pdf_to_tiffoptions = array_combine(array_map($prefix_options, array_keys($file_data['headers']), array_fill(0, count($file_data['headers']), "parent_object|")), array_values($file_data['headers']));
       }
 
 
