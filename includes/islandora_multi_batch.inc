@@ -329,7 +329,7 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
       // Right now we only accept PDFs in a Book or Newspaper
       // Pages (1 or more) will have a special "parent OBJ" mapping
       // But we do not need to check the CMODEL since the UI limits who can already
-      if (isset($this->parameters['cmodel_mapping'][$objectInfo['cmodel']]['dsid']['OBJ'])) {
+      if (isset($this->parameters['cmodel_mapping'][$objectInfo['cmodel']]['dsid']['rows']['OBJ'])) {
         $howtogenerate = $this->parameters['cmodel_mapping'][$objectInfo['cmodel']]['dsid']['rows']['OBJ'];
         // We do not have access to the parent yet here. So we just flag it
         if (strpos($howtogenerate['method']['data'], "parent_object|") === 0 ) {
