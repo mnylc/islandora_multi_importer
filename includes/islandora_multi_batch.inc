@@ -1035,20 +1035,26 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
                   $fileurl = "zip://" . str_replace(" ", "\x20", $this->preprocessorParameters['zipfile']) . "#" . trim($this->objectInfo['data'][$method[1]]);
 
                   if ($method[0] == 'parent_object') {
+                    error_log('should be in the ZIP');
                     // islandora paged can not deal with zipped files sadly
                     // we need a temp one
                     $tmp_directory = islandora_multi_importer_temp_directory();
                     $destination = $tmp_directory.'/'.md5($fileurl).'.'.$path_info['PATHINFO_EXTENSION'];
                     if (!file_exists($destination)) {
-                      $temp_pdf = file_unmanaged_copy($fileurl, $destination, FILE_EXISTS_REPLACE);
+                      $success = file_put_contents($destination, $fp);
                     }
 
                     $offset = trim($this->objectInfo['data'][$this->preprocessorParameters['object_maping']['sequencemap_row']['sequencemap']]);
 
+                    error_log($success);
                     error_log($fileurl);
                     error_log($device);
                     error_log($offset);
-                    $fileurl = islandora_paged_content_extract_tiff_from_pdf($temp_pdf, $offset, $device, $resolution);
+
+                    if ($success) {
+                      $fileurl = islandora_paged_content_extract_tiff_from_pdf($destination, $offset, $device, $resolution);
+                    }
+                    error_log($fileurl);
                     // Get path info agaain for the returned mimetype
                     $path_info = pathinfo(str_replace(" ", "\x20", trim($fileurl)));
                     $themime = "image/tiff";
@@ -1134,7 +1140,7 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
 
                 // Not found...report the error.
                 
-                $errors[] = t('We tried, but For Object %id, %dsid datastream: %filename was nowhere to be found!',
+                $errors[] = t('We tried, but For Object %id, %dsid datastream: %filename was no where to be found!',
                 array(
                   '%filename' => trim($this->objectInfo['data'][$method[1]]),
                   '%dsid' => $dsid,
