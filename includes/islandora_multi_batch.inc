@@ -523,7 +523,7 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
         // 1.- Only one page present (master to be used as template data)
         // 2.- a Sequence number of eXaCtLY == 0. Easy peasy
         if (count($parent_hash[$parent]) == 1 &&
-          $info[$child]['data'][$this->parameters['object_maping']['sequencemap_row']['sequencemap']] == 0 &&
+          (int) $info[$child]['data'][$this->parameters['object_maping']['sequencemap_row']['sequencemap']] == 0 &&
           strlen(trim($info[$child]['data'][$source_datastream]) > 4 )
         ) {
           // So 5, is a single character, a dot and the pdf extension or the ps extension
