@@ -891,41 +891,6 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
         if (!empty($howtogenerate['method']['data'])) {
           $method = explode("|", $howtogenerate['method']['data']);
           switch ($method[0]) {
-            case 'parent_object':
-              $offset = trim($this->objectInfo['data'][$this->preprocessorParameters['object_maping']['sequencemap_row']['sequencemap']]);
-              $resolution = 300;
-              $device = isset($this->preprocessorParameters['pdf_device']) ? $this->preprocessorParameters['pdf_device'] : 'tiff24nc';
-              error_log($this->objectInfo['data'][$method[1]]);
-              error_log($device);
-              error_log($offset);
-              $url = islandora_paged_content_extract_tiff_from_pdf(trim($this->objectInfo['data'][$method[1]]), $offset, $device, $resolution);
-              if ($url) {
-              $path_info = pathinfo(str_replace(" ", "\x20", trim($url)));
-              $filename = $path_info['filename'];
-              $dslabel = substr($filename,0,255);
-              //remove any trailing spaces
-              $dslabel = trim($dslabel);
-              $dslabel = !empty($dslabel) ? $dslabel : "$dsid datastream";
-              $datastreams[$dsid] = array(
-                'dsid' => $dsid,
-                'label' => $dslabel,
-                'mimetype' => 'image/tiff',
-                'datastream_file' => $url,
-                'filename' => $path_info['basename'],
-                'control_group' => 'M',
-              );
-              }
-              else {
-                $errors[] = t('For Object %id, %dsid datastream: we could process/extract TIFF from PDF %filename',
-                  array(
-                    '%filename' => trim($this->objectInfo['data'][$method[1]]),
-                    '%dsid' => $dsid,
-                    '%id' => $this->id,
-                  ));
-              }
-             break;
-
-
             case 'derivative':
             // Nothing to do really, derivative processing will do the job.
             break;
@@ -984,6 +949,10 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
             );
             break;
 
+            case 'parent_object':
+              $resolution = 300;
+              $device = isset($this->preprocessorParameters['pdf_device']) ? $this->preprocessorParameters['pdf_device'] : 'tiff24nc';
+            // Will deal same as column but with a twist
             case 'column':
             // This means our source field contains a file path or and url
             // if file path, we need to know if local of ZIP
@@ -1009,9 +978,22 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
                   // try to get it now from remote
                   $fileurl = islandora_multi_importer_remote_file_get(trim($this->objectInfo['data'][$method[1]]));
                   $themime = "application/octet-stream";
+
+                  if ($method[0] == 'parent_object' && $fileurl) {
+                    $offset = trim($this->objectInfo['data'][$this->preprocessorParameters['object_maping']['sequencemap_row']['sequencemap']]);
+
+                    error_log($this->objectInfo['data'][$method[1]]);
+                    error_log($device);
+                    error_log($offset);
+                    $fileurl = islandora_paged_content_extract_tiff_from_pdf($fileurl, $offset, $device, $resolution);
+                    // Get path info agaain for the returned mimetype
+                    $path_info = pathinfo(str_replace(" ", "\x20", trim($fileurl)));
+                    $themime = "image/tiff";
+                  }
+
+
                   if ($fileurl) { 
                     $themime = property_exists($fileurl, 'filemime') ? $fileurl->filemime : $this->getMimetype($path_info['basename']);
-                
                     if ($dsid == "HOCR" && $themime == "application/octet-stream") {
                       $themime = "text/html";
                     }
@@ -1023,7 +1005,7 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
                     //remove any trailing spaces
                     $dslabel = trim($dslabel);
                     $dslabel = !empty($dslabel) ? $dslabel : "$dsid datastream";
-                    
+
                     $datastreams[$dsid] = array(
                       'dsid' => $dsid,
                       'label' => $dslabel,
@@ -1045,10 +1027,24 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
                   }
                 } 
                 else {
-                  // This means we have the file insize the ZIP.
+                  // This means we have the file inside the ZIP.
                   // Deal with non extensions when inside a ZIP
                  
                   $themime = $this->getMimetype($path_info['basename']);
+                  $fileurl = "zip://" . str_replace(" ", "\x20", $this->preprocessorParameters['zipfile']) . "#" . trim($this->objectInfo['data'][$method[1]]);
+
+                  if ($method[0] == 'parent_object') {
+                    $offset = trim($this->objectInfo['data'][$this->preprocessorParameters['object_maping']['sequencemap_row']['sequencemap']]);
+
+                    error_log($this->objectInfo['data'][$method[1]]);
+                    error_log($device);
+                    error_log($offset);
+                    $fileurl = islandora_paged_content_extract_tiff_from_pdf($fileurl, $offset, $device, $resolution);
+                    // Get path info agaain for the returned mimetype
+                    $path_info = pathinfo(str_replace(" ", "\x20", trim($fileurl)));
+                    $themime = "image/tiff";
+                  }
+
                   if ($dsid == "HOCR" && $themime == "application/octet-stream") {
                     $themime = "text/html";
                   }
@@ -1065,7 +1061,7 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
                     'dsid' => $dsid,
                     'label' => $dslabel,
                     'mimetype' => $themime,
-                    'datastream_file' => "zip://" . str_replace(" ", "\x20", $this->preprocessorParameters['zipfile']) . "#" . trim($this->objectInfo['data'][$method[1]]),
+                    'datastream_file' => $fileurl,
                     'filename' => $path_info['basename'],
                     'control_group' => 'M',
                   );
@@ -1086,6 +1082,16 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
 
             else {
               $fileurl = islandora_multi_importer_remote_file_get(trim($this->objectInfo['data'][$method[1]]));
+              if ($method[0] == 'parent_object' && $fileurl) {
+                $offset = trim($this->objectInfo['data'][$this->preprocessorParameters['object_maping']['sequencemap_row']['sequencemap']]);
+                error_log($fileurl);
+                error_log($device);
+                error_log($offset);
+                $fileurl = islandora_paged_content_extract_tiff_from_pdf($fileurl, $offset, $device, $resolution);
+                // Get path info agaain for the returned mimetype
+                $path_info = pathinfo(str_replace(" ", "\x20", trim($fileurl)));
+                $themime = "image/tiff";
+              }
 
               $themime = "application/octet-stream";
               if ($fileurl) {
