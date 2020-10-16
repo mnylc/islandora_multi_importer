@@ -970,7 +970,7 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
 
             case 'parent_object':
               $resolution = 300;
-              $device = isset($this->preprocessorParameters['pdf_device']) ? $this->preprocessorParameters['pdf_device'] : 'tiff24nc';
+              $device = isset($this->preprocessorParameters['pdf_device']) ? $this->preprocessorParameters['pdf_device'] : 'tiff32nc';
             // Will deal same as column but with a twist
             case 'column':
             // This means our source field contains a file path or and url
