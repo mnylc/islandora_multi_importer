@@ -228,7 +228,7 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
           // Deal with non extensions when inside a ZIP
           $tmp_directory = islandora_multi_importer_temp_directory();
           $fileurl = "zip://" . str_replace(" ", "\x20", $this->parameters['zipfile']) . "#" . trim($fileasstring);
-          $destination = $tmp_directory.'/'.md5($fileurl).'.'.$path_info[PATHINFO_EXTENSION];
+          $destination = $tmp_directory.'/'.md5($fileurl).'.'.$path_info['extension'];
           if (!file_exists($destination)) {
             $success = file_put_contents($destination, $fp);
           }
@@ -1060,7 +1060,7 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
                     // islandora paged can not deal with zipped files sadly
                     // we need a temp one
                     $tmp_directory = islandora_multi_importer_temp_directory();
-                    $destination = $tmp_directory.'/'.md5($fileurl).'.'.$path_info[PATHINFO_EXTENSION];
+                    $destination = $tmp_directory.'/'.md5($fileurl).'.'.$path_info['extension'];
                     if (!file_exists($destination)) {
                       $success = file_put_contents($destination, $fp);
                     }
