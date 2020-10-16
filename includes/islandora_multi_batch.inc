@@ -549,7 +549,6 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
             // First update sequence number of the first one to 1
             $info[$child]['data'][$this->parameters['object_maping']['sequencemap_row']['sequencemap']] = 1;
             $labelmap = $this->parameters['object_maping']['labelmap_row']['labelmap'];
-            $info[$child]['data'][$labelmap] = $info[$child]['data'][$labelmap] . ' ' . 1;
              // because yea, maybe someone just got one!
             for($i = 1 ; $i < $number_of_pages; $i++) {
               $theclone = $info[$child];
@@ -557,6 +556,8 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
               $theclone['data'][$this->parameters['object_maping']['sequencemap_row']['sequencemap']] = $i;
               $info[] = $theclone;
             }
+            // Only add the 1 once we added all the clones.
+            $info[$child]['data'][$labelmap] = $info[$child]['data'][$labelmap] . ' ' . 1;
             $namespace = $info[$child]['namespace'];
             // One less since we already had the 0 sequence master page.
             $namespace_count[$namespace] = $namespace_count[$namespace] + $number_of_pages - 1;
