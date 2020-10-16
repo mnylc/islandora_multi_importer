@@ -209,6 +209,7 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
           // try to get it now from remote
           $fileurl = islandora_multi_importer_remote_file_get(trim($fileasstring));
            if ($fileurl) {
+             $z->close();
              // We can really not trust mime type in this scenario
             return $fileurl;
           }
@@ -217,13 +218,27 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
               array(
                 '%filename' => trim($fileasstring),
               ));
+            $z->close();
             return FALSE;
+
           }
         }
         else {
           // This means we have the file inside the ZIP.
           // Deal with non extensions when inside a ZIP
-          return  "zip://" . str_replace(" ", "\x20", $this->parameters['zipfile']) . "#" . trim($fileasstring);
+          $tmp_directory = islandora_multi_importer_temp_directory();
+          $fileurl = "zip://" . str_replace(" ", "\x20", $this->parameters['zipfile']) . "#" . trim($fileasstring);
+          $destination = $tmp_directory.'/'.md5($fileurl).'.'.$path_info[PATHINFO_EXTENSION];
+          if (!file_exists($destination)) {
+            $success = file_put_contents($destination, $fp);
+          }
+          error_log($fileurl);
+          error_log($destination);
+
+          if ($success) {
+            $z->close();
+            return $destination;
+          }
         }
         $z->close();
       }
@@ -1051,7 +1066,7 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
                     }
 
                     $offset = trim($this->objectInfo['data'][$this->preprocessorParameters['object_maping']['sequencemap_row']['sequencemap']]);
-
+                    $offset = ($offset > 0 ) ? (int) $offset : 1;
                     error_log($success);
                     error_log($fileurl);
                     error_log($device);
