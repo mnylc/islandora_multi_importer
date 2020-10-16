@@ -967,6 +967,7 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
               $opened = $z->open($this->preprocessorParameters['zipfile']);
               if ($opened === TRUE) {
                 $fp = $z->getStream($this->objectInfo['data'][$method[1]]);
+                error_log($this->objectInfo['data'][$method[1]]);
                 if (!$fp) {
                     $errors[] = t('For Object %id, %dsid datastream: We could not find the source %file file in the expected location, will try to get it remotely',
                     array(
@@ -1036,7 +1037,7 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
                   if ($method[0] == 'parent_object') {
                     $offset = trim($this->objectInfo['data'][$this->preprocessorParameters['object_maping']['sequencemap_row']['sequencemap']]);
 
-                    error_log($this->objectInfo['data'][$method[1]]);
+                    error_log($fileurl);
                     error_log($device);
                     error_log($offset);
                     $fileurl = islandora_paged_content_extract_tiff_from_pdf($fileurl, $offset, $device, $resolution);
