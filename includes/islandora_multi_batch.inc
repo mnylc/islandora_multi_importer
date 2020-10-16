@@ -229,6 +229,7 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
           $tmp_directory = islandora_multi_importer_temp_directory();
           $fileurl = "zip://" . str_replace(" ", "\x20", $this->parameters['zipfile']) . "#" . trim($fileasstring);
           $destination = $tmp_directory.'/'.md5($fileurl).'.'.$path_info['extension'];
+          $success = TRUE;
           if (!file_exists($destination)) {
             $success = file_put_contents($destination, $fp);
           }
@@ -1056,6 +1057,7 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
                     // we need a temp one
                     $tmp_directory = islandora_multi_importer_temp_directory();
                     $destination = $tmp_directory.'/'.md5($fileurl).'.'.$path_info['extension'];
+                    $success = TRUE;
                     if (!file_exists($destination)) {
                       $success = file_put_contents($destination, $fp);
                     }
