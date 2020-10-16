@@ -1035,12 +1035,20 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
                   $fileurl = "zip://" . str_replace(" ", "\x20", $this->preprocessorParameters['zipfile']) . "#" . trim($this->objectInfo['data'][$method[1]]);
 
                   if ($method[0] == 'parent_object') {
+                    // islandora paged can not deal with zipped files sadly
+                    // we need a temp one
+                    $tmp_directory = islandora_multi_importer_temp_directory();
+                    $destination = $tmp_directory.'/'.md5($fileurl).'.'.$path_info['PATHINFO_EXTENSION'];
+                    if (!file_exists($destination)) {
+                      $temp_pdf = file_unmanaged_copy($fileurl, $destination, FILE_EXISTS_REPLACE);
+                    }
+
                     $offset = trim($this->objectInfo['data'][$this->preprocessorParameters['object_maping']['sequencemap_row']['sequencemap']]);
 
                     error_log($fileurl);
                     error_log($device);
                     error_log($offset);
-                    $fileurl = islandora_paged_content_extract_tiff_from_pdf($fileurl, $offset, $device, $resolution);
+                    $fileurl = islandora_paged_content_extract_tiff_from_pdf($temp_pdf, $offset, $device, $resolution);
                     // Get path info agaain for the returned mimetype
                     $path_info = pathinfo(str_replace(" ", "\x20", trim($fileurl)));
                     $themime = "image/tiff";
