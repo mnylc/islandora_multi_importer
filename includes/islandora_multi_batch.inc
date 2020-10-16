@@ -513,6 +513,8 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
     // In specific ones that are going to Borrow a PDF from the parent's OBJ
     // Should we also clear the Parent's OBJ afterwards?
     foreach ($special_children_hash as $child) {
+      dpm($child);
+
       if (isset($info[$child])) {
         $parent = $info[$child]['parent'];
         $source_datastream = $info[$child]['parent_object_obj'];
@@ -522,9 +524,13 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
         // Two conditions will apply for generating
         // 1.- Only one page present (master to be used as template data)
         // 2.- a Sequence number of eXaCtLY == 0. Easy peasy
+        dpm($parent_hash[$parent]);
+        dpm($info[$child]['data'][$this->parameters['object_maping']['sequencemap_row']['sequencemap']]);
+        dpm($info[$child]['data'][$source_datastream]);
+
         if (count($parent_hash[$parent]) == 1 &&
           (int) $info[$child]['data'][$this->parameters['object_maping']['sequencemap_row']['sequencemap']] == 0 &&
-          strlen(trim($info[$child]['data'][$source_datastream]) > 4 )
+          strlen(trim($info[$child]['data'][$source_datastream])) > 4
         ) {
           // So 5, is a single character, a dot and the pdf extension or the ps extension
           // Means we need a lot of extra pages based on the PDF info info.
@@ -1039,7 +1045,7 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
                     // islandora paged can not deal with zipped files sadly
                     // we need a temp one
                     $tmp_directory = islandora_multi_importer_temp_directory();
-                    $destination = $tmp_directory.'/'.md5($fileurl).'.'.$path_info['PATHINFO_EXTENSION'];
+                    $destination = $tmp_directory.'/'.md5($fileurl).'.'.$path_info[PATHINFO_EXTENSION];
                     if (!file_exists($destination)) {
                       $success = file_put_contents($destination, $fp);
                     }
