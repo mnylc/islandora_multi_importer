@@ -232,8 +232,6 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
           if (!file_exists($destination)) {
             $success = file_put_contents($destination, $fp);
           }
-          error_log($fileurl);
-          error_log($destination);
 
           if ($success) {
             $z->close();
@@ -528,7 +526,6 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
     // In specific ones that are going to Borrow a PDF from the parent's OBJ
     // Should we also clear the Parent's OBJ afterwards?
     foreach ($special_children_hash as $child) {
-      dpm($child);
 
       if (isset($info[$child])) {
         $parent = $info[$child]['parent'];
@@ -539,9 +536,6 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
         // Two conditions will apply for generating
         // 1.- Only one page present (master to be used as template data)
         // 2.- a Sequence number of eXaCtLY == 0. Easy peasy
-        dpm($parent_hash[$parent]);
-        dpm($info[$child]['data'][$this->parameters['object_maping']['sequencemap_row']['sequencemap']]);
-        dpm($info[$child]['data'][$source_datastream]);
 
         if (count($parent_hash[$parent]) == 1 &&
           (int) $info[$child]['data'][$this->parameters['object_maping']['sequencemap_row']['sequencemap']] == 0 &&
@@ -555,14 +549,17 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
             // First update sequence number of the first one to 1
             $info[$child]['data'][$this->parameters['object_maping']['sequencemap_row']['sequencemap']] = 1;
             $labelmap = $this->parameters['object_maping']['labelmap_row']['labelmap'];
+            $info[$child]['data'][$labelmap] = $info[$child]['data'][$labelmap] . ' ' . 1;
              // because yea, maybe someone just got one!
             for($i = 1 ; $i < $number_of_pages; $i++) {
               $theclone = $info[$child];
-              $theclone['data'][$labelmap] =  $theclone['data'][$labelmap] . ' ' . $pagenumber;
+              $theclone['data'][$labelmap] =  $theclone['data'][$labelmap] . ' ' . $i;
+              $theclone['data'][$this->parameters['object_maping']['sequencemap_row']['sequencemap']] = $i;
               $info[] = $theclone;
             }
             $namespace = $info[$child]['namespace'];
-            $namespace_count[$namespace] = $namespace_count[$namespace] + $number_of_pages;
+            // One less since we already had the 0 sequence master page.
+            $namespace_count[$namespace] = $namespace_count[$namespace] + $number_of_pages - 1;
           }
         }
       }
@@ -988,7 +985,7 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
               $opened = $z->open($this->preprocessorParameters['zipfile']);
               if ($opened === TRUE) {
                 $fp = $z->getStream($this->objectInfo['data'][$method[1]]);
-                error_log($this->objectInfo['data'][$method[1]]);
+
                 if (!$fp) {
                     $errors[] = t('For Object %id, %dsid datastream: We could not find the source %file file in the expected location, will try to get it remotely',
                     array(
@@ -1004,9 +1001,6 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
                   if ($method[0] == 'parent_object' && $fileurl) {
                     $offset = trim($this->objectInfo['data'][$this->preprocessorParameters['object_maping']['sequencemap_row']['sequencemap']]);
 
-                    error_log($this->objectInfo['data'][$method[1]]);
-                    error_log($device);
-                    error_log($offset);
                     $fileurl = islandora_paged_content_extract_tiff_from_pdf($fileurl, $offset, $device, $resolution);
                     // Get path info agaain for the returned mimetype
                     $path_info = pathinfo(str_replace(" ", "\x20", trim($fileurl)));
@@ -1056,7 +1050,7 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
                   $fileurl = "zip://" . str_replace(" ", "\x20", $this->preprocessorParameters['zipfile']) . "#" . trim($this->objectInfo['data'][$method[1]]);
 
                   if ($method[0] == 'parent_object') {
-                    error_log('should be in the ZIP');
+
                     // islandora paged can not deal with zipped files sadly
                     // we need a temp one
                     $tmp_directory = islandora_multi_importer_temp_directory();
@@ -1067,15 +1061,12 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
 
                     $offset = trim($this->objectInfo['data'][$this->preprocessorParameters['object_maping']['sequencemap_row']['sequencemap']]);
                     $offset = ($offset > 0 ) ? (int) $offset : 1;
-                    error_log($success);
-                    error_log($fileurl);
-                    error_log($device);
-                    error_log($offset);
+
 
                     if ($success) {
                       $fileurl = islandora_paged_content_extract_tiff_from_pdf($destination, $offset, $device, $resolution);
                     }
-                    error_log($fileurl);
+
                     // Get path info agaain for the returned mimetype
                     $path_info = pathinfo(str_replace(" ", "\x20", trim($fileurl)));
                     $themime = "image/tiff";
@@ -1120,9 +1111,7 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
               $fileurl = islandora_multi_importer_remote_file_get(trim($this->objectInfo['data'][$method[1]]));
               if ($method[0] == 'parent_object' && $fileurl) {
                 $offset = trim($this->objectInfo['data'][$this->preprocessorParameters['object_maping']['sequencemap_row']['sequencemap']]);
-                error_log($fileurl);
-                error_log($device);
-                error_log($offset);
+
                 $fileurl = islandora_paged_content_extract_tiff_from_pdf($fileurl, $offset, $device, $resolution);
                 // Get path info agaain for the returned mimetype
                 $path_info = pathinfo(str_replace(" ", "\x20", trim($fileurl)));
