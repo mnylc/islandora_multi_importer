@@ -551,7 +551,7 @@ class IslandoraMultiBatch extends IslandoraBatchPreprocessor {
             $info[$child]['data'][$this->parameters['object_maping']['sequencemap_row']['sequencemap']] = 1;
             $labelmap = $this->parameters['object_maping']['labelmap_row']['labelmap'];
              // because yea, maybe someone just got one!
-            for($i = 1 ; $i < $number_of_pages; $i++) {
+            for($i = 2 ; $i <= $number_of_pages; $i++) {
               $theclone = $info[$child];
               $theclone['data'][$labelmap] =  $theclone['data'][$labelmap] . ' ' . $i;
               $theclone['data'][$this->parameters['object_maping']['sequencemap_row']['sequencemap']] = $i;
@@ -1002,7 +1002,6 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
 
                   if ($method[0] == 'parent_object' && $fileurl) {
                     $offset = trim($this->objectInfo['data'][$this->preprocessorParameters['object_maping']['sequencemap_row']['sequencemap']]);
-
                     $fileurl = islandora_paged_content_extract_tiff_from_pdf($fileurl, $offset, $device, $resolution);
                     // Get path info agaain for the returned mimetype
                     $path_info = pathinfo(str_replace(" ", "\x20", trim($fileurl)));
@@ -1058,6 +1057,7 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
                     $tmp_directory = islandora_multi_importer_temp_directory();
                     $destination = $tmp_directory.'/'.md5($fileurl).'.'.$path_info['extension'];
                     $success = TRUE;
+
                     if (!file_exists($destination)) {
                       $success = file_put_contents($destination, $fp);
                     }
@@ -1070,7 +1070,7 @@ class IslandoraMultiBatchObject extends IslandoraBatchObject {
                       $fileurl = islandora_paged_content_extract_tiff_from_pdf($destination, $offset, $device, $resolution);
                     }
 
-                    // Get path info agaain for the returned mimetype
+                    // Get path info again for the returned mimetype
                     $path_info = pathinfo(str_replace(" ", "\x20", trim($fileurl)));
                     $themime = "image/tiff";
                   }
