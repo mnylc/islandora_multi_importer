@@ -244,7 +244,7 @@ function islandora_multi_importer_remote_file_get($url) {
     $localfile = file_build_uri(drupal_basename($parsed_url['path']));
     if (!file_exists($localfile)) {
       // Actual remote heavy lifting only if not present.
-      $localfile = islandora_multi_importer_retrieve_remote_file($url, $local, FILE_EXISTS_REPLACE);
+      $localfile = islandora_multi_importer_retrieve_remote_file($url, $localfile, FILE_EXISTS_REPLACE);
       return $localfile;
     }
     else {
@@ -533,8 +533,8 @@ function islandora_multi_importer_array_combine_special($header, $row) {
 /**
  * Match different sized arrays.
  *
- * @param array $headercount
- *   an array lenght to check against.
+ * @param integer $headercount
+ *   an array length to check against.
  * @param array $row
 *   a CSV data row
  *
